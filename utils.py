@@ -2,14 +2,15 @@ from datetime import datetime
 import logging
 
 import discord
-from discord.ext import commands
+from discord.ext import commands,tasks
 from discord.ui import Button,View
+import asyncio
 
 import bot_config
 import modules.database as DB
 import modules.AMP as AMP
 
-async def predicate(context):
+async def async_rolecheck(context):
     logger = logging.getLogger(__name__)
     staff_role,author_top_role = 0,0
     guild_roles = context.guild.roles
@@ -38,36 +39,56 @@ async def predicate(context):
 
 def role_check():
     """Use this before any Commands that require a Staff/Mod level permission Role"""
-    return commands.check(predicate)
+    return commands.check(async_rolecheck)
 
 class CustomButton(Button):
-    def __init__(self,server,view,label:str,callback_label:str,callback_disabled:bool,style=discord.ButtonStyle.green,context=None):
+    def __init__(self,server,view,function,label:str,callback_label:str,callback_disabled:bool,style=discord.ButtonStyle.green,context=None):
         super().__init__(label=label, style=style, custom_id=label)
         self.server = server
         self.context = context
+        self._label = label
+
         self.callback_label = callback_label
         self.callback_disabled = callback_disabled
+
+        self._function = function
         self._view = view
         view.add_item(self)
 
     async def callback(self,interaction):
-        if await predicate(interaction.user):
-            print('Run my Command')
+        """This is called when a button is interacted with."""
+        if not await async_rolecheck(interaction.user):
+            return
+        self._interaction = interaction
         self.label = self.callback_label
         self.disabled = self.callback_disabled
         await interaction.response.edit_message(view=self._view)
+        print('Run my Command')
+        #self._function()
+        await asyncio.sleep(30)
+        await self.reset()
+
+    #@tasks.loop(seconds=30.0)
+    async def reset(self):
+        #print(dir(self._interaction))
+        print('Resetting Buttons...')
+        self.label = self._label
+        self.disabled = False
+        await self._interaction.followup.edit_message(message_id=self._interaction.message.id,view=self._view)
+
+
 
 class StopButton(CustomButton):
-    def __init__(self,server,view):
-        super().__init__(server=server,view=view,label='Stop', callback_label='Stopping...',callback_disabled=True,style=discord.ButtonStyle.red)
+    def __init__(self,server,view,function):
+        super().__init__(server=server,view=view,function=function,label='Stop', callback_label='Stopping...',callback_disabled=True,style=discord.ButtonStyle.red)
 
 class RestartButton(CustomButton):
-    def __init__(self,server,view):
-        super().__init__(server=server,view=view,label='Restart', callback_label='Restarting...',callback_disabled=True,style=discord.ButtonStyle.blurple)
+    def __init__(self,server,view,function):
+        super().__init__(server=server,view=view,function=function,label='Restart', callback_label='Restarting...',callback_disabled=True,style=discord.ButtonStyle.blurple)
 
-class KillButton(Button):
-    def __init__(self,server,view):
-        super().__init__(server=server,view=view,label='Kill', callback_label='Killed...', callback_disabled=True,style=discord.ButtonStyle.danger)
+class KillButton(CustomButton):
+    def __init__(self,server,view,function):
+        super().__init__(server=server,view=view,function=function,label='Kill', callback_label='Killed...', callback_disabled=True,style=discord.ButtonStyle.danger)
     
 class StatusView(View):
     def __init__(self,timeout=180):

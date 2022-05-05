@@ -59,24 +59,20 @@ async def on_user_update(user_before,user_after):
     logger.info(f'Edited User: {user_before} into {user_after}')
     return user_before,user_after
 
-#This will be my on_message event handler..
 @client.listen('on_message')
-#@client.event()
 async def on_message(message):
     if message.content.startswith(prefix):
         return message
-    if message.author == client.user:
+    if message.author != client.user:
+        logger.info(f'On Message Event {os.path.basename(__file__)}: {message}')
         return message
-    logger.info(f'On Message Event {os.path.basename(__file__)}: {message}')
-    #print(message.content)
-    return message
-
-#This is called when a message in any channel of the guild is edited. Returns <message> object.
+   
 @client.event
 async def on_message_edit(message_before,message_after):
     """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-    logger.info(f'Edited Message {os.path.basename(__file__)}: {message_before} into {message_after}')
-    return message_before,message_after
+    if message_before.author != client.user:
+        logger.info(f'Edited Message {os.path.basename(__file__)}: {message_before} into {message_after}')
+        return message_before,message_after
 
 @client.event
 async def on_reaction_add(reaction,user):

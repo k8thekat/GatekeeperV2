@@ -24,9 +24,9 @@ class AMP_Module(commands.Cog):
     async def on_message(self,message):
         if message.content.startswith(self._client.command_prefix):
             return message
-        if message.author == self._client.user:
+        if message.author != self._client.user:
+            self.logger.info(f'On Message {os.path.basename(__file__)}: {message}')
             return message
-        self.logger.info(f'On Message {os.path.basename(__file__)}: {message}')
 
     @commands.Cog.listener('on_user_update')
     async def on_user_update(self,user_before,user_after):
@@ -111,8 +111,10 @@ class AMP_Module(commands.Cog):
         print(parameter)
         server = await self.uBot.serverparse(context,context.guild.id,(parameter))
         view = utils.StatusView()
-        utils.CustomButton(server,view,'Start',callback_label='Starting...',callback_disabled=True)
-        utils.StopButton(server,view)
+        utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)
+        utils.StopButton(server,view,server.StopInstance)
+        utils.RestartButton(server,view,server.RestartInstance)
+        utils.KillButton(server,view,server.KillInstance)
         msg = self.uBot.default_embedmsg(context,title= server.FriendlyName,description='Test Embed',field='Status',field_value='**6/10 Players**')
         await context.send(embed=msg)
         await context.send(view=view)
