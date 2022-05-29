@@ -1,5 +1,7 @@
 from datetime import datetime
 import logging
+import json
+import requests
 
 import discord
 from discord.ext import commands,tasks
@@ -10,7 +12,9 @@ import bot_config
 import modules.database as DB
 import modules.AMP as AMP
 
-async def async_rolecheck(context):
+import test
+
+async def async_rolecheck(context: discord.Interaction):
     logger = logging.getLogger(__name__)
     staff_role,author_top_role = 0,0
     guild_roles = context.guild.roles
@@ -63,20 +67,16 @@ class CustomButton(Button):
         self.label = self.callback_label
         self.disabled = self.callback_disabled
         await interaction.response.edit_message(view=self._view)
-        print('Run my Command')
-        #self._function()
+        self._function()
         await asyncio.sleep(30)
         await self.reset()
 
     #@tasks.loop(seconds=30.0)
     async def reset(self):
-        #print(dir(self._interaction))
         print('Resetting Buttons...')
         self.label = self._label
         self.disabled = False
         await self._interaction.followup.edit_message(message_id=self._interaction.message.id,view=self._view)
-
-
 
 class StopButton(CustomButton):
     def __init__(self,server,view,function):
@@ -195,10 +195,14 @@ class botUtils():
             self._client = client
             self.logger = logging.getLogger(__name__)
             self.logger.info('Bot Utilities Loaded')
+
             self.DB = DB.getDatabase()
+            self.DBconfig = self.DB.GetConfig()
+
             self.AMPInstances = AMP.AMP_Instances
 
-        async def roleparse(self,context,guild_id:int,parameter:str): 
+
+        async def roleparse(self,context,guild_id:int,parameter:str) -> discord.Role: 
             """This is the bot utils Role Parse Function\n
             It handles finding the specificed Discord `<role>` in multiple different formats.\n
             They can contain single quotes, double quotes and underscores. (" ",' ',_)\n
@@ -231,10 +235,10 @@ class botUtils():
                     if role.name.lower() == parameter.lower():
                         self.logger.debug('Found the Discord Role {role}')
                         return role
-                await context.send(f'Unable to find the Discord Role: {parameter}')
+                await context.reply(f'Unable to find the Discord Role: {parameter}')
                 return None
 
-        async def channelparse(self,context,guild_id:int,parameter:str):
+        async def channelparse(self,context,guild_id:int,parameter:str) -> discord.TextChannel:
             """This is the bot utils Channel Parse Function\n
             It handles finding the specificed Discord `<channel>` in multiple different formats, either numeric or alphanumeric.\n
             returns `<channel>` object if True, else returns `None`
@@ -254,10 +258,10 @@ class botUtils():
                         return channel
                 else:
                     self.logger.error('Unable to Find the Discord Channel')
-                    await context.send(f'Unable to find the Discord Channel: {parameter}')
+                    await context.reply(f'Unable to find the Discord Channel: {parameter}')
                     return None
         
-        async def userparse(self,context,guild_id:int,parameter: str):
+        async def userparse(self,context,guild_id:int,parameter: str) -> discord.Member:
             """This is the bot utils User Parse Function\n
             It handles finding the specificed Discord `<user>` in multiple different formats, either numeric or alphanumeric.\n
             It also supports '@', '#0000' and partial display name searching for user indentification (eg. k8thekat#1357)\n
@@ -297,14 +301,14 @@ class botUtils():
                     if member.display_name.lower().startswith(parameter.lower()) or (member.display_name.lower().find(parameter.lower()) != -1):
                         if cur_member != None:
                             self.logger.error('Found multiple Discord Members: {parameter}, Returning None')
-                            await context.send('Found multiple Discord Members matching that name, please be more specific.')
+                            await context.reply('Found multiple Discord Members matching that name, please be more specific.')
                             return None
 
                         self.logger.debug('Found the Discord Member {member.display_name}')
                         cur_member = member
                 return cur_member
                 
-        async def serverparse(self,context,guild_id:int,parameter):
+        async def serverparse(self,context,guild_id:int,parameter) -> AMP.AMPInstance:
             """This is the botUtils Server Parse function.
             **Note** Use context.guild.id \n
             Returns `AMPInstance[server] <object>`"""
@@ -321,7 +325,7 @@ class botUtils():
                 if var != -1:
                     if cur_server != None:
                         self.logger.error('Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
-                        await context.send('Found multiple AMP Servers matching the provided name, please be more specific.')
+                        await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
                         return None
 
                     self.logger.debug(f'Found the AMP Server {self.AMPInstances[server].FriendlyName}')
@@ -329,20 +333,75 @@ class botUtils():
 
             return cur_server #AMP instance object 
 
+        async def name_to_UUID(self,context,name): 
+            """Converts an IGN to a UUID/Name Table \n
+            Can Handle Context and Message
+            `returns [{'id': 'uuid', 'name': 'name'}]` else returns `None`"""
+            url = 'https://api.mojang.com/profiles/minecraft'
+            header = {'Content-Type': 'application/json'}
+            jsonhandler = json.dumps(name)
+            post_req = requests.post(url, headers=header, data=jsonhandler)
+            minecraft_user = post_req.json()
+            if len(minecraft_user) != 0: #True if it exists and False if it doesnt.
+                return minecraft_user #returns [{'id': 'uuid', 'name': 'name'}] 
+            else:
+                await context.reply(f'The User Name {name} does not exists, please verify your In-Game-Name.')
+                return None
+
+        async def UUID_name_history(self,context,mc_user_uuid):
+            """WTF Does this even return? Possible a Dictionary List?"""
+            url = f'https://api.mojang.com/user/profiles/{mc_user_uuid}/names'
+            post_req = requests.get(url)
+            return post_req.json()[-1]
+
         def sub_command_handler(self,command:str,sub_command):
             """This will get the `Parent` command and then add a `Sub` command to said `Parent` command."""
             parent_command = self._client.get_command(command)
             self.logger.info(f'Loading Parent Command: {parent_command}')
             parent_command.add_command(sub_command)
         
-        def default_embedmsg(self,context,title,description=None,field=None,field_value=None):
+        def default_embedmsg(self,title,context,description=None,field=None,field_value=None):
+            """This Embed has only one Field Entry."""
             embed=discord.Embed(title=title, description=description, color=0x808000)
             embed.set_author(name=context.author.display_name, icon_url=context.author.avatar)
             embed.add_field(name=field, value=field_value, inline=False)
             return embed
-           
+
+        def server_basic_embed(self,context):
+            """This Embed is for Server Displays"""
+            embed=discord.Embed(title=f'Server List for {context.guild.name}', color=0x00ff00)
+            embed_fieldindex = 0
+            embed_list = []
+            for server in AMP.AMP_Instances:
+                server = AMP.AMP_Instances[server]
+                
+                #db_server = self.DB.GetServer(server.InstanceID)
+                db_server = test.DB_Spoof()
+                #temp
+                if db_server != None:
+                    embed.set_thumbnail(url=context.guild.icon)
+                    embed.add_field(name='\u1CBC\u1CBC',value = '========={server.FriendlyName}=========',inline=False)
+                    embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
+                    embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
+                    embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
+                    embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
+                embed_fieldindex += 5
+                
+                if embed_fieldindex == 25:
+                    embed_list.append(embed)
+                    embed_fieldindex = 0
+                    embed=discord.Embed(title=f'Continued Server List for {context.guild.name}', color=0x00ff00)
+
+            if embed_fieldindex != 0:
+                embed_list.append(embed)
+            return embed_list
+
         def server_status_embed(self,context,server,TPS,Users,CPU,Memory,Uptime,Users_Online):
-            embed=discord.Embed(title=f'{server.FriendlyName}', description='Server Stats', color=0x00ff40)
+            if server.Running:
+                server_status = 'Online'
+            else:
+                server_status = 'Offline'
+            embed=discord.Embed(title=f'{server.FriendlyName}', description=f'Instance Status: **{server_status}**', color=0x00ff40)
             embed.set_thumbnail(url=context.guild.icon)
             embed.add_field(name='TPS', value=TPS, inline=True)
             embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
@@ -352,3 +411,16 @@ class botUtils():
             embed.add_field(name='Players Online', value=Users_Online, inline=False)
             return embed
 
+        def server_whitelist_embed(self,context,server):
+            embed=discord.Embed(title=f'{server.FriendlyName}', color=0x00ff00)
+            #users_online = server.getUserList()
+            #!TODO! Update Database
+            db_server = test.DB_Spoof()
+            users_online = ', '.join(db_server.users)
+            #temp
+            if db_server != None:
+                embed.set_thumbnail(url=context.guild.icon)
+                embed.add_field(name='IP: ', value=db_server.IP, inline=False)
+                embed.add_field(name='Users Online:' , value=users_online, inline=False)
+            return embed
+                

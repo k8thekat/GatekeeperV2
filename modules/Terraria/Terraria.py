@@ -24,9 +24,9 @@ class Terraria(commands.Cog):
     async def on_message(self,message):
         if message.content.startswith(self._client.command_prefix):
             return message
-        if message.author.bot == True:
+        if message.author != self._client.user:
+            self.logger.info(f'On Message Event for {self.name}')
             return message
-        print(f'On Message {self.name}: {message}')
 
     @commands.Cog.listener('on_user_update')
     async def on_user_update(self,user_before,user_after):
@@ -38,8 +38,9 @@ class Terraria(commands.Cog):
     @commands.Cog.listener('on_message_edit')
     async def on_message_edit(self,message_before,message_after):
         """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        self.logger.info(f'Edited Message {self.name}: {message_before} into {message_after}')
-        return message_before,message_after
+        if message_before.author != self._client.user:
+            self.logger.info(f'Edited Message Event for {self.name}')
+            return message_before,message_after
 
     @commands.Cog.listener('on_reaction_add')
     async def on_reaction_add(self,reaction,user):
@@ -76,5 +77,5 @@ class Terraria(commands.Cog):
     # async def bot_init(self,context):
     #     print('cog init test')
 
-def setup(client):
-    client.add_cog(Terraria(client))
+async def setup(client):
+    await client.add_cog(Terraria(client))

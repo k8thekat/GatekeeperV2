@@ -4,7 +4,8 @@ tokens.py
 copyright.txt
 class_examples.py
 db-howto.txt
-test.py
+test*
+**/test*
+**/cog_template*
 todo.txt
-Gatekeeper.db
-
+hybrid*

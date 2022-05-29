@@ -65,9 +65,10 @@ def getAMP():
 def moduleHandler():
     """Do NOT USE; purely for testing Purpose"""
     for instance in AMP_Instances:
+        print(dir(AMP_Instances[instance]))
         #print('header',AMP_Instances[instance].AMPheader)
         #print('installed version',AMP_Instances[instance].InstalledVersion)
-        pprint(AMP_Instances[instance].serverdata)
+        #pprint(AMP_Instances[instance].serverdata)
 
 def instanceCheck():
     """Checks for any new Instances since after startup. `(Advise using this in some sort of loop every so often)`\n
@@ -207,9 +208,14 @@ class AMPInstance:
         if len(result["result"][0]['AvailableInstances']) != 0:
             InstancesFound = True
             for i in range(0,len(result["result"][0]['AvailableInstances'])): #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
-                entry = result["result"][0]['AvailableInstances'][i]
-                server = AMPInstance(entry['InstanceID'],entry,Index = i)
-                serverlist[server.InstanceID] = server 
+                entry = result["result"][0]['AvailableInstances'][i]  
+                if entry['Module'] == 'Minecraft':
+                    from modules.Minecraft.amp_minecraft import AMPMinecraft as AMPMC
+                    server = AMPMC(entry['InstanceID'],entry,Index = i)
+                else:
+                    server = AMPInstance(entry['InstanceID'],entry,Index = i)
+                serverlist[server.InstanceID] = server
+
             return serverlist
         else:
             InstancesFound = False
@@ -312,8 +318,8 @@ class AMPInstance:
     # Test AMP API calls with this function
     def getAPItest(self):
         parameters = {}
-        result = self.CallAPI('Core/GetUserList', parameters)
-        pprint(result)
+        result = self.CallAPI('Core/GetModuleInfo', parameters)
+        #pprint(result)
         return result
 
     @Login

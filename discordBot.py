@@ -21,6 +21,7 @@
 '''
 from datetime import datetime
 import discord
+from discord import Guild, app_commands
 from discord.ext import commands
 import tokens
 import os,sys
@@ -36,21 +37,29 @@ import gitUpdate
 import utils
 import modules.AMP as AMP
 import modules.database as database
+import modules.db_module as db_module
 
 Version = 'alpha-0.0.1'
+bot_logger.init()
+logger = logging.getLogger(__name__)
 
 #Discord Specific
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-
 prefix = '$'
 client = commands.Bot(command_prefix= prefix, intents = intents)
-logger = logging.getLogger(__name__)
+#command_tree = app_commands.CommandTree(client = client)
 
+
+@client.event
+async def setup_hook():
+    await initbot()
+    
 @client.event
 async def on_ready():
     logger.info('Are you the Keymaster?...I am the Gatekeeper')
+    client.tree.copy_global_to(guild=client.get_guild(bot_config.Guild_ID))
     #client.is_ready() #Lets wait to start this until the bot has fully setup.
     return
 
@@ -64,9 +73,9 @@ async def on_message(message):
     if message.content.startswith(prefix):
         return message
     if message.author != client.user:
-        logger.info(f'On Message Event {os.path.basename(__file__)}: {message}')
+        logger.info(f'On Message Event for {os.path.basename(__file__)}')
         return message
-   
+
 @client.event
 async def on_message_edit(message_before,message_after):
     """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
@@ -92,60 +101,75 @@ async def on_member_remove(member):
     logger.info(f'Member Removed {os.path.basename(__file__)}: {member}')
     return member
 
-@client.group()
+@client.hybrid_group(name='bot')
 @utils.role_check()
-async def bot(context):
-    print('Bot Command')
+async def main_bot(context):
+    #print('Bot Command')
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...')
 
-@bot.command(name='test',description='Test Async Function...')
-async def test(context):
-    """ This is my TEST command"""
-    logger.setLevel(logger.DEBUG)
-    #cog = test_cog(client)
-    #await cog.test()
-    #client.load_extension('modules.cogs.testcog')
-    #import bot_test
-    #tBot = bot_test.TestingBot(client)
-    #await tBot.test()
+@main_bot.command(name='test',description='Test Async Function...')
+@utils.role_check()
+async def bot_test(context):
+    """Test Async Function...**DO NOT USE**"""
+    print(dir(context.interaction))
+    print(dir(context.interaction.followup))
+    print(dir(context.interaction.user))
+    print(dir(context.interaction.guild))
+    print(dir(context.interaction.response))
+    print(dir(context.interaction.message))
+    await context.send('Test Function Used')
+    #await client.load_extension('modules.cogs.testcog')
+    #await client.load_extension('modules.cogs.testcog2')
 
-@bot.command(name='ping',description='Pong...')
+@main_bot.command(name='ping',description='Pong...')
+@utils.role_check()
 async def bot_ping(context):
+    """Pong.."""
     await context.send(f'Pong {round(client.latency * 1000)}ms')
 
-@bot.command(name='load',description='Loads a Cog')
-async def bot_cog_loader(self,context,cog:str):
+@main_bot.command(name='load',description='Loads a Cog')
+@utils.role_check()
+async def bot_cog_loader(context,cog:str):
+    """Use this function for loading a cog manually."""
     try:
-        self._client.load_extension(name= cog)
+        client.load_extension(name= cog)
     except Exception as e:
         await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}')
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
-@bot.command(name='unload',description='Unloads a Cog')
-async def bot_cog_unloader(self,context,cog:str):
+@main_bot.command(name='unload',description='Unloads a Cog')
+@utils.role_check()
+async def bot_cog_unloader(context,cog:str):
+    """Use this function to un-load a cog manually."""
     try:
-        self._client.unload_extension(name= cog)
+        client.unload_extension(name= cog)
     except Exception as e:
         await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}')
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
-@bot.command(name='settings',description='Settings to control specific features of the discordBot.')
-async def bot_setting(context,*parameter):
-    """This will access and house all the bot specific settings."""
+@main_bot.command(name='settings',description='Settings to control specific features of the discordBot.')
+@utils.role_check()
+async def bot_setting(context):
+    """Settings to control specific features of the discordBot."""
     logger.info('Bot Settings Called...')
-    return
+    if main_DB:
+        db_module.db_bot_settings()
+    return await context.send('Bot Settings here...')
 
-@bot.command(name='disconnect',description='Closes the connection to Discord')
-async def bot_stop(context,*args):
+@main_bot.command(name='disconnect',description='Closes the connection to Discord')
+@utils.role_check()
+async def bot_stop(context):
     """Closes the connection to Discord."""
     logger.info('Bot Stop Called...')
-    await client.close()
+    await context.send('Disconnecting from the Server...')
+    return await client.close()
 
-@bot.command(name='restart',description='Restarts the bot...')
-async def bot_restart(context,*args):
+@main_bot.command(name='restart',description='Restarts the bot...')
+@utils.role_check()
+async def bot_restart(context):
     """This is the discordBot restart function\n
     Requires the discordBot to be run in a Command/PowerShell Window ONLY!"""
     logger.info('Bot Restart Called...')
@@ -155,108 +179,53 @@ async def bot_restart(context,*args):
     sys.stdout.flush()
     os.execv(sys.executable, ['python3'] + sys.argv)
 
-@bot.command(name='status',description='Status of the bot...')
-async def bot_status(context, *args):
-    print('Bot Status')
+@main_bot.command(name='status',description='Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)')
+@utils.role_check()
+async def bot_status(context):
+    """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
+    await context.send(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}\nAMP Connected: {AMP.SuccessfulConnection} // SQL Database: {database.SuccessfulDatabase}')
 
-@bot.command(name='sync',description='Syncs Bot Commands...')
-async def bot_sync(context,*args):
+@main_bot.command(name='sync',description='Syncs Bot Commands to the current guild this command was used in.')
+@utils.role_check()
+async def bot_sync(context):
+    """Syncs Bot Commands to the current guild this command was used in."""
     client.tree.copy_global_to(guild=context.guild)
-    await client.tree.sync(guild=context.guild)
+    logger.info(f'Bot Commands Sync: {await client.tree.sync(guild=context.guild)}')
+    await context.send('Successfully Syncd Bot Commands')
     
-@bot.command(name='update',description='Checks for Updates...')
-async def bot_update(context,*args):
+@main_bot.command(name='update',description='Checks for gitHub Updates...')
+@utils.role_check()
+async def bot_update(context):
+    """Checks for gitHub Updates..."""
     gitUpdate.githubUpdate
+    await context.send('Updating the Bot...')
 
-@bot.command(name='log',description='Bot Debugging')
-async def bot_log_level(context,*args):
+@main_bot.command(name='log',description='Changes the Bot Logging level to specified level')
+@utils.role_check()
+async def bot_log_level(context,level:str):
     """This needs more Testing, Use this to adjust Logging Level"""
-    logger.info(f'Set Logging level %s',args[0].upper())
-    logger.setLevel(args[0].upper())
+    logger.info(f'Set Logging level %s',level.upper())
+    logger.setLevel(level.upper())
+    await context.send(f'Adjusted Logging Level to {level.upper()}')
 
-@client.group()
-@utils.role_check()
-async def user(context):
-    if context.invoked_subcommand is None:
-        await context.send('Please try your command again...')
-
-@user.command(name='test')
-async def userTest(context,user:str=None):
-    """User Test Function"""
-    print(dir(context))
-    logger.info('User Test Function')
-    await context.send('User Test')
-
-@user.command(name = 'pardon')
-async def userPardon(context,user:str, reason:str=None):
-    """Un-Bans a User from the Guild/Server.\n
-    Requires a `<user>` discord object.\n
-    Supports `reason`(Optional)"""
-    logger.info('Removing a Users Ban Status...')
-    await context.guild.unban(user,reason)
-
-@user.command(name = 'ban')
-async def userBan(context,user:str ,reason:str=None):
-    """Bans a User from the Guild/Server.\n
-    Requires a `<user>` discord object.\n
-    Supports `reason`(Optional)"""
-    logger.info('Banning User from Server...')
-    await context.guild.ban(user,reason)
-
-@user.command(name = 'kick')
-async def userKick(user: str,reason:str=None):
-    """Kicks a User from the guild.
-    The `<user>` must be a discord user object.\n
-    Supports `reason`(Optional)"""
-    logger.info('Kick Discord User Called...')
-    await client.kick(user,reason)
-
-@client.group()
-@utils.role_check()
-async def gatekeeper(context):
-    if context.invoked_subcommand is None:
-        await context.send('Please try your command again...')
-
-@gatekeeper.command(name='test')
-async def testing(context):
-    logger.info('Gatekeeper Testing Function')
-
-def initbot():
+async def initbot():
     """This is the main startup function..."""
-    global Version
-    bot_logger.init()
-    logger.info('Bot Intializing...')
-    logger.info(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}')
-    #print(f'Bot Intializing...Discord Version: {discord.__version__} Bot Version: {Version}')
-    gitUpdate.init(Version)
-    main_DB = database.init()
-    #!TODO! Currently set to False in database.py
-    if main_DB:
-        client.load_extension('modules.db_module')
+    global main_AMP,main_DB,main_DB_Config
+    #gitUpdate.init(Version)
 
     main_AMP = AMP.init()
     if main_AMP:
-        client.load_extension('modules.amp_module')
+        await client.load_extension('modules.amp_module')
 
-def bot_test():
-    """`*** DO NOT USE ***`"""
-    client.load_extension('modules.cogs.testcog')
-    client.load_extension('modules.cogs.testcog2')
-    #dBot = botclass.discordBot(client)
-    #uBot = botclass.botUtils(client)
-    #if bot_config.AMP == True:
-        #client.load_extension('modules.module')
+    main_DB = database.init()
+    main_DB_Config = main_DB.GetConfig()
+    if main_DB:
+        await client.load_extension('modules.db_module')
+
     import modules.module as module
-    testing = threading.Thread(target=module.init, args = (client,))
-    #testing = threading.Thread(target=module.ModuleHandler.__init__, args = (client,))
-    testing.start()
-    #testing = threading.Thread(target = bot_test.__init__,name = 'Test thread',args= (discordBot,botUtils))
-    #testing.start()
-    #print(async_loop_main)
-    #global async_loop_main
-    #bot_test.__init__(client)#,async_loop_main)
-    #bot_test.test()
-
+    Mod_Handler = module.ModuleHandler(client)
+    await Mod_Handler.cog_auto_loader()
+    #uBot = utils.botUtils(client)
 
 async def thread_loop():
     curtime = datetime.now()
@@ -269,9 +238,9 @@ def client_start():
     async_loop.run_until_complete(client.start(tokens.token, reconnect = True, bot = True))
 
 def client_run():
+    logger.info('Bot Intializing...')
+    logger.info(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}')
     client.run(tokens.token, reconnect = True)# bot = True)
 
-if __name__ == '__main__':
-    initbot()
-    bot_test()
-    client_run()
+
+client_run()

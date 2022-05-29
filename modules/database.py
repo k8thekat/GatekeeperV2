@@ -28,8 +28,9 @@ import time
 import modules.AMP as AMP
 import logging
 
-db = None
 main_Database = None
+main_Database_Config = None
+SuccessfulDatabase = False
 
 def dump_to_json(data):
 	for entry in data:
@@ -40,13 +41,14 @@ def dump_to_json(data):
 	return json.dumps(data)
 
 def init():
-	global main_Database,logger
+	global main_Database,logger,SuccessfulDatabase
 	logger = logging.getLogger(__name__)
 	logger.info('Database Initializion...')
+
 	main_Database = Database()
-	#temp
-	return False
-	#return True
+
+	SuccessfulDatabase = True
+	return True
 
 def getDatabase():
     """Returns the Database <object>"""
@@ -55,25 +57,23 @@ def getDatabase():
         init()
     return main_Database
 
-def cleanupDB():
-	"""This is used to remove un-used DBServer Entries"""
-	logger.info('Database Clean-Up in progress...')
+def dbWhitelistSetup():
 	global main_Database
-	AMP_Instances = AMP.getAMP()
-	db_server_list = main_Database.getAllServers()#This function doesn't exist yet.
-	for server in db_server_list:
-		if server.InstanceID not in AMP_Instances:
-			main_Database.delServer(server)
+	db_config = main_Database.GetConfig()
+	if not main_Database.DBExists:
+		db_config.AddSetting('Whitelist_Channel', None)
+		db_config.AddSetting('WhiteList_Wait_Time', 5)
+		db_config.AddSetting('Auto_Whitelist', False)
 
 class Database:
 	def __init__(self):
-		DBExists = False
-		if os.path.exists("Gatekeeper.db"):
-			DBExists = True
+		self.DBExists = False
+		if os.path.exists("discordBot.db"):
+			self.DBExists = True
 
-		self._db = sqlite3.connect("Gatekeeper.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, check_same_thread=False)
+		self._db = sqlite3.connect("discordBot.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, check_same_thread=False)
 		self._db.row_factory = sqlite3.Row
-		if not DBExists:
+		if not self.DBExists:
 			self._InitializeDatabase()
 			self._InitializeDefaultData()
 
@@ -434,7 +434,10 @@ class Database:
 		return ID
 
 	def GetConfig(self):
-		return DBConfig(self)
+		global main_Database_Config
+		if main_Database_Config == None:
+			main_Database_Config = DBConfig(self)
+		return main_Database_Config
 
 	def _DeleteConfig(self, ConfigID, ConfigName):
 		self._execute("Delete from Config where ID=?", (ConfigID,))
@@ -1033,6 +1036,8 @@ class DBConfig:
 			super().__setattr__(entry["Name"].capitalize(), entry["Value"])
 		cur.close()
 
+	
+
 	def __setattr__(self, name, value):
 		if name in self._ConfigNameToID:
 			super().__setattr__(name, value)
@@ -1047,6 +1052,11 @@ class DBConfig:
 			if (type(val) == str) and val.isnumeric():
 				val = int(val)
 		return val
+
+	#list(self._ConfigNameToID.keys())
+	def GetSettingList(self):
+		settings = list(self._ConfigNameToID.leys())
+		return settings
 
 	def SetSetting(self, name:str, value):
 		name = name.capitalize().replace(" ", "_").replace("-", "_")

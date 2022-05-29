@@ -15,11 +15,12 @@ import modules.AMP as AMP
 CWD = os.getcwd()
 loop = asyncio.new_event_loop()
 loaded = []
+Fin = False
 
-def init(client):
-    while client.is_ready() == False:
-        time.sleep(1)
-    test = ModuleHandler(client)
+# def init(client):
+#     while client.is_ready() == False:
+#         time.sleep(1)
+#     test = ModuleHandler(client)
 
 def testing(client):
     print('Module Testing',client)
@@ -31,16 +32,18 @@ def testing(client):
 class ModuleHandler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
     def __init__(self,client):
-        self.logger = logging.getLogger()
-        self.logger.info('Modules Initializing...')
         self._client = client
+        self.name = os.path.basename(__file__)
+        self.logger = logging.getLogger()
+        self.logger.info(f'{self.name.capitalize()} Initializing...')
         self.AMP = AMP.getAMP()
         self.AMPInstances = AMP.AMP_Instances
-        self.cog_auto_loader()
+        #await self.cog_auto_loader()
+        
 
-    def cog_auto_loader(self):
+    async def cog_auto_loader(self):
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
-        global CWD
+        global CWD,Fin
         #print(f'My Current Working Directory: {CWD}')
         for instance in self.AMPInstances:
             module = self.AMPInstances[instance].Module
@@ -54,12 +57,12 @@ class ModuleHandler():
                     #print('File List', module_file_list)
 
                     for script in module_file_list:
-                        if script.endswith('.py') and not script.startswith('AMP'):
+                        if script.endswith('.py') and not script.lower().startswith('amp'):
                             cog = f'{path}.{script[:-3]}'
                             #print('This is my cog var:',cog)
                             #TODO -- This needs testing.
                             try:
-                                self._client.load_extension(cog) #We will load the scripts like a cog to access the commands and functions.
+                                await self._client.load_extension(cog) #We will load the scripts like a cog to access the commands and functions.
                                 loaded.append(module)
 
                             except Exception as e:
@@ -69,13 +72,14 @@ class ModuleHandler():
                 
                 except FileNotFoundError:
                     try:
-                        self._client.load_extension('modules.GenericModule.Generic')
+                        await self._client.load_extension('modules.GenericModule.Generic')
                         loaded.append(module)
                     except Exception as e:
                         self.logger.error(f'**ERROR** Loading Module **modules.GenericModule.Generic** - {e}')
                     else:
                         self.logger.info(f'**SUCCESS** Loading Module **modules.GenericModule.Generic**')
                         
+        self.logger.info(f'**All Modules Loaded** Un-loading Module Handler')
                 
 
 
