@@ -32,7 +32,7 @@ class Cog_Template(commands.Cog):
             return message
            
     @commands.Cog.listener('on_user_update')
-    async def on_user_update(self,user_before,user_after):
+    async def on_user_update(self,user_before,user_after) -> discord.User:
         """Called when a User updates any part of their Discord Profile; this provides access to the `user_before` and `user_after` <discord.Member> objects."""
         self.logger.info(f'User Update {self.name}: {user_before} into {user_after}')
         return user_before,user_after
@@ -66,21 +66,21 @@ class Cog_Template(commands.Cog):
     #Any COMMAND needs a ROLE CHECK prior unless its a sub_command
     @commands.hybrid_command(name='cog_temp')
     @utils.role_check()
-    async def temp(self,context):
+    async def temp(self,context:commands.Context):
         """cog template command'"""
         self.logger.info('test')
 
     #Example group command for a cog.
     @commands.hybrid_group(name='cog')
     @utils.role_check()
-    async def cog_temp(self,context):
+    async def cog_temp(self,context:commands.Context):
         """ Cog Template Group Command"""
         print('cog temp test')
     
     #Example sub_command for a cog.
     #@commands.app_commands.describe
     @cog_temp.command(name='init')
-    async def cog_init(self,context):
+    async def cog_init(self,context:commands.Context):
         """Cog Template Init Command"""
         print('cog init test')
 

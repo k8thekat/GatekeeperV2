@@ -225,7 +225,8 @@ class AMPInstance:
 
     @Login  
     def ConsoleUpdate(self):
-        """Returns `{'ConsoleEntries':[{'Contents': '/size [<args>]','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`"""
+        """Returns `{'ConsoleEntries':[{'Contents': 'String','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`\n
+        Will post all updates from previous API call of console update"""
         #print('Console update')
         parameters = {}
         # Will post all updates from previous API call of console update.
@@ -233,14 +234,25 @@ class AMPInstance:
         return result
 
     @Login
-    def ConsoleMessage(self,msg):
+    def ConsoleMessage_with_Update(self,msg):
+        """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
         msg = ' '.join(msg)
         parameters = {'message': msg}
         #print(parameters)
         result = self.CallAPI('Core/SendConsoleMessage', parameters)
+        logger.debug(result)
         time.sleep(0.5)
         update = self.ConsoleUpdate()
         return update
+
+    @Login
+    def COnsoleMessage(self,msg):
+        msg = ' '.join(msg)
+        parameters = {'message': msg}
+        #print(parameters)
+        result = self.CallAPI('Core/SendConsoleMessage', parameters)
+        logger.debug(result)
+        return
 
     @Login
     def StartInstance(self):
@@ -435,11 +447,36 @@ class AMPInstance:
         return result
 
     #TODO - Need to fix list
-    def sessionCleanup(self):
-        global SessionIDlist
-        sessions = self.getActiveAMPSessions()
-        for entry in sessions['result']:
-            if entry['Username'] == tokens.AMPUser:
-                if entry['SessionID'] not in SessionIDlist:
-                    self.endUserSession(entry['SessionID'])
+    # def sessionCleanup(self):
+    #     global SessionIDlist
+    #     sessions = self.getActiveAMPSessions()
+    #     for entry in sessions['result']:
+    #         if entry['Username'] == tokens.AMPUser:
+    #             if entry['SessionID'] not in SessionIDlist:
+    #                 self.endUserSession(entry['SessionID'])
+    #     return
+
+    @Login
+    def addWhitelist(self,user):
+        """Base Function for AMP"""
+        return user
+
+    @Login
+    def getWhitelist(self):
+        """Base Function for AMP"""
         return
+
+    @Login
+    def removeWhitelist(self,user):
+        """Base Function for AMP"""
+        return user
+
+    @Login
+    def name_Conversion(self,user):
+        """Base Function for AMP"""
+        return user
+
+    @Login
+    def name_History(self,user):
+        """Base Function for AMP"""
+        return user

@@ -218,7 +218,7 @@ async def initbot():
         await client.load_extension('modules.amp_module')
 
     main_DB = database.init()
-    main_DB_Config = main_DB.GetConfig()
+    main_DB_Config = database.getDatabase().GetConfig()
     if main_DB:
         await client.load_extension('modules.db_module')
 

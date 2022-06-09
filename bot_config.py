@@ -19,3 +19,5 @@ Multiverse_Core = False
 
 #Whitelist Format
 WhitelistFormat = '**IGN**: minecraft_ign \n**SERVER**: servername'
+Whitelist_Pending_Emoji = '941213757026226266'
+Whitelist_Finished_Emoji = '941214285609185300'

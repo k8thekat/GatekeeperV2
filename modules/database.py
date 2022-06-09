@@ -50,20 +50,15 @@ def init():
 	SuccessfulDatabase = True
 	return True
 
-def getDatabase():
-    """Returns the Database <object>"""
-    global main_Database
-    if main_Database == None:
-        init()
-    return main_Database
-
 def dbWhitelistSetup():
 	global main_Database
 	db_config = main_Database.GetConfig()
-	if not main_Database.DBExists:
+	try:
 		db_config.AddSetting('Whitelist_Channel', None)
 		db_config.AddSetting('WhiteList_Wait_Time', 5)
 		db_config.AddSetting('Auto_Whitelist', False)
+	except:
+		logger.error('DB_Config Whitelist Settings already set.')
 
 class Database:
 	def __init__(self):
@@ -1084,3 +1079,12 @@ class DBConfig:
 		self._db._DeleteConfig(self._ConfigNameToID[name], name)
 		super().__delattr__(name)
 		self._ConfigNameToID.pop(name)
+
+
+
+def getDatabase() -> Database:
+    """Returns the Database <object>"""
+    global main_Database
+    if main_Database == None:
+        init()
+    return main_Database

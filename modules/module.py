@@ -12,10 +12,10 @@ from discord.ext import commands
 #custom scripts
 import modules.AMP as AMP
 
-CWD = os.getcwd()
+#CWD = os.getcwd()
 loop = asyncio.new_event_loop()
 loaded = []
-Fin = False
+
 
 # def init(client):
 #     while client.is_ready() == False:
@@ -33,9 +33,13 @@ class ModuleHandler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
     def __init__(self,client):
         self._client = client
+
+        self._cwd = os.getcwd()
         self.name = os.path.basename(__file__)
+
         self.logger = logging.getLogger()
         self.logger.info(f'{self.name.capitalize()} Initializing...')
+
         self.AMP = AMP.getAMP()
         self.AMPInstances = AMP.AMP_Instances
         #await self.cog_auto_loader()
@@ -43,8 +47,12 @@ class ModuleHandler():
 
     async def cog_auto_loader(self):
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
-        global CWD,Fin
-        #print(f'My Current Working Directory: {CWD}')
+
+        #Just to make it easier; always load the Generic Module
+        await self._client.load_extension('modules.GenericModule.Generic')
+        self.logger.info(f'**SUCCESS** Loading Module **modules.GenericModule.Generic**')
+        loaded.append('Generic')
+
         for instance in self.AMPInstances:
             module = self.AMPInstances[instance].Module
             if module == 'GenericModule':
@@ -53,7 +61,7 @@ class ModuleHandler():
                 #print(module)
                 path = f'modules.{module}' #This gets us to the folder for the module specific scripts to load via the cog.
                 try:
-                    module_file_list = os.listdir(CWD + '\\' + path.replace('.','\\')) #This gets me the list of files in the directory
+                    module_file_list = os.listdir(self._cwd + '\\' + path.replace('.','\\')) #This gets me the list of files in the directory
                     #print('File List', module_file_list)
 
                     for script in module_file_list:
@@ -70,16 +78,18 @@ class ModuleHandler():
                             else:
                                 self.logger.info(f'**SUCCESS** Loading Module **{cog}**')
                 
-                except FileNotFoundError:
-                    try:
-                        await self._client.load_extension('modules.GenericModule.Generic')
-                        loaded.append(module)
-                    except Exception as e:
-                        self.logger.error(f'**ERROR** Loading Module **modules.GenericModule.Generic** - {e}')
-                    else:
-                        self.logger.info(f'**SUCCESS** Loading Module **modules.GenericModule.Generic**')
+                except FileNotFoundError as e:
+                    self.logger.error(f'**ERROR** Loading Module ** - File Not Found {e}')
+
+                #     # try:
+                #     #     await self._client.load_extension('modules.GenericModule.Generic')
+                #     #     loaded.append(module)
+                #     except Exception as e:
+                #         self.logger.error(f'**ERROR** Loading Module **modules.GenericModule.Generic** - {e}')
+                #     else:
+                #         self.logger.info(f'**SUCCESS** Loading Module **modules.GenericModule.Generic**')
                         
-        self.logger.info(f'**All Modules Loaded** Un-loading Module Handler')
+        self.logger.info(f'**All Modules Loaded**')
                 
 
 
