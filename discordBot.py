@@ -37,7 +37,7 @@ import gitUpdate
 import utils
 import modules.AMP as AMP
 import modules.database as database
-import modules.db_module as db_module
+import modules.DB_module as DB_module
 
 Version = 'alpha-0.0.1'
 bot_logger.init()
@@ -156,7 +156,7 @@ async def bot_setting(context):
     """Settings to control specific features of the discordBot."""
     logger.info('Bot Settings Called...')
     if main_DB:
-        db_module.db_bot_settings()
+        DB_module.db_bot_settings()
     return await context.send('Bot Settings here...')
 
 @main_bot.command(name='disconnect',description='Closes the connection to Discord')
@@ -213,14 +213,14 @@ async def initbot():
     global main_AMP,main_DB,main_DB_Config
     #gitUpdate.init(Version)
 
-    main_AMP = AMP.init()
+    main_AMP = AMP.init(client)
     if main_AMP:
-        await client.load_extension('modules.amp_module')
+        await client.load_extension('modules.AMP_module')
 
     main_DB = database.init()
     main_DB_Config = database.getDatabase().GetConfig()
     if main_DB:
-        await client.load_extension('modules.db_module')
+        await client.load_extension('modules.DB_module')
 
     import modules.module as module
     Mod_Handler = module.ModuleHandler(client)

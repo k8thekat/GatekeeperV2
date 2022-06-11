@@ -348,7 +348,7 @@ class botUtils():
             embed.add_field(name=field, value=field_value, inline=False)
             return embed
 
-        def server_basic_embed(self,context:commands.Context) -> list:
+        def server_list_embed(self,context:commands.Context) -> list:
             """This Embed is for Server Displays"""
             embed=discord.Embed(title=f'Server List for {context.guild.name}', color=0x00ff00)
             embed_fieldindex = 0
@@ -361,7 +361,8 @@ class botUtils():
                 db_server = test.DB_Spoof()
                 if db_server != None:
                     embed.set_thumbnail(url=context.guild.icon)
-                    embed.add_field(name='\u1CBC\u1CBC',value = '========={server.FriendlyName}=========',inline=False)
+                    #!TODO! Verify server.DisplayName Works!
+                    embed.add_field(name='\u1CBC\u1CBC',value = '========={server.DisplayName}=========',inline=False)
                     embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
                     embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
                     embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)

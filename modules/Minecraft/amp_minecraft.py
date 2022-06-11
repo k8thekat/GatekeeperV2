@@ -1,3 +1,4 @@
+from email.policy import default
 import modules.AMP as AMP
 import requests
 import json
@@ -5,7 +6,9 @@ import json
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0):
-        super().__init__(instanceID, serverdata, Index)
+        super().__init__(instanceID, serverdata, Index, default_console=False)
+
+        #self.Console = MinecraftConsole(self)
         self.APImodule = 'MinecraftModule'
 
     def name_Conversion(self,name): 
@@ -75,3 +78,10 @@ class AMPMinecraft(AMP.AMPInstance):
         parameters = {'id': ID}
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
+
+
+#!TODO! Need to figure the super() Init for the new console.
+# class MinecraftConsole(AMP.AMPConsole):
+#     def __init__(self,AMPInstance = AMPMinecraft):
+#         super().__init__(self,AMPInstance)
+#         self.AMPMinecraft = AMPMinecraft

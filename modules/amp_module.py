@@ -1,10 +1,12 @@
 import os
 import datetime
+from pprint import pprint
 
 import utils
 import modules.AMP as AMP
 import logging
-from pprint import pprint
+import modules.database as DB
+
 
 import discord
 from discord.ext import commands
@@ -17,6 +19,9 @@ class AMP_Module(commands.Cog):
         self.logger = logging.getLogger()
         
         self.AMPInstances = AMP.AMP_Instances
+        self.DB = DB.getDatabase()
+        #self.DBconfig = self.DB.GetConfig()
+
         self.server_list = self.amp_server_list
         self.logger.info(f'{self.name.capitalize()} Module Loaded')
    
@@ -57,7 +62,7 @@ class AMP_Module(commands.Cog):
         #for server in self.AMPInstances:
             #server_list.append(self.AMPInstances[server].FriendlyName)
             #server is the InstanceID (use it as a dictionary key)
-        for embed in self.uBot.server_basic_embed(context):
+        for embed in self.uBot.server_list_embed(context):
             await context.send(embed = embed)
 
     @amp_server.command(name='start',description='Starts the AMP Instance')
@@ -157,5 +162,9 @@ class AMP_Module(commands.Cog):
             await context.send(', '.join(server.getUserList()))
 
     
+    async def amp_server_console_init(self):
+        print()
+
+
 async def setup(client):
     await client.add_cog(AMP_Module(client))
