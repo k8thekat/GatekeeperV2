@@ -25,7 +25,7 @@ import datetime
 import json
 import time
 
-import modules.AMP as AMP
+#import modules.AMP as AMP
 import logging
 
 main_Database = None
@@ -70,35 +70,22 @@ class Database:
 		self._db.row_factory = sqlite3.Row
 		if not self.DBExists:
 			self._InitializeDatabase()
-			self._InitializeDefaultData()
+			#self._InitializeDefaultData()
 
 	def _InitializeDatabase(self):
 		cur = self._db.cursor()
-		cur.execute("""create table Roles (
-						ID integer primary key,
-						DiscordID text not null collate nocase unique
-						)""")
-
-		cur.execute("""create table Permissions (
-						ID integer primary key,
-						Name text not null collate nocase,
-						Description text
-						)""")
-
-		cur.execute("""create table RolePermissions (
-						RoleID integer not null,
-						PermissionID integer not null,
-						foreign key(RoleID) references Roles(ID),
-						foreign key(PermissionID) references Permissions(ID),
-						unique(RoleID, PermissionID)
-						)""")
-
+		
 		cur.execute("""create table Servers (
 						ID integer primary key,
 						InstanceID text not null unique collate nocase,
-						FriendlyName text unique collate nocase,
+						InstanceName text unique collate nocase,
+						DisplayName text,
+						Description text,
+						IP text unique,
 						Whitelist integer not null,
 						Donator integer not null,
+						Console integer not null,
+						Console_Filtered integer not null,
 						DiscordConsoleChannel text nocase,
 						DiscordChatChannel text nocase,
 						DiscordRole text collate nocase
@@ -117,34 +104,8 @@ class Database:
 						DiscordName text collate nocase,
 						IngameName text collate nocase,
 						UUID text unique collate nocase,
-						GlobalBanExpiration timestamp,
-						Donator integer not null,
-						ServerModerator integer not null,
-						TimePlayed integer
-						)""")
-
-		cur.execute("""create table ServerUsers (
-						ID integer primary key,
-						ServerID integer not null,
-						UserID integer not null,
-						Whitelisted integer not null,
-						LastLogin timestamp,
-						SuspensionExpiration timestamp,
-						foreign key(UserID) references Users(ID),
-						foreign key(ServerID) references Servers(ID),
-						unique(ServerID, UserID)
-						)""")
-						
-		cur.execute("""create table UserInfractions (
-						ID integer primary key,
-						UserID integer not null,
-						ServerID integer,
-						ModID integer not null,
-						Note text not null,
-						InfractionDate timestamp default (datetime('now')),
-						foreign key(UserID) references Users(ID),
-						foreign key(ServerID) references Servers(ID),
-						foreign key(ModID) references Users(ID)
+						SteamID text unique collate nocase,
+						Donator integer not null
 						)""")
 
 		cur.execute("""create table Log (
@@ -160,20 +121,6 @@ class Database:
 						)""")
 
 		self._db.commit()
-
-	def _InitializeDefaultData(self):
-		"""
-		cur = self._db.cursor()
-		cur.execute("insert into Permissions(Name, Description) values('Kick', 'Ability to kick users')")
-		cur.execute("insert into Permissions(Name, Description) values('Ban', 'Ability to ban users')")
-		cur.execute("insert into Permissions(Name, Description) values('Whitelist', 'Ability to whitelist users')")
-		cur.execute("insert into Permissions(Name, Description) values('Warn', 'Ability to warn users')")
-		cur.execute("insert into Permissions(Name, Description) values('Restart', 'Ability to restart users')")
-		cur.execute("insert into Permissions(Name, Description) values('ServerConsole', 'Ability to run console commands')")
-		cur.close()
-		self._db.commit()
-		"""
-		return
 
 	def _execute(self, SQL, params):
 		Retry = 0
