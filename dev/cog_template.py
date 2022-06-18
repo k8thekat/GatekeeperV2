@@ -13,13 +13,20 @@ class Cog_Template(commands.Cog):
     def __init__ (self,client):
         self._client = client
         self.name = os.path.basename(__file__)
+
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'{self.name} Module Loaded')
-        self.AMP = AMP.getAMP() #Main AMP object
-        self.AMPInstances = AMP.AMP_Instances #Main AMP Instance Dictionary
+        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
+
+        self.AMPHandler = AMP.getAMPHandler()
+        self.AMP =self.AMPHandler.AMP #Main AMP object
+        self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
+
         self.DB = DB.getDatabase() #Main Database object
+        self.DBCOnfig = self.DB.GetConfig()
+
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
+
         self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
 
     @commands.Cog.listener('on_message')

@@ -208,12 +208,12 @@ async def bot_log_level(context,level:str):
     logger.setLevel(level.upper())
     await context.send(f'Adjusted Logging Level to {level.upper()}')
 
-async def initbot():
+async def  initbot():
     """This is the main startup function..."""
     global main_AMP,main_DB,main_DB_Config
     #gitUpdate.init(Version)
 
-    main_AMP = AMP.init(client)
+    main_AMP = AMP.getAMPHandler()
     if main_AMP:
         await client.load_extension('modules.AMP_module')
 

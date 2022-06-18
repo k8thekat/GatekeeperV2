@@ -14,8 +14,15 @@ class Terraria(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
         self.logger.info(f'{self.name} Module Loaded')
-        self.AMP = AMP.getAMP() #Main AMP object
+
+        
+        self.AMPHandler = AMP.getAMPHandler()
+        self.AMP = self.AMPHandler.AMP #Main AMP object
+        self.AMPInstances = self.AMPHandler.AMP_Instances
+
         self.DB = DB.getDatabase() #Main Database object
+        self.DBConfig = self.DB.GetConfig()
+
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
         #self.uBot.sub_command_handler(self,'user',self.info)

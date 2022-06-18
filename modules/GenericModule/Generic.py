@@ -17,9 +17,11 @@ class Generic(commands.Cog):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'{self.name} Module Loaded')
+        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
 
-        self.AMP = AMP.getAMP() #Main AMP object
+        self.AMPHandler = AMP.getAMPHandler()
+        self.AMP = self.AMPHandler.AMP #Main AMP object
+        
         self.DB = DB.getDatabase() #Main Database object
         self.DBConfig = self.DB.GetConfig() 
 
@@ -158,6 +160,8 @@ class Generic(commands.Cog):
 
         if user_ign or user_server == None:
             await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with this format! \n{self.WL_format}')
+            self.logger.info(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
+            self.failed_whitelist.append(message)
         
         amp_server = self.uBot.serverparse(message,message.guild.id,user_server)
         if amp_server == None:
@@ -166,7 +170,7 @@ class Generic(commands.Cog):
         #!TODO! Need to Handle Failed Whitelist Requests Properply
         user_UUID = amp_server.name_Conversion(user_ign) #Returns None if Multiple or incorrect.
         if user_UUID == None:
-            await message.reply(f'Hey! I am having trouble finding your IGN, please edit your previous message or send another message with an updated IGN')
+            await message.reply(f'Hey! I am having trouble finding your IGN, please edit your previous message or send another message with the correct information!')
             self.logger.info(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
             self.failed_whitelist.append(message)
             return
@@ -177,7 +181,8 @@ class Generic(commands.Cog):
         
         db_server = self.DB.GetServer(amp_server.InstanceID)
 
-        user_check = amp_server.checkWhitelist(user_UUID)
+        #!TODO! Add this function to AMP.py 
+        user_check = amp_server.check_Whitelist(user_UUID)
         if user_check == True:
             await message.reply(f'You are already Whitelisted on {amp_server.FriendlyName}. If this is an error contact Staff, otherwise Have fun! <3')
             self.logger.info(f'Discord User: {message.author.name} is already Whitelisted on {amp_server.FriendlyName}')

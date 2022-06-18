@@ -12,7 +12,7 @@ import bot_config
 import modules.database as DB
 import modules.AMP as AMP
 
-import test
+import test #!TESTING PURPOSE ONLY!
 
 async def async_rolecheck(context: discord.Interaction):
     logger = logging.getLogger(__name__)
@@ -103,7 +103,7 @@ class discordBot():
     def __init__(self,client):
         self.botLogger = logging.getLogger(__name__)
         self._client = client
-        self.botLogger.info(f'Bot Init')
+        self.botLogger.info(f'Utils Discord Loaded')
     
     async def userAddRole(self, user: discord.user, role: discord.role, reason:str=None):
         """Adds a Role to a User.\n
@@ -195,12 +195,13 @@ class botUtils():
         def __init__ (self,client):
             self._client = client
             self.logger = logging.getLogger(__name__)
-            self.logger.info('Bot Utilities Loaded')
+            self.logger.info('Utils Bot Loaded')
 
             self.DB = DB.getDatabase()
             self.DBconfig = self.DB.GetConfig()
 
-            self.AMPInstances = AMP.AMP_Instances
+            self.AMPHandler = AMP.getAMPHandler()
+            self.AMPInstances = self.AMPHandler.AMP_Instances
 
 
         def roleparse(self,context,guild_id:int,parameter:str) -> discord.Role: 

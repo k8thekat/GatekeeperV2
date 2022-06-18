@@ -21,10 +21,11 @@ class DB_Module(commands.Cog):
         self.name = os.path.basename(__file__)
 
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'{self.name.capitalize()} Module Loaded')
+        self.logger.info(f'**SUCESS** Loading Module **{self.name.replace("db","DB")}**')
 
-        self.AMP = AMP.getAMP() #Main AMP object
-        self.AMPInstances = AMP.AMP_Instances #Main AMP Instance Dictionary
+        self.AMPHandler = AMP.getAMPHandler()
+        self.AMP = self.AMPHandler.AMP#Main AMP object
+        self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
         self.DB = DB.getDatabase() #Main Database object
         self.DBConfig = self.DB.GetConfig()

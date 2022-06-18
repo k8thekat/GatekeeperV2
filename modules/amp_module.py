@@ -18,12 +18,16 @@ class AMP_Module(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
         
-        self.AMPInstances = AMP.AMP_Instances
+        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPInstances = self.AMPHandler.AMP_Instances
+
+        self.AMPHandler.set_discord_client(self._client)   #This is to get the Discord Client functionality into AMPHandler and AMPConsole class
+
         self.DB = DB.getDatabase()
         #self.DBconfig = self.DB.GetConfig()
 
         self.server_list = self.amp_server_list
-        self.logger.info(f'{self.name.capitalize()} Module Loaded')
+        self.logger.info(f'**SUCCESS** Loading {self.name.replace("amp","AMP")}')
    
         self.uBot = utils.botUtils(client)
         

@@ -1,12 +1,11 @@
-from email.policy import default
 import modules.AMP as AMP
 import requests
 import json
     
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0):
-        super().__init__(instanceID, serverdata, Index, default_console=False)
+    def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
+        super().__init__(instanceID, serverdata, Index,Handler= Handler)
 
         #self.Console = MinecraftConsole(self)
         self.APImodule = 'MinecraftModule'
@@ -35,23 +34,24 @@ class AMPMinecraft(AMP.AMPInstance):
         post_req = requests.get(url)
         return post_req.json()[-1]
 
-    @AMP.Login
+   
     def addWhitelist(self,User:str):
         """Adds a User to the Whitelist File *Supports UUID or IGN*"""
+        self.Login()
         parameters = {'UserOrUUID': User}
         result = self.CallAPI(f'{self.APIModule}/AddToWhitelist', parameters)
         return result
 
-    @AMP.Login
     def getWhitelist(self):
         """Returns a List of Dictionary Entries of all Whitelisted Users `{'name': 'IGN', 'uuid': '781a2971-c14b-42c2-8742-d1e2b029d00a'}`"""
+        self.Login()
         parameters = {}
         result = self.CallAPI(f'{self.APIModule}/GetWhitelist',parameters)
         return result['result']
 
-    @AMP.Login
     def removeWhitelist(self,User:str):
         """Removes a User from the Whitelist File *Supports UUID or IGN*"""
+        self.Login()
         parameters = {'UserOrUUID': User}
         result = self.CallAPI(f'{self.APIModule}/RemoveWhitelistEntry',parameters)
         return result
@@ -60,21 +60,22 @@ class AMPMinecraft(AMP.AMPInstance):
     def checkWhitelist(self,user_UUID):
         """Checks if the User is already in the whitelist file.
         Returns `True` if the UUID is found."""
+        self.Login()
         server_whitelist = self.getWhitelist()
         for entry in server_whitelist:
             if user_UUID == entry['uuid']:
                 return True
 
-    @AMP.Login
     def getHeadbyUUID(self,UUID:str):
         """Gets a Users Player Head via UUID"""
+        self.Login()
         parameters = {'id': UUID}
         result = self.CallAPI(f'{self.APIModule}/GetHeadByUUID', parameters)
         return result
 
-    @AMP.Login
     def banUserID(self,ID:str):
         """Bans a User from the Server"""
+        self.Login()
         parameters = {'id': ID}
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
