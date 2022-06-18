@@ -36,7 +36,7 @@ import bot_config
 import gitUpdate
 import utils
 import modules.AMP as AMP
-import modules.database as database
+import modules.DB as DB
 import modules.DB_module as DB_module
 
 Version = 'alpha-0.0.1'
@@ -183,7 +183,7 @@ async def bot_restart(context):
 @utils.role_check()
 async def bot_status(context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
-    await context.send(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}\nAMP Connected: {AMP.SuccessfulConnection} // SQL Database: {database.SuccessfulDatabase}')
+    await context.send(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}\nAMP Connected: {AMP.SuccessfulConnection} // SQL Database: {DB.DBHandler.SuccessfulDatabase}')
 
 @main_bot.command(name='sync',description='Syncs Bot Commands to the current guild this command was used in.')
 @utils.role_check()
@@ -212,13 +212,15 @@ async def  initbot():
     """This is the main startup function..."""
     global main_AMP,main_DB,main_DB_Config
     #gitUpdate.init(Version)
+    main_DBHandler = DB.getDBHandler()
+    main_DB = main_DBHandler.DB
+    main_DB_Config = main_DB.GetConfig() #Can point to here or main_DBHandler.DBConfig
 
-    main_AMP = AMP.getAMPHandler()
+    main_AMP = AMP.getAMPHandler().AMP
+
     if main_AMP:
         await client.load_extension('modules.AMP_module')
 
-    main_DB = database.init()
-    main_DB_Config = database.getDatabase().GetConfig()
     if main_DB:
         await client.load_extension('modules.DB_module')
 

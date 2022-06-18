@@ -5,7 +5,7 @@ from pprint import pprint
 import utils
 import modules.AMP as AMP
 import logging
-import modules.database as DB
+import modules.DB as DB
 
 
 import discord
@@ -23,8 +23,9 @@ class AMP_Module(commands.Cog):
 
         self.AMPHandler.set_discord_client(self._client)   #This is to get the Discord Client functionality into AMPHandler and AMPConsole class
 
-        self.DB = DB.getDatabase()
-        #self.DBconfig = self.DB.GetConfig()
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
 
         self.server_list = self.amp_server_list
         self.logger.info(f'**SUCCESS** Loading {self.name.replace("amp","AMP")}')

@@ -9,7 +9,7 @@ from discord.ui import Button,View
 import asyncio
 
 import bot_config
-import modules.database as DB
+import modules.DB as DB
 import modules.AMP as AMP
 
 import test #!TESTING PURPOSE ONLY!
@@ -197,8 +197,9 @@ class botUtils():
             self.logger = logging.getLogger(__name__)
             self.logger.info('Utils Bot Loaded')
 
-            self.DB = DB.getDatabase()
-            self.DBconfig = self.DB.GetConfig()
+            self.DBHandler = DB.getDBHandler()
+            self.DB = self.DBHandler.DB #Main Database object
+            self.DBConfig = self.DBHandler.DBConfig
 
             self.AMPHandler = AMP.getAMPHandler()
             self.AMPInstances = self.AMPHandler.AMP_Instances

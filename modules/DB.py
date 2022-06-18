@@ -24,13 +24,9 @@ import os
 import datetime
 import json
 import time
-
-#import modules.AMP as AMP
 import logging
 
-main_Database = None
-main_Database_Config = None
-SuccessfulDatabase = False
+
 
 def dump_to_json(data):
 	for entry in data:
@@ -40,31 +36,51 @@ def dump_to_json(data):
 			data[entry] = int(data[entry])
 	return json.dumps(data)
 
-def init():
-	global main_Database,logger,SuccessfulDatabase
-	logger = logging.getLogger(__name__)
-	logger.info('Database Initializion...')
+Handler = None
 
-	main_Database = Database()
+class DBHandler():
+	def __init__(self):
+		self.logger = logging.getLogger(__name__)
+		self.logger.info('DB Handler Initialization...')
 
-	SuccessfulDatabase = True
-	return True
+		self.DB = Database(Handler = self)
+		self.DBConfig = self.DB.GetConfig()
+		self.SuccessfulDatabase = True
+	
+	def dbWhitelistSetup(self):
+		"""This is set Default AMP Specific Whitelist Settings"""
+		try:
+			self.DBConfig.AddSetting('Whitelist_Channel', None)
+			self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
+			self.DBConfig.AddSetting('Auto_Whitelist', False)
+		except:
+			self.logger.error('**ERROR** DBConfig Default Whitelist Settings have been set.')
 
-def dbWhitelistSetup():
-	global main_Database
-	db_config = main_Database.GetConfig()
-	try:
-		db_config.AddSetting('Whitelist_Channel', None)
-		db_config.AddSetting('WhiteList_Wait_Time', 5)
-		db_config.AddSetting('Auto_Whitelist', False)
-	except:
-		logger.error('DB_Config Whitelist Settings already set.')
+	def dbConsoleSetup(self):
+		"""This is set Default AMP Specific Console Settings"""
+		try:
+			self.DBConfig.AddSetting('Console', False)
+			self.DBConfig.AddSetting('Console_Filtered', True)
+			self.DBConfig.AddSetting('Discord_Console_Channel', None) #Should be a str, can be an int. eg 289450670581350401
+		except:
+			self.logger.error('**ERROR** DBConfig Default Console Settings have been set.')
+			
+def getDBHandler() -> DBHandler:
+    global Handler
+    if Handler == None:
+        Handler = DBHandler()
+    return Handler
 
 class Database:
-	def __init__(self):
+	def __init__(self,Handler = None):
 		self.DBExists = False
 		if os.path.exists("discordBot.db"):
 			self.DBExists = True
+
+		if Handler:
+			self.DBHandler = Handler
+		else:
+			self.DBHandler = getDBHandler()
 
 		self._db = sqlite3.connect("discordBot.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, check_same_thread=False)
 		self._db.row_factory = sqlite3.Row
@@ -376,10 +392,14 @@ class Database:
 		return ID
 
 	def GetConfig(self):
-		global main_Database_Config
-		if main_Database_Config == None:
-			main_Database_Config = DBConfig(self)
-		return main_Database_Config
+		#global main_Database_Config
+		#if self.DBHandler.DBConfig == None:
+		#if main_Database_Config == None:
+			#main_Database_Config = DBConfig(self)
+		self.DBHandler.DBConfig = DBConfig(self)
+		#return main_Database_Config
+		print('DB Config Get Config', self.DBHandler.DBConfig)
+		return self.DBHandler.DBConfig
 
 	def _DeleteConfig(self, ConfigID, ConfigName):
 		self._execute("Delete from Config where ID=?", (ConfigID,))
@@ -1026,12 +1046,3 @@ class DBConfig:
 		self._db._DeleteConfig(self._ConfigNameToID[name], name)
 		super().__delattr__(name)
 		self._ConfigNameToID.pop(name)
-
-
-
-def getDatabase() -> Database:
-    """Returns the Database <object>"""
-    global main_Database
-    if main_Database == None:
-        init()
-    return main_Database

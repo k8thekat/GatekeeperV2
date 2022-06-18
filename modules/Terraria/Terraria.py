@@ -5,7 +5,7 @@ import logging
 
 import utils
 import modules.AMP as AMP
-import modules.database as DB
+import modules.DB as DB
 
 
 class Terraria(commands.Cog):
@@ -20,8 +20,9 @@ class Terraria(commands.Cog):
         self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances
 
-        self.DB = DB.getDatabase() #Main Database object
-        self.DBConfig = self.DB.GetConfig()
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)

@@ -5,7 +5,7 @@ import logging
 
 import utils
 import modules.AMP as AMP
-import modules.database as DB
+import modules.DB as DB
 import modules.Minecraft.amp_minecraft as AMPMC
 import bot_config
 
@@ -22,8 +22,9 @@ class Minecraft(commands.Cog):
         self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
-        self.DB = DB.getDatabase() #Main Database Class
-        self.DBconfig = self.DB.GetConfig() #Main Database Config Class
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
 
         self.uBot = utils.botUtils(client) #Utilities Class for Embed's and other functionality.
         self.dBot = utils.discordBot(client) #Common Discord Bot functionality (messages/reactions/users)

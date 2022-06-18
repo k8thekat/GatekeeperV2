@@ -35,7 +35,7 @@ import threading
 import importlib.util
 import traceback
 
-import modules.database as database
+import modules.DB as DB
 import tokens
 import utils
 
@@ -54,7 +54,9 @@ class AMPHandler():
         self.SuccessfulConnection = False
         self.InstancesFound = False
 
-        self.DB = database.getDatabase()
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
 
         self.val_settings()
         self.moduleHandler()
@@ -580,7 +582,9 @@ class AMPConsole:
         self.AMPInstance = AMPInstance
         self.AMP_Console_Threads = self.AMPHandler.AMP_Console_Threads
 
-        self.DB = database.getDatabase()
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
         self.DB_Server = self.DB.GetServer(self.AMPInstance.InstanceID)
 
         self.__client = self.AMPHandler.__client
@@ -593,11 +597,9 @@ class AMPConsole:
         try:
             self.console = self.DB_Server.Console
             self.console_filter_level = self.DB_Server.Console_Filtered
-            self.console_channel = self.uBot.channelparse(self.DB_Server.DiscordConsoleChannel)
+            self.console_channel = self.uBot.channelparse(self.DB_Server.Discord_Console_Channel)
         except:
-            self.console = False
-            self.console_filter_level = False
-            self.console_channel = None
+            self.DBHandler.dbConsoleSetup()
 
         self.console_message_list = []
 

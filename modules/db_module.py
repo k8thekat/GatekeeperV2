@@ -6,7 +6,7 @@ from discord.ext import commands
 
 import utils
 import modules.AMP as AMP
-import modules.database as DB
+import modules.DB as DB
 
 
 def db_bot_settings():
@@ -27,8 +27,9 @@ class DB_Module(commands.Cog):
         self.AMP = self.AMPHandler.AMP#Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
-        self.DB = DB.getDatabase() #Main Database object
-        self.DBConfig = self.DB.GetConfig()
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)

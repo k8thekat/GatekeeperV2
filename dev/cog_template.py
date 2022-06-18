@@ -6,7 +6,7 @@ import logging
 
 import utils
 import modules.AMP as AMP
-import modules.database as DB
+import modules.DB as DB
 
 
 class Cog_Template(commands.Cog):
@@ -30,11 +30,15 @@ class Cog_Template(commands.Cog):
         self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
 
     @commands.Cog.listener('on_message')
-    async def on_message(self,message):
+    async def on_message(self,message:discord.Message):
         """Called when a Member/User sends a message in any Channel of the Guild."""
-        if message.content.startswith(self._client.command_prefix):
+        if message.content.startswith(self._client.command_prefix): #This prevents any {prefix}commands from interacting with on_message events
             return message
-        if message.author != self._client.user:
+
+        if message.content.startswith('/'): #This prevents /commands from interacting with on_message events
+            return message
+
+        if message.author != self._client.user: #This prevents the bot from interacting/replying to itself with on_message events
             print(f'On Message Event for {self.name}')
             return message
            

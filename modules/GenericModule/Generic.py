@@ -7,9 +7,10 @@ from discord.ext import commands,tasks
 
 import utils
 import modules.AMP as AMP
-import modules.database as DB
+import modules.DB as DB
 from modules.message_parser import ParseIGNServer
 import bot_config
+
 
 
 class Generic(commands.Cog):
@@ -22,8 +23,9 @@ class Generic(commands.Cog):
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
         
-        self.DB = DB.getDatabase() #Main Database object
-        self.DBConfig = self.DB.GetConfig() 
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
@@ -32,12 +34,15 @@ class Generic(commands.Cog):
 
         #This should help prevent errors in older databases.
         try:
-            self.Auto_WL = self.DBConfig.auto_whitelist
-            self.WL_channel = self.DBConfig.whitelist_channel
-            self.WL_delay = self.DBConfig.whitelist_wait_time #Should only be an INT value; all values in Minutes.
+            self.Auto_WL = self.DBConfig.Auto_whitelist
+            print(self.Auto_WL)
+            self.WL_channel = self.DBConfig.Whitelist_channel #DBConfig is Case sensitive.
+            print(self.WL_channel)
+            self.WL_delay = self.DBConfig.Whitelist_wait_time #Should only be an INT value; all values in Minutes.
+            print(self.WL_delay)
 
         except:
-            DB.dbWhitelistSetup()
+            self.DBHandler.dbWhitelistSetup()
         
         self.failed_whitelist = []
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
@@ -48,15 +53,21 @@ class Generic(commands.Cog):
 
 
     @commands.Cog.listener('on_message')
-    async def on_message(self,message):
+    async def on_message(self,message:discord.Message):
         if message.content.startswith(self._client.command_prefix):
             return message
+
+        if message.content.startswith('/'):
+            return message
+
         if message.author != self._client.user:
             self.logger.info(f'On Message Event for {self.name}')
             return message
-        if message.channel.id == self.WL_channel:
-            print('Minecraft Whitelist Channel Message Found')
+
+        if message.channel.id == self.WL_channel: #This is AMP Specific; for handling whitelist requests to any server.
+            print(f'{self.name} Whitelist Channel Message Found')
             self.on_message_whitelist(message)
+        
 
     @commands.Cog.listener('on_user_update')
     async def on_user_update(self,user_before:discord.User,user_after:discord.User):
