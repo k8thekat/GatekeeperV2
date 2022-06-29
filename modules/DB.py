@@ -26,6 +26,8 @@ import json
 import time
 import logging
 
+from modules.AMP import AMPInstance
+
 
 
 def dump_to_json(data):
@@ -56,14 +58,18 @@ class DBHandler():
 		except:
 			self.logger.error('**ERROR** DBConfig Default Whitelist Settings have been set.')
 
-	def dbConsoleSetup(self):
+	def dbServerConsoleSetup(self,server:AMPInstance):
 		"""This is set Default AMP Specific Console Settings"""
+		self.DB_Server = self.DB.GetServer(server.InstanceID)
 		try:
-			self.DBConfig.AddSetting('Console', False)
-			self.DBConfig.AddSetting('Console_Filtered', True)
-			self.DBConfig.AddSetting('Discord_Console_Channel', None) #Should be a str, can be an int. eg 289450670581350401
+			self.DB_Server.Console_Flag = False
+			self.DB_Server.Console_Filtered = True
+			self.DB_Server.Discord_Console_Channel = None #Should be a str, can be an int. eg 289450670581350401
 		except:
-			self.logger.error('**ERROR** DBConfig Default Console Settings have been set.')
+			self.logger.error(f'**ERROR** DBConfig Default Console Settings have been set for {server.FriendlyName}')
+
+	def dbServerPopulate(self,server:AMPInstance):
+		"""This will grab all the DB Information on the specific server and return the information"""
 			
 def getDBHandler() -> DBHandler:
     global Handler
@@ -100,11 +106,11 @@ class Database:
 						IP text unique,
 						Whitelist integer not null,
 						Donator integer not null,
-						Console integer not null,
+						Console_Flag integer not null,
 						Console_Filtered integer not null,
-						DiscordConsoleChannel text nocase,
-						DiscordChatChannel text nocase,
-						DiscordRole text collate nocase
+						Discord_Console_Channel text nocase,
+						Discord_Chat_Channel text nocase,
+						Discord_Role text collate nocase
 						)""")
 
 		cur.execute("""create table ServerNicknames (
@@ -187,113 +193,114 @@ class Database:
 		jdata = dump_to_json({"Type": "UserUpdate", "UserID": dbuser.ID, "Field": entry, "Value": args[entry]})
 		self._logdata(jdata)
 
-	def _UpdateServerUser(self, dbserveruser, **args):
-		#get the property to update
-		entry = list(args.keys())[0]
-		self._execute(f"Update serverusers set {entry}=? where ID=?", (args[entry], dbserveruser.ID))
-		jdata = dump_to_json({"Type": "ServerUserUpdate", "ServerID": dbserveruser.GetServer().ID, "UserID": dbserveruser.GetUser().ID, "Field": entry, "Value": args[entry]})
-		self._logdata(jdata)
+	# def _UpdateServerUser(self, dbserveruser, **args):
+	# 	#get the property to update
+	# 	entry = list(args.keys())[0]
+	# 	self._execute(f"Update serverusers set {entry}=? where ID=?", (args[entry], dbserveruser.ID))
+	# 	jdata = dump_to_json({"Type": "ServerUserUpdate", "ServerID": dbserveruser.GetServer().ID, "UserID": dbserveruser.GetUser().ID, "Field": entry, "Value": args[entry]})
+	# 	self._logdata(jdata)
 
-	def AddPermission(self, Name:str, Description:str=None):
-		Name = Name.capitalize().replace(" ", "_")
-		self._execute(f"Insert into Permissions(Name, Description) Values(?, ?)", (Name, Description))
-		jdata = dump_to_json({"Type": "AddPermission", "Name": Name, "Description": Description})
-		self._logdata(jdata)
+	# def AddPermission(self, Name:str, Description:str=None):
+	# 	Name = Name.capitalize().replace(" ", "_")
+	# 	self._execute(f"Insert into Permissions(Name, Description) Values(?, ?)", (Name, Description))
+	# 	jdata = dump_to_json({"Type": "AddPermission", "Name": Name, "Description": Description})
+	# 	self._logdata(jdata)
 
-	def UpdatePermission(self, Name:str, NewDescription:str):
-		Name = Name.capitalize().replace(" ", "_")
-		self._execute(f"Update Permissions set Description=? where Name=?", (NewDescription, Name))
-		jdata = dump_to_json({"Type": "UpdatePermission", "Name": Name, "Description": NewDescription})
-		self._logdata(jdata)
+	# def UpdatePermission(self, Name:str, NewDescription:str):
+	# 	Name = Name.capitalize().replace(" ", "_")
+	# 	self._execute(f"Update Permissions set Description=? where Name=?", (NewDescription, Name))
+	# 	jdata = dump_to_json({"Type": "UpdatePermission", "Name": Name, "Description": NewDescription})
+	# 	self._logdata(jdata)
 
-	def GetPermissionDescription(self, Name:str):
-		Name = Name.capitalize().replace(" ", "_")
-		row = self._fetchone(f"Select Description from Permissions where Name=?", (Name, ))
-		if row:
-			return row["Description"]
-		return None
+	# def GetPermissionDescription(self, Name:str):
+	# 	Name = Name.capitalize().replace(" ", "_")
+	# 	row = self._fetchone(f"Select Description from Permissions where Name=?", (Name, ))
+	# 	if row:
+	# 		return row["Description"]
+	# 	return None
 
-	def AddRole(self, DiscordID:str):
-		return DBRole(db=self, DiscordID=DiscordID)
+	# def AddRole(self, DiscordID:str):
+	# 	return DBRole(db=self, DiscordID=DiscordID)
 
-	def GetRole(self, DiscordID:str):
-		#we need to look for a server where the friendly name or nickname matches the provided name
-		(row, cur) = self._fetchone(f"select ID from Roles where DiscordID=?", (int(DiscordID),))
+	# def GetRole(self, DiscordID:str):
+	# 	#we need to look for a server where the friendly name or nickname matches the provided name
+	# 	(row, cur) = self._fetchone(f"select ID from Roles where DiscordID=?", (int(DiscordID),))
 
-		#if no rows then fail
-		if not row:
-			cur.close()
-			return None
+	# 	#if no rows then fail
+	# 	if not row:
+	# 		cur.close()
+	# 		return None
 
-		ret = DBRole(db=self, ID=int(row["id"]))
-		cur.close()
-		return ret
+	# 	ret = DBRole(db=self, ID=int(row["id"]))
+	# 	cur.close()
+	# 	return ret
 
-	def DeleteRole(self, dbrole):
-		self._execute("Delete from RolePermissions where RoleID=?", (dbrole.ID,))
-		self._execute("Delete from Roles where ID=?", (dbrole.ID,))
-		jdata = dump_to_json({"Type": "DeleteRole", "DiscordID": dbrole.DiscordID})
-		self._logdata(jdata)
+	# def DeleteRole(self, dbrole):
+	# 	self._execute("Delete from RolePermissions where RoleID=?", (dbrole.ID,))
+	# 	self._execute("Delete from Roles where ID=?", (dbrole.ID,))
+	# 	jdata = dump_to_json({"Type": "DeleteRole", "DiscordID": dbrole.DiscordID})
+	# 	self._logdata(jdata)
 
-	def _UpdateRole(self, dbrole, **args):
-		#get the property to update
-		entry = list(args.keys())[0]
-		self._execute(f"Update Roles set {entry}=? where ID=?", (args[entry], dbrole.ID))
-		jdata = dump_to_json({"Type": "UpdateRole", "Name": entry, "Value": args[entry]})
-		self._logdata(jdata)
+	# def _UpdateRole(self, dbrole, **args):
+	# 	#get the property to update
+	# 	entry = list(args.keys())[0]
+	# 	self._execute(f"Update Roles set {entry}=? where ID=?", (args[entry], dbrole.ID))
+	# 	jdata = dump_to_json({"Type": "UpdateRole", "Name": entry, "Value": args[entry]})
+	# 	self._logdata(jdata)
 
-	def _UpdateRolePermission(self, dbrole, permission, value):
-		#get the property to update
-		if not value:
-			self._execute("delete from RolePermissions where RoleID=? and PermissionID=?", (dbrole.ID, permission))
-		else:
-			try:
-				self._execute("insert into RolePermissions (RoleID, PermissionID) values(?, ?)", (dbrole.ID, permission))
-			except:
-				print("had error")
-				pass
-		jdata = dump_to_json({"Type": "UpdateRolePermission", "Role": dbrole.DiscordID, "Permission": permission, "Value": value})
-		self._logdata(jdata)
-		return True
+	# def _UpdateRolePermission(self, dbrole, permission, value):
+	# 	#get the property to update
+	# 	if not value:
+	# 		self._execute("delete from RolePermissions where RoleID=? and PermissionID=?", (dbrole.ID, permission))
+	# 	else:
+	# 		try:
+	# 			self._execute("insert into RolePermissions (RoleID, PermissionID) values(?, ?)", (dbrole.ID, permission))
+	# 		except:
+	# 			print("had error")
+	# 			pass
+	# 	jdata = dump_to_json({"Type": "UpdateRolePermission", "Role": dbrole.DiscordID, "Permission": permission, "Value": value})
+	# 	self._logdata(jdata)
+	# 	return True
 
-	def GetAllRoles(self):
-		#return a list of roles with a certain permission
-		(rows, cur) = self._fetchall("select DiscordID from Roles", ())
+	# def GetAllRoles(self):
+	# 	#return a list of roles with a certain permission
+	# 	(rows, cur) = self._fetchall("select DiscordID from Roles", ())
 
-		RoleList = []
-		for entry in rows:
-			RoleList.append(DBRole(self, DiscordID=entry["DiscordID"]))
+	# 	RoleList = []
+	# 	for entry in rows:
+	# 		RoleList.append(DBRole(self, DiscordID=entry["DiscordID"]))
 
-		cur.close()
-		return RoleList
+	# 	cur.close()
+	# 	return RoleList
 
-	def GetRolesListWithPermission(self, PermissionName:str):
-		#return a list of roles with a certain permission
-		(rows, cur) = self._fetchall("select Roles.DiscordID from Roles, Permissions, RolePermissions where Permissions.Name=? and RolePermissions.PermissionID = Permissions.ID and Roles.ID = RolePermissions.RoleID", (PermissionName.capitalize(),))
+	# def GetRolesListWithPermission(self, PermissionName:str):
+	# 	#return a list of roles with a certain permission
+	# 	(rows, cur) = self._fetchall("select Roles.DiscordID from Roles, Permissions, RolePermissions where Permissions.Name=? and RolePermissions.PermissionID = Permissions.ID and Roles.ID = RolePermissions.RoleID", (PermissionName.capitalize(),))
 
-		RoleList = []
-		for entry in rows:
-			RoleList.append(int(entry["DiscordID"]))
+	# 	RoleList = []
+	# 	for entry in rows:
+	# 		RoleList.append(int(entry["DiscordID"]))
 
-		cur.close()
-		return RoleList
+	# 	cur.close()
+	# 	return RoleList
 
-	def GetRolesWithPermission(self, PermissionName:str):
-		#get our list first
-		RoleList = self.GetRolesListWithPermission(PermissionName)
+	# def GetRolesWithPermission(self, PermissionName:str):
+	# 	#get our list first
+	# 	RoleList = self.GetRolesListWithPermission(PermissionName)
 
-		ret = []
-		for entry in RoleList:
-			ret.append(DBRole(self, DiscordID=entry))
-		return ret
+	# 	ret = []
+	# 	for entry in RoleList:
+	# 		ret.append(DBRole(self, DiscordID=entry))
+	# 	return ret
 
-	def AddServer(self, InstanceID:str, FriendlyName:str=None, Whitelist:bool=False, Donator:bool=False, MapCreationDate:datetime.datetime=None, UserLimit:int=None, DiscordConsoleChannel:str=None, DiscordChatChannel:str=None, DiscordRole:str=None):
+	def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=False, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None):
 		#try:
-		return DBServer(db=self, InstanceID=InstanceID, FriendlyName=FriendlyName, Whitelist=Whitelist, Donator=Donator, MapCreationDate=MapCreationDate, UserLimit=UserLimit, DiscordConsoleChannel=DiscordConsoleChannel, DiscordChatChannel=DiscordChatChannel, DiscordRole=DiscordRole)
+		return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role)
 		#except:
 			#return None
 
 	def GetServer(self, InstanceID:str=None, Name:str=None):
+		#print(InstanceID,Name)
 		if not InstanceID and not Name:
 			return None
 	
@@ -301,8 +308,8 @@ class Database:
 		if InstanceID:
 			(row, cur) = self._fetchone(f"select ID from Servers where InstanceID=?", (InstanceID,))
 		else:
-			(row, cur) = self._fetchone(f"select ID from Servers where FriendlyName=?", (Name,))
-
+			(row, cur) = self._fetchone(f"select ID from Servers where InstanceName=? or DisplayName=?", (Name,Name))
+	
 		#if no rows then try nicknames
 		if not row:
 			if Name:
@@ -319,18 +326,18 @@ class Database:
 		cur.close()
 		return ret
 
-	def GetServerUser(self, dbserver, dbuser):
-		#we need to look for a server where the friendly name or nickname matches the provided name
-		(row, cur) = self._fetchone(f"select ID from ServerUsers where ServerID=? and UserID=?", (dbserver.ID, dbuser.ID))
-		#if no rows then fail
-		if not row:
-			return None
+	# def GetServerUser(self, dbserver, dbuser):
+	# 	#we need to look for a server where the friendly name or nickname matches the provided name
+	# 	(row, cur) = self._fetchone(f"select ID from ServerUsers where ServerID=? and UserID=?", (dbserver.ID, dbuser.ID))
+	# 	#if no rows then fail
+	# 	if not row:
+	# 		return None
 
-		#create a new serveruser object and return it
-		ret = DBServerUser(ID=int(row["ID"]), Server=dbserver, User=dbuser, db=self)
+	# 	#create a new serveruser object and return it
+	# 	#ret = DBServerUser(ID=int(row["ID"]), Server=dbserver, User=dbuser, db=self)
 
-		cur.close()
-		return ret
+	# 	cur.close()
+	# 	#return ret
 
 	def GetUser(self, value:str):
 		#find the user
@@ -358,15 +365,15 @@ class Database:
 		SQLWhere = []
 		SQLArgs = []
 
-		if(GlobalBanExpiration):
-			SQLWhere.append("GlobalBanExpiration <= ?")
-			SQLArgs.append(GlobalBanExpiration)
+		# if(GlobalBanExpiration):
+		# 	SQLWhere.append("GlobalBanExpiration <= ?")
+		# 	SQLArgs.append(GlobalBanExpiration)
 		if(Donator):
 			SQLWhere.append("and Donator = ?")
 			SQLArgs.append(Donator)
-		if(ServerModerator):
-			SQLWhere.append("ServerModerator = ?")
-			SQLArgs.append(ServerModerator)
+		# if(ServerModerator):
+		# 	SQLWhere.append("ServerModerator = ?")
+		# 	SQLArgs.append(ServerModerator)
 
 		if len(SQLWhere):
 			SQL = SQL + " where " + " and ".join(SQLWhere)
@@ -398,7 +405,7 @@ class Database:
 			#main_Database_Config = DBConfig(self)
 		self.DBHandler.DBConfig = DBConfig(self)
 		#return main_Database_Config
-		print('DB Config Get Config', self.DBHandler.DBConfig)
+		#print('DB Config Get Config', self.DBHandler.DBConfig)
 		return self.DBHandler.DBConfig
 
 	def _DeleteConfig(self, ConfigID, ConfigName):
@@ -482,9 +489,9 @@ class Database:
 			qentries = ("?,"*Count)[:-1]
 			Params = tuple(NeededServers[0:Count])
 			NeededServers = NeededServers[Count:]
-			(rows, cur) = self._fetchall(f"Select ID, FriendlyName from Servers where ID in ({qentries})", tuple(Params))
+			(rows, cur) = self._fetchall(f"Select ID, InstanceName from Servers where ID in ({qentries})", tuple(Params))
 			for entry in rows:
-				Servers[int(entry["ID"])] = entry["FriendlyName"]
+				Servers[int(entry["ID"])] = entry["InstanceName"]
 			cur.close()
 
 		#now update all log entries
@@ -511,7 +518,7 @@ class Database:
 		return ret
 
 class DBUser:
-	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, GlobalBanExpiration:datetime.datetime=None, Donator:bool=False, ServerModerator:bool=False,TimePlayed:int=0):
+	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, SteamID:str=None, Donator:bool=False):
 		#set defaults
 		Params = locals()
 		Params.pop("self")
@@ -520,9 +527,6 @@ class DBUser:
 		super().__setattr__("_db", db)
 		for entry in Params:
 			super().__setattr__(entry, Params[entry])
-
-		if((GlobalBanExpiration != None) and (type(GlobalBanExpiration) != datetime.datetime)):
-			raise Exception("GlobalBanExpiration is not datetime")
 
 		#if given a database and ID then look up our values
 		if ID:
@@ -573,59 +577,59 @@ class DBUser:
 	def __setattr__(self, name: str, value):
 		if (name == "ID") or (name[0] == "_"):
 			return
-		elif name == "GlobalBanExpiration":
-			#make sure proper value
-			if (type(value) != datetime.datetime) and (type(value) != None):
-				raise Exception("Invalid type")
-		elif name in ["Donator", "ServerModerator"]:
+		# elif name == "GlobalBanExpiration":
+		# 	#make sure proper value
+		# 	if (type(value) != datetime.datetime) and (type(value) != None):
+		# 		raise Exception("Invalid type")
+		elif name in ["Donator"]:
 			#conver to bool
 			value = bool(value)
 		elif name == "DiscordID":
 			#conver to int
 			value =int(value)
-		elif name == "TimePlayed":
-			#conver to integer
-			value = int(value)
+		# elif name == "TimePlayed":
+		# 	#conver to integer
+		# 	value = int(value)
 
 		#set value and update the user
 		super().__setattr__(name, value)
 		self._db._UpdateUser(self, **{name:value})
 
-	def AddInfraction(self, mod, server = None, note = None):
-		if server != None:
-			ServerID = server.ID
-		else:
-			ServerID = None
-		self._db._execute("Insert into UserInfractions (ServerID, UserID, ModID, Note) values(?, ?, ?, ?)", (ServerID, self.ID, mod.ID, note))
-		jdata = dump_to_json({"Type": "AddUserInfraction", "ServerID": ServerID, "UserID": self.ID, "ModID": mod.ID})
-		self._db._logdata(jdata)
+	# def AddInfraction(self, mod, server = None, note = None):
+	# 	if server != None:
+	# 		ServerID = server.ID
+	# 	else:
+	# 		ServerID = None
+	# 	self._db._execute("Insert into UserInfractions (ServerID, UserID, ModID, Note) values(?, ?, ?, ?)", (ServerID, self.ID, mod.ID, note))
+	# 	jdata = dump_to_json({"Type": "AddUserInfraction", "ServerID": ServerID, "UserID": self.ID, "ModID": mod.ID})
+	# 	self._db._logdata(jdata)
 
-	def DelInfraction(self, ID):
-		self._db._execute("Delete from UserInfractions where ID=? and UserID=?", (ID, self.ID))
+	# def DelInfraction(self, ID):
+	# 	self._db._execute("Delete from UserInfractions where ID=? and UserID=?", (ID, self.ID))
 
-	@property
-	def Infractions(self):
-		#get all of our infractions and return them in a list of dictionary entries
-		(rows, cur) = self._db._fetchall("""
-			Select UI.ID, S.FriendlyName, M.DiscordID, M.DiscordName, UI.Note, UI.InfractionDate
-			from UserInfractions UI, Users M
-			left join Servers S on UI.ServerID=S.ID
-			where UI.UserID=? and M.ID=UI.ModID
-			Order By UI.InfractionDate""", (self.ID,))
+	# @property
+	# def Infractions(self):
+	# 	#get all of our infractions and return them in a list of dictionary entries
+	# 	(rows, cur) = self._db._fetchall("""
+	# 		Select UI.ID, S.InstanceName, M.DiscordID, M.DiscordName, UI.Note, UI.InfractionDate
+	# 		from UserInfractions UI, Users M
+	# 		left join Servers S on UI.ServerID=S.ID
+	# 		where UI.UserID=? and M.ID=UI.ModID
+	# 		Order By UI.InfractionDate""", (self.ID,))
 
-		ret = []
-		for entry in rows:
-			data = {}
-			data["ID"] = int(entry["ID"])
-			data["Server"] = entry["FriendlyName"]
-			data["Mod_DiscordID"] = int(entry["DiscordID"])
-			data["Mod_DiscordName"] = entry["DiscordName"]
-			data["Note"] = entry["Note"]
-			data["Date"] = entry["InfractionDate"]
-			ret.append(data)
+	# 	ret = []
+	# 	for entry in rows:
+	# 		data = {}
+	# 		data["ID"] = int(entry["ID"])
+	# 		data["Server"] = entry["InstanceName"]
+	# 		data["Mod_DiscordID"] = int(entry["DiscordID"])
+	# 		data["Mod_DiscordName"] = entry["DiscordName"]
+	# 		data["Note"] = entry["Note"]
+	# 		data["Date"] = entry["InfractionDate"]
+	# 		ret.append(data)
 
-		cur.close()
-		return ret
+	# 	cur.close()
+	# 	return ret
 
 	def GetServer(self, dbserver = None, InstanceID:str = None, Name:str = None):
 		if not dbserver:
@@ -637,19 +641,19 @@ class DBUser:
 		#go find the entry
 		return self._db.GetServerUser(Server, self)
 
-	def GetAllServers(self):
-		#get all servers that we are on
-		(rows, cur) = self._db._fetchall("Select ServerID from ServerUsers where UserID=?", (self.ID,))
-		ret = []
-		for entry in rows:
-			Server = DBServer(self._db, ID=entry["ServerID"])
-			ret.append(self._db.GetServerUser(Server, self))
+	# def GetAllServers(self):
+	# 	#get all servers that we are on
+	# 	(rows, cur) = self._db._fetchall("Select ServerID from ServerUsers where UserID=?", (self.ID,))
+	# 	ret = []
+	# 	for entry in rows:
+	# 		Server = DBServer(self._db, ID=entry["ServerID"])
+	# 		ret.append(self._db.GetServerUser(Server, self))
 
-		cur.close()
-		return ret
+	# 	cur.close()
+	# 	return ret
 
 class DBServer:
-	def __init__(self, db:Database, ID:int=None, InstanceID:str=None, FriendlyName:str=None, Whitelist:bool=False, Donator:bool=False, MapCreationDate:datetime.datetime=None, UserLimit:int=None, DiscordConsoleChannel:str=None, DiscordChatChannel:str=None, DiscordRole:str=None):
+	def __init__(self, db:Database, ID:int=None, InstanceID:str=None, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Console_Flag:bool=False, Console_Filtered:bool=True):
 		#set defaults
 		Params = locals()
 		Params.pop("self")
@@ -661,13 +665,11 @@ class DBServer:
 
 		if(self.ID != None):
 			super().__setattr__("ID", int(self.ID))
-		if(self.DiscordConsoleChannel != None):
-			super().__setattr__("DiscordConsoleChannel", int(self.DiscordConsoleChannel))
-		if(self.DiscordChatChannel != None):
-			super().__setattr__("DiscordChatChannel", int(self.DiscordChatChannel))
+		if(self.Discord_Console_Channel != None):
+			super().__setattr__("Discord_Console_Channel", int(self.Discord_Console_Channel))
+		if(self.Discord_Chat_Channel != None):
+			super().__setattr__("Discord_Chat_Channel", int(self.Discord_Chat_Channel))
 
-		if((MapCreationDate != None) and (type(MapCreationDate) != datetime.datetime)):
-			raise Exception("MapCreationDate is not datetime")
 
 		#if given a database and ID then look up our values
 		if ID:
@@ -720,16 +722,16 @@ class DBServer:
 	def __setattr__(self, name: str, value):
 		if (name in ["ID", "Nicknames"]) or (name[0] == "_"):
 			return
-		elif name == "MapCreationDate":
-			#make sure proper value
-			if type(value) != datetime.datetime:
-				raise Exception("Invalid type")
+		# elif name == "MapCreationDate":
+		# 	#make sure proper value
+		# 	if type(value) != datetime.datetime:
+		# 		raise Exception("Invalid type")
 		elif name in ["Whitelist", "Donator"]:
 			#conver to bool
 			value = bool(value)
-		elif name in ["UserLimit"]:
-			value = int(value)
-		elif name in ["DiscordConsoleChannel", "DiscordChatChannel"]:
+		# elif name in ["UserLimit"]:
+		# 	value = int(value)
+		elif name in ["Discord_Console_Channel", "Discord_Chat_Channel"]:
 			if value != None:
 				value = int(value)
     
@@ -761,226 +763,226 @@ class DBServer:
 		jdata = dump_to_json({"Type": "DeleteServerNickname", "ServerID": self.ID, "Nickname": Nickname})
 		self._db._logdata(jdata)
 
-	def AddUser(self, dbuser:DBUser=None, DiscordID:str = None, DiscordName:str = None, IngameName:str = None, UUID:str = None):
-		try:
-			if not dbuser:
-				dbuser = self._db.GetUser(DiscordID=DiscordID, DiscordName=DiscordName, IngameName=IngameName, UUID=UUID)
-			if not dbuser:
-				return None
+	# def AddUser(self, dbuser:DBUser=None, DiscordID:str = None, DiscordName:str = None, IngameName:str = None, UUID:str = None):
+	# 	try:
+	# 		if not dbuser:
+	# 			dbuser = self._db.GetUser(DiscordID=DiscordID, DiscordName=DiscordName, IngameName=IngameName, UUID=UUID)
+	# 		if not dbuser:
+	# 			return None
 
-			#make sure we don't add an already existing user
-			ServerUser = self._db.GetServerUser(self, dbuser)
-			if ServerUser:
-				return ServerUser
+	# 		#make sure we don't add an already existing user
+	# 		ServerUser = self._db.GetServerUser(self, dbuser)
+	# 		if ServerUser:
+	# 			return ServerUser
 
-			self._db._execute("Insert into ServerUsers(ServerID, UserID, Whitelisted) values(?, ?, ?)", (self.ID, dbuser.ID, False))
-			jdata = dump_to_json({"Type": "AddServerUser", "ServerID": self.ID, "UserID": dbuser.ID})
-			self._db._logdata(jdata)
-		except:
-			return None
-		return self._db.GetServerUser(self, dbuser)
+	# 		self._db._execute("Insert into ServerUsers(ServerID, UserID, Whitelisted) values(?, ?, ?)", (self.ID, dbuser.ID, False))
+	# 		jdata = dump_to_json({"Type": "AddServerUser", "ServerID": self.ID, "UserID": dbuser.ID})
+	# 		self._db._logdata(jdata)
+	# 	except:
+	# 		return None
+	# 	return self._db.GetServerUser(self, dbuser)
 
-	def GetUser(self, Value = None):
-		if type(Value) == DBUser:
-			dbuser = Value
-		else:
-			dbuser = self._db.GetUser(Value)
+	# def GetUser(self, Value = None):
+	# 	if type(Value) == DBUser:
+	# 		dbuser = Value
+	# 	else:
+	# 		dbuser = self._db.GetUser(Value)
 
-		if not dbuser:
-			return None
+	# 	if not dbuser:
+	# 		return None
 
-		#go find the entry
-		return self._db.GetServerUser(self, dbuser)
+	# 	#go find the entry
+	# 	return self._db.GetServerUser(self, dbuser)
 
-	def GetAllUsers(self, Whitelisted=None, LastLogin=None, SuspensionExpiration=None):
-		#get all servers that we are on
-		SQL = "Select UserID from ServerUsers where ServerID=?"
-		SQLArgs = [self.ID]
-		if(Whitelisted):
-			SQL += " and Whitelisted=?"
-			SQLArgs.append(Whitelisted)
-		if(LastLogin):
-			SQL += " and LastLogin <= ?"
-			SQLArgs.append(LastLogin)
-		if(SuspensionExpiration):
-			SQL += " and SuspensionExpiration <= ?"
-			SQLArgs.append(SuspensionExpiration)
+	# def GetAllUsers(self, Whitelisted=None, LastLogin=None, SuspensionExpiration=None):
+	# 	#get all servers that we are on
+	# 	SQL = "Select UserID from ServerUsers where ServerID=?"
+	# 	SQLArgs = [self.ID]
+	# 	if(Whitelisted):
+	# 		SQL += " and Whitelisted=?"
+	# 		SQLArgs.append(Whitelisted)
+	# 	if(LastLogin):
+	# 		SQL += " and LastLogin <= ?"
+	# 		SQLArgs.append(LastLogin)
+	# 	if(SuspensionExpiration):
+	# 		SQL += " and SuspensionExpiration <= ?"
+	# 		SQLArgs.append(SuspensionExpiration)
 
-		(rows, cur) = self._db._fetchall(SQL, tuple(SQLArgs))
-		ret = []
-		for entry in rows:
-			User = DBUser(self._db, ID=entry["UserID"])
-			ret.append(self._db.GetServerUser(self, User))
+	# 	(rows, cur) = self._db._fetchall(SQL, tuple(SQLArgs))
+	# 	ret = []
+	# 	for entry in rows:
+	# 		User = DBUser(self._db, ID=entry["UserID"])
+	# 		ret.append(self._db.GetServerUser(self, User))
 
-		cur.close()
-		return ret
+	# 	cur.close()
+	# 	return ret
 
-	def AddUserInfraction(self, user:DBUser, mod:DBUser, note:str):
-		user.AddInfraction(server = self, mod = mod, note = note)
+	# def AddUserInfraction(self, user:DBUser, mod:DBUser, note:str):
+	# 	user.AddInfraction(server = self, mod = mod, note = note)
 
-class DBServerUser:
-	def __init__(self, db:Database, Server:DBServer, User:DBUser, ID=None, Whitelisted:bool=False, LastLogin:datetime.datetime=None, SuspensionExpiration:datetime.datetime=None):
-		#set defaults
-		Params = locals()
-		Params.pop("self")
-		Params.pop("db")
-		Params.pop("__class__")
-		Params.pop("Server")
-		Params.pop("User")
-		super().__setattr__("_db", db)
-		super().__setattr__("_Server", Server)
-		super().__setattr__("_User", User)
-		for entry in Params:
-			super().__setattr__(entry, Params[entry])
+# class DBServerUser:
+# 	def __init__(self, db:Database, Server:DBServer, User:DBUser, ID=None, Whitelisted:bool=False, LastLogin:datetime.datetime=None, SuspensionExpiration:datetime.datetime=None):
+# 		#set defaults
+# 		Params = locals()
+# 		Params.pop("self")
+# 		Params.pop("db")
+# 		Params.pop("__class__")
+# 		Params.pop("Server")
+# 		Params.pop("User")
+# 		super().__setattr__("_db", db)
+# 		super().__setattr__("_Server", Server)
+# 		super().__setattr__("_User", User)
+# 		for entry in Params:
+# 			super().__setattr__(entry, Params[entry])
 
-		#if given a database and ID then look up our values
-		if ID:
-			(row, cur) = self._db._fetchone("Select * From ServerUsers where ID=?", (ID,))
-			if row:
-				for entry in row.keys():
-					super().__setattr__(entry, row[entry])
-			else:
-				raise Exception(f"Unable to locate ServerUser ID {ID}")
-			cur.close()
-		else:
-			#add the combo to the database after making sure they don't already exist
-			serveruser = self._db.GetServerUser(Server, User)
-			if serveruser:
-				raise Exception("Server/User already found")
+# 		#if given a database and ID then look up our values
+# 		if ID:
+# 			(row, cur) = self._db._fetchone("Select * From ServerUsers where ID=?", (ID,))
+# 			if row:
+# 				for entry in row.keys():
+# 					super().__setattr__(entry, row[entry])
+# 			else:
+# 				raise Exception(f"Unable to locate ServerUser ID {ID}")
+# 			cur.close()
+# 		else:
+# 			#add the combo to the database after making sure they don't already exist
+# 			serveruser = self._db.GetServerUser(Server, User)
+# 			if serveruser:
+# 				raise Exception("Server/User already found")
 
-			DBFields = Params
+# 			DBFields = Params
 
-			#create the sql line
-			SQL = "insert into ServerUsers (ServerID, UserID, "
-			SQLVars = [Server.ID, User.ID]
+# 			#create the sql line
+# 			SQL = "insert into ServerUsers (ServerID, UserID, "
+# 			SQLVars = [Server.ID, User.ID]
 
-			for entry in DBFields:
-				if DBFields[entry] != None:
-					SQL += entry + ","
-					SQLVars.append(DBFields[entry])
+# 			for entry in DBFields:
+# 				if DBFields[entry] != None:
+# 					SQL += entry + ","
+# 					SQLVars.append(DBFields[entry])
 
-			SQL = SQL[:-1] + ") values (" + ("?,"*len(SQLVars))[:-1] + ")"
-			#create the tuple needed
-			SQLTuple = tuple(SQLVars)
+# 			SQL = SQL[:-1] + ") values (" + ("?,"*len(SQLVars))[:-1] + ")"
+# 			#create the tuple needed
+# 			SQLTuple = tuple(SQLVars)
 			
-			#execute it
-			self._db._execute(SQL, SQLTuple)
+# 			#execute it
+# 			self._db._execute(SQL, SQLTuple)
 
-			#now find the ID
-			(row, cur) = self._db._fetchone("Select ID From ServerUsers where ServerID=? and UserID=?", (Server.ID,User.ID))
-			if row:
-				super().__setattr__("ID", row["ID"])
-			else:
-				raise Exception(f"Unable to locate new serveruser")
-			cur.close()
+# 			#now find the ID
+# 			(row, cur) = self._db._fetchone("Select ID From ServerUsers where ServerID=? and UserID=?", (Server.ID,User.ID))
+# 			if row:
+# 				super().__setattr__("ID", row["ID"])
+# 			else:
+# 				raise Exception(f"Unable to locate new serveruser")
+# 			cur.close()
 
-			jdata = dump_to_json({"Type": "AddServerUser", "ServerID": Server.ID, "UserID": User.ID})
-			self._db._logdata(jdata)
+# 			jdata = dump_to_json({"Type": "AddServerUser", "ServerID": Server.ID, "UserID": User.ID})
+# 			self._db._logdata(jdata)
 
-	def __setattr__(self, name: str, value):
-		if (name == "ID") or (name[0] == "_"):
-			return
-		elif name in ["LastLogin", "SuspensionExpiration"]:
-			#make sure proper value
-			if type(value) != datetime.datetime:
-				raise Exception("Invalid type")
-		elif name == "Whitelisted":
-			#conver to bool
-			value = bool(value)
+# 	def __setattr__(self, name: str, value):
+# 		if (name == "ID") or (name[0] == "_"):
+# 			return
+# 		elif name in ["LastLogin", "SuspensionExpiration"]:
+# 			#make sure proper value
+# 			if type(value) != datetime.datetime:
+# 				raise Exception("Invalid type")
+# 		elif name == "Whitelisted":
+# 			#conver to bool
+# 			value = bool(value)
 		
 
-		#set value and update the user
-		super().__setattr__(name, value)
-		self._db._UpdateServerUser(self, **{name:value})
+# 		#set value and update the user
+# 		super().__setattr__(name, value)
+# 		self._db._UpdateServerUser(self, **{name:value})
 
-	def GetServer(self):
-		return self._Server
+# 	def GetServer(self):
+# 		return self._Server
 
-	def GetUser(self):
-		return self._User
+# 	def GetUser(self):
+# 		return self._User
 
-class DBRole:
-	def __init__(self, db:Database=None, ID:int=None, DiscordID:str=None):
-		#set defaults
-		Params = locals()
-		Params.pop("self")
-		Params.pop("db")
-		super().__setattr__("_db", db)
-		for entry in Params:
-			super().__setattr__(entry, Params[entry])
+# class DBRole:
+# 	def __init__(self, db:Database=None, ID:int=None, DiscordID:str=None):
+# 		#set defaults
+# 		Params = locals()
+# 		Params.pop("self")
+# 		Params.pop("db")
+# 		super().__setattr__("_db", db)
+# 		for entry in Params:
+# 			super().__setattr__(entry, Params[entry])
 
-		if(self.DiscordID):
-			super().__setattr__("DiscordID", int(self.DiscordID))
+# 		if(self.DiscordID):
+# 			super().__setattr__("DiscordID", int(self.DiscordID))
 
-		#get the known permissions
-		super().__setattr__("_PermissionIDToName", {})
-		super().__setattr__("_PermissionNameToID", {})
-		(rows, cur) = self._db._fetchall("Select ID, Name from Permissions", ())
-		for entry in rows:
-			self._PermissionIDToName[entry["ID"]] = entry["Name"].capitalize()
-			self._PermissionNameToID[entry["Name"].capitalize()] = entry["ID"]
-			super().__setattr__(entry["Name"].capitalize(), False)
-		cur.close()
+# 		#get the known permissions
+# 		super().__setattr__("_PermissionIDToName", {})
+# 		super().__setattr__("_PermissionNameToID", {})
+# 		(rows, cur) = self._db._fetchall("Select ID, Name from Permissions", ())
+# 		for entry in rows:
+# 			self._PermissionIDToName[entry["ID"]] = entry["Name"].capitalize()
+# 			self._PermissionNameToID[entry["Name"].capitalize()] = entry["ID"]
+# 			super().__setattr__(entry["Name"].capitalize(), False)
+# 		cur.close()
 
-		if ID or DiscordID:
-			if ID:
-				#get the name for this role
-				(row, cur) = self._db._fetchone("Select DiscordID from Roles where ID=?", (ID,))
-				if not row:
-					raise Exception("Invalid role ID")
-				super().__setattr__("DiscordID", int(row["DiscordID"]))
-			else:
-				#we were given a name so see if it exists otherwise add it
-				(row, cur) = self._db._fetchone("Select ID from Roles where DiscordID=?", (DiscordID,))
-				if not row:
-					cur.close()
-					self._db._execute("Insert into Roles (DiscordID) values (?)", (DiscordID,))
+# 		if ID or DiscordID:
+# 			if ID:
+# 				#get the name for this role
+# 				(row, cur) = self._db._fetchone("Select DiscordID from Roles where ID=?", (ID,))
+# 				if not row:
+# 					raise Exception("Invalid role ID")
+# 				super().__setattr__("DiscordID", int(row["DiscordID"]))
+# 			else:
+# 				#we were given a name so see if it exists otherwise add it
+# 				(row, cur) = self._db._fetchone("Select ID from Roles where DiscordID=?", (DiscordID,))
+# 				if not row:
+# 					cur.close()
+# 					self._db._execute("Insert into Roles (DiscordID) values (?)", (DiscordID,))
 
-					#now get the ID
-					(row, cur) = self._db._fetchone("Select ID from Roles where DiscordID=?", (DiscordID,))
-					if not row:
-						cur.close()
-						raise Exception("Error adding role")
+# 					#now get the ID
+# 					(row, cur) = self._db._fetchone("Select ID from Roles where DiscordID=?", (DiscordID,))
+# 					if not row:
+# 						cur.close()
+# 						raise Exception("Error adding role")
 
-					jdata = dump_to_json({"Type": "AddRole", "DiscordID": DiscordID})
-					self._db._logdata(jdata)
+# 					jdata = dump_to_json({"Type": "AddRole", "DiscordID": DiscordID})
+# 					self._db._logdata(jdata)
 
-				super().__setattr__("ID", row["ID"])
+# 				super().__setattr__("ID", row["ID"])
 
-			cur.close()
+# 			cur.close()
 
-			(rows, cur) = self._db._fetchall("Select PermissionID from RolePermissions where RoleID=?", (self.ID,))
-			for entry in rows:
-				super().__setattr__(self._PermissionIDToName[entry["PermissionID"]], True)
-			cur.close()
+# 			(rows, cur) = self._db._fetchall("Select PermissionID from RolePermissions where RoleID=?", (self.ID,))
+# 			for entry in rows:
+# 				super().__setattr__(self._PermissionIDToName[entry["PermissionID"]], True)
+# 			cur.close()
 
-	def __setattr__(self, name, value):
-		if name == "ID":
-			return
-		if name in self._PermissionNameToID:
-			value = bool(value)
-			super().__setattr__(name, value)
-			self._db._UpdateRolePermission(self, self._PermissionNameToID[name], value)
-		elif name == "DiscordID":
-			super().__setattr__(name, int(value))
-			self._db._UpdateRole(self, DiscordID=value)
-		else:
-			super().__setattr__(name, value)
+# 	def __setattr__(self, name, value):
+# 		if name == "ID":
+# 			return
+# 		if name in self._PermissionNameToID:
+# 			value = bool(value)
+# 			super().__setattr__(name, value)
+# 			self._db._UpdateRolePermission(self, self._PermissionNameToID[name], value)
+# 		elif name == "DiscordID":
+# 			super().__setattr__(name, int(value))
+# 			self._db._UpdateRole(self, DiscordID=value)
+# 		else:
+# 			super().__setattr__(name, value)
 
-	def __getitem__(self,name):
-			return getattr(self, name)
+# 	def __getitem__(self,name):
+# 			return getattr(self, name)
 
-	def __setitem__(self,name,value):
-			setattr(self, name, value)
+# 	def __setitem__(self,name,value):
+# 			setattr(self, name, value)
 
-	def __iter__(self):
-		self._iter = list(self._PermissionNameToID.keys())
-		return self
+# 	def __iter__(self):
+# 		self._iter = list(self._PermissionNameToID.keys())
+# 		return self
 
-	def __next__(self):
-		if len(self._iter) == 0:
-			raise StopIteration
-		return self._iter.pop(0)
+# 	def __next__(self):
+# 		if len(self._iter) == 0:
+# 			raise StopIteration
+# 		return self._iter.pop(0)
 
 class DBConfig:
 	def __init__(self, db:Database=None):

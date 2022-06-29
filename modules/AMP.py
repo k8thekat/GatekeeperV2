@@ -34,6 +34,7 @@ import logging
 import threading
 import importlib.util
 import traceback
+import discord
 
 import modules.DB as DB
 import tokens
@@ -43,14 +44,19 @@ Handler = None
 
 
 class AMPHandler():
-    def __init__(self):
+    def __init__(self,client:discord.Client):
         self.logger = logging.getLogger()
-        self.__client = None
+        self._client = client
         self._cwd = pathlib.Path.cwd()
 
         self.SessionIDlist = {}
+
+        self.AMP_Instances = {}
         self.AMP_Modules = {}
+
+        self.AMP_Console_Modules = {}
         self.AMP_Console_Threads = {}
+
         self.SuccessfulConnection = False
         self.InstancesFound = False
 
@@ -61,13 +67,16 @@ class AMPHandler():
         self.val_settings()
         self.moduleHandler()
 
-        self.AMP = AMPInstance(Handler = self)
-        self.AMP_Instances = self.AMP.getInstances()
-
         #self.instanceCheck()
 
-    def set_discord_client(self,client):
-        self.__client = client
+    # def set_discord_client(self,client):
+    #     """Passes the Discord Bot Client object to AMP_Handler for functionality inside of AMP_Console"""
+    #     self.__client = client
+
+    def setup_AMPInstances(self):
+        """Intializes the connection to AMP and creates AMP_Instance objects."""
+        self.AMP = AMPInstance(Handler = self)
+        self.AMP_Instances = self.AMP.getInstances()
 
     def instanceCheck(self):
         """Checks for any new Instances since after startup. `(Advise using this in some sort of loop every so often)`\n
@@ -82,15 +91,16 @@ class AMPHandler():
 
     #!TODO! Need to check on startup and every so often for new instances and add them to the DB
     def add_Server_toDB(self,instance):
-        if self._cwd.joinpath('Gatekeeper.db').exists():
+        """Adds the server to the DB if its not already there."""
+        if self._cwd.joinpath('discordBot.db').exists():
             instance_check = self.DB.GetServer(instance)
             if instance_check == None:
-                self.DB.AddServer(InstanceID=self.AMP_Instances[instance].InstanceID,FriendlyName=self.AMP_Instances[instance].FriendlyName)
+                self.DB.AddServer(InstanceID=self.AMP_Instances[instance].InstanceID,InstanceName =self.AMP_Instances[instance].FriendlyName)
     
     #Checks for Errors in Config
     def val_settings(self):
         """Validates the tokens.py settings and 2FA."""
-        self.logger.info('AMPHandler validate settings in progress...')
+        self.logger.info('AMPHandler is validating your token file...')
         reset = False
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
@@ -122,7 +132,10 @@ class AMPHandler():
                         spec = importlib.util.spec_from_file_location(module_name, script)
                         class_module = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(class_module)
+
                         self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
+                        self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
+
                         self.logger.info(f'**SUCCESS** Loading AMP Module **{module_name}**')
                         #print(dir(class_module))
                     # module_name = script.name[4:-3].capitalize()
@@ -135,31 +148,35 @@ class AMPHandler():
                     except Exception as e:
                         self.logger.error(f'**ERROR** Loading AMP Module **{module_name}** - {e}')
                         continue
-
+            print('My AMP Console Modules',self.AMP_Console_Modules)
         except Exception as e:
             self.logger.error(f'**ERROR** Loading Module ** - File Not Found {e}')
                     
-def getAMPHandler()-> AMPHandler:
+def getAMPHandler(client:discord.Client = None)-> AMPHandler:
     global Handler
     if Handler == None:
-        Handler = AMPHandler()
+        Handler = AMPHandler(client)
     return Handler
 
 class AMPInstance:
-    """**Note** Use a seperate thread/async func when intializing AMPInstances"""
+    """Base class for AMP"""
     def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
         self.logger = logging.getLogger()
 
-        if Handler:
-            self.AMPHandler = Handler
-        else:
+        self.AMPHandler = Handler
+        if self.AMPHandler == None:
             self.AMPHandler = getAMPHandler()
+
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB
 
         self.SessionID = 0
         self.Index = Index
         self.serverdata = serverdata
         self.serverlist = {}
         self.InstanceID = instanceID
+        self.Server_Running = False
+
         self.url = tokens.AMPurl + '/API/' #base url for AMP console /API/
 
         try:
@@ -174,16 +191,60 @@ class AMPInstance:
         if instanceID != 0:
             self.url += f"ADSModule/Servers/{instanceID}/API/"
         
-        #!TODO! AMP Console Implimentation
         if default_console:
             self.Console = AMPConsole(self)
 
         if instanceID != 0:
+            #This gets all the dictionary values tied to AMP and makes them attributes
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
+
             self.FriendlyName = self.FriendlyName.replace(' ', '_')
+            #print('Instance Attr',dir(self))
+            #print('Instance Running',self.Running)
+            
+            #This gets me the DB_Server object if it's not there; it adds the server.
+            #self.DB_Server = None
+            self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
+            #Possible DB_Server Attributes = InstanceID, InstanceName, DisplayName, Description, IP, Whitelist, Donator, Console_Flag, Console_Filtered, Discord_Console_Channel, Discord_Chat_Channel, Discord_Role
+            if self.DB_Server == None:
+                self.DB_Server = self.DB.AddServer(InstanceID = self.InstanceID, InstanceName = self.FriendlyName)
+                self.logger.info(f'*SUCCESS** Added {self.FriendlyName} to the Database.')
+            else:
+                self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
+
+            #This sets all my DB_Server attributes.
+            self.attr_update()
+
+    def attr_update(self):
+        """This will update AMP Instance attributes."""
+        #Need to call this every so often. Possibly anytime I get instance information/update instance information
+        self.logger.info(f'Instance Running: {self.Running}')
+        if self.Running:
+            server_status = self.server_check() #Using this to see if the API fails to set the server status (offline/online) NOT THE INSTANCE STATUS! Thats self.Running!!
+            self.logger.info(f'{self.FriendlyName} Server Running: {server_status}')
+            self.Server_Running = server_status 
+
+        self.DisplayName = self.DB_Server.DisplayName
+        self.Description = self.DB_Server.Description
+        self.IP = self.DB_Server.IP
+        self.Whitelist = self.DB_Server.Whitelist
+        self.Donator = self.DB_Server.Donator
+        self.Console_Flag = self.DB_Server.Console_Flag
+        self.Console_Filtered = self.DB_Server.Console_Filtered
+        self.Discord_Console_Channel = self.DB_Server.Discord_Console_Channel
+        self.Discord_Chat_Channel = self.DB_Server.Discord_Chat_Channel
+        self.Discord_Role = self.DB_Server.Discord_Role
+
+    def server_check(self):
+        """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
+        Success = self.Login()
+        if Success:
+            parameters = {}
+            self.CallAPI('Core/GetStatus', parameters)
+            return True
         else:
-           self.Running = True
+            return False
 
     def Login(self):
         #def wrapper(*args, **kargs):
@@ -212,11 +273,20 @@ class AMPInstance:
                     'token': token, #get current 2Factor Code
                     'rememberMe': True}
 
-            result = self.CallAPI('Core/Login',parameters)
-            self.SessionID = result['sessionID']
+            try:
+                result = self.CallAPI('Core/Login',parameters)
+                #pprint(result)
+                self.SessionID = result['sessionID']
+                self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
+                self.Running = True
+
+            except:
+                #!TODO! Track if Instance is Offline (Login Fails if Instance is Offline)
+                self.logger.error(f'{self.FriendlyName} - Instance is Offline')
+                self.Running = False
+                return False
             #if ("checkup" not in kargs) or (kargs["checkup"] == False):
-            self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
-            return
+            return True
         
         #return func(*args, **kargs)
     #return wrapper
@@ -285,6 +355,7 @@ class AMPInstance:
                 instance = result["result"][0]['AvailableInstances'][i]  
                 if instance['Module'] in self.AMPHandler.AMP_Modules:
                     self.logger.info(f'Loaded __AMP_{instance["Module"]}__ for {instance["FriendlyName"]}')
+                    #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
                     server = self.AMPHandler.AMP_Modules[instance['Module']](instance['InstanceID'],instance,i,self.AMPHandler)
                     serverlist[server.InstanceID] = server
                 else:
@@ -303,7 +374,6 @@ class AMPInstance:
         """Returns `{'ConsoleEntries':[{'Contents': 'String','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`\n
         Will post all updates from previous API call of console update"""
         #print('Console update')
-        self.Login()
         parameters = {}
         # Will post all updates from previous API call of console update.
         result = self.CallAPI('Core/GetUpdates', parameters)
@@ -311,7 +381,6 @@ class AMPInstance:
 
     def ConsoleMessage_withUpdate(self,msg:str)-> dict:
         """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
-        self.Login()
         parameters = {'message': ' '.join(msg)}
         #print(parameters)
         self.CallAPI('Core/SendConsoleMessage', parameters)
@@ -578,43 +647,71 @@ class AMPConsole:
     def __init__(self, AMPInstance = AMPInstance):
         self.logger = logging.getLogger()
 
-        self.AMPHandler = getAMPHandler()
         self.AMPInstance = AMPInstance
+        self.AMPHandler = self.AMPInstance.AMPHandler
+        self.AMP_Console_Modules = self.AMPHandler.AMP_Console_Modules
         self.AMP_Console_Threads = self.AMPHandler.AMP_Console_Threads
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
-        self.DB_Server = self.DB.GetServer(self.AMPInstance.InstanceID)
-
-        self.__client = self.AMPHandler.__client
-        self.uBot = utils.botUtils(self.__client)
-        self.dBot = utils.discordBot(self.__client)
+        self.DB_Server = self.DB.GetServer(InstanceID = self.AMPInstance.InstanceID)
+        
+        self._client = self.AMPHandler._client
+        self.uBot = utils.botUtils(self._client)
+        self.dBot = utils.discordBot(self._client)
 
         self.console_thread = None
         self.console_thread_running = False
+        #print(dir(self.AMPInstance))
+
+        # try:
+        #     self.DB_Server = self.DB.GetServer(self.AMPInstance.InstanceID)
+        # except:
+        #     self.DB.AddServer(self.AMPInstance.InstanceID,self.AMPInstance.FriendlyName)
 
         try:
-            self.console = self.DB_Server.Console
+            self.console_flag = self.DB_Server.Console_Flag
             self.console_filter_level = self.DB_Server.Console_Filtered
-            self.console_channel = self.uBot.channelparse(self.DB_Server.Discord_Console_Channel)
+            if self.DB_Server.Discord_Console_Channel != None:
+                self.console_channel = self.uBot.channelparse(self.DB_Server.Discord_Console_Channel)
+            else:
+                self.console_channel = None
         except:
-            self.DBHandler.dbConsoleSetup()
+            self.DBHandler.dbServerConsoleSetup(self.AMPInstance)
+            self.console_flag = self.DB_Server.Console_Flag
+            self.console_filter_level = self.DB_Server.Console_Filtered
+            self.console_channel = self.DB_Server.Discord_Console_Channel
 
         self.console_message_list = []
 
-        self.console_start()
+        self.logger.info(f'**SUCCESS** Setting up {self.AMPInstance.FriendlyName} Console')
+        #self.console_start()
      
-    async def console_start(self):
+    def console_start(self):
+        #print(self,dir(self))
         """This starts our console threads..."""
-        if self.console:
+        if self.console_flag:
+            print(self.AMPInstance.Module,self.AMPInstance.FriendlyName)
             try:
-                self.console_thread = threading.Thread(self.console_parse())
-                self.console_thread_running = True
-                self.AMP_Console_Threads[self.AMPInstance.InstanceID] = AMPConsole
-                logging.info(f'Initiating Server Console for {self.AMPInstance.FriendlyName}...')
+                #!TODO! Finish setting up Consoles
+                if self.AMPInstance.Module in self.AMP_Console_Modules:
+                    self.logger.info(f'Loaded __AMPConsole_{self.AMPInstance.Module}__ for {self.AMPInstance.FriendlyName}')
+                    server_console = self.AMP_Console_Modules[self.AMPInstance.Module] #This should point to our AMP Console Object
+                    self.AMP_Console_Threads[self.AMPInstance.InstanceID] = server_console
+                    self.console_thread = threading.Thread(server_console.console_parse())
+                    self.console_thread_running = True
+                    logging.info(f'Initiating Server Console for {self.AMPInstance.FriendlyName}...')
+
+                else:
+                    self.logger.info(f'Loaded __AMPConsole_Generic__ for {self.AMPInstance.FriendlyName}')
+                    server_console = self.AMP_Console_Modules['Generic']
+                    self.AMP_Console_Threads[self.AMPInstance.InstanceID] = server_console
+                    self.console_thread = threading.Thread(server_console.console_parse())
+                    self.console_thread_running = True
+
             except Exception as e:
-                self.AMP_Console_Threads[self.AMPInstance.InstanceID] = AMPConsole
+                self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.AMP_Console_Modules['Generic']
                 logging.error(f'Failed to Start the Console for {self.AMPInstance.FriendlyName}...')
 
 
@@ -622,59 +719,63 @@ class AMPConsole:
         """This handles AMP Console Updates; turns them into bite size messages and sends them to Discord"""
         if self.console_channel == None:
             return
-
-        console = self.AMPInstance.ConsoleUpdate()
+        while(self.console_thread_running):
+            console = self.AMPInstance.ConsoleUpdate()
             
-        for entry in console['ConsoleEntries']:
-            if self.console_filter(entry):
-                continue
-
-            if self.console_chat(entry):
-                continue
-
-            if len(entry['Contents']) > 1500:
-                index_hunt = entry['Contents'].find(';')
-                if index_hunt == -1:
+            for entry in console['ConsoleEntries']:
+                if self.console_filter(entry):
                     continue
 
-                msg_len_index = entry['Contents'].rindex(';')
+                if self.console_chat(entry):
+                    continue
 
-                while msg_len_index > 1500:
-                    msg_len_indexend = msg_len_index
-                    msg_len_index = entry['Contents'].rindex(';',0,msg_len_indexend)
-
-                    if msg_len_index < 1500:
-                        newmsg = entry['Contents'][0:msg_len_index]
-                        self.console_message_list.append(f"{entry['Source']}: {newmsg.lstrip()}")
-                        entry['Contents'] = entry['Contents'][msg_len_index+1:len(entry['Contents'])]
-                        msg_len_index = len(entry['Contents'])
+                if len(entry['Contents']) > 1500:
+                    index_hunt = entry['Contents'].find(';')
+                    if index_hunt == -1:
                         continue
-            else:
-                self.console_message_list.append(f"{entry['Source']}: {entry['Contents']}") 
 
-        if len(self.console_message_list) > 0:
-            bulkentry = ''
-            for entry in self.console_message_list:
-                if len(bulkentry + entry) < 1500:
-                    bulkentry = bulkentry + entry + '\n' 
+                    msg_len_index = entry['Contents'].rindex(';')
 
+                    while msg_len_index > 1500:
+                        msg_len_indexend = msg_len_index
+                        msg_len_index = entry['Contents'].rindex(';',0,msg_len_indexend)
+
+                        if msg_len_index < 1500:
+                            newmsg = entry['Contents'][0:msg_len_index]
+                            self.console_message_list.append(f"{entry['Source']}: {newmsg.lstrip()}")
+                            entry['Contents'] = entry['Contents'][msg_len_index+1:len(entry['Contents'])]
+                            msg_len_index = len(entry['Contents'])
+                            continue
                 else:
+                    self.console_message_list.append(f"{entry['Source']}: {entry['Contents']}") 
+
+            if len(self.console_message_list) > 0:
+                bulkentry = ''
+                for entry in self.console_message_list:
+                    if len(bulkentry + entry) < 1500:
+                        bulkentry = bulkentry + entry + '\n' 
+
+                    else:
+                        try: #!TODO Needs to be Tested!
+                            await self.console_send_message(bulkentry[:-1])
+                        except Exception as e:
+                            self.logger.error(f'Unable to Send Console Message...{e}')
+
+                        bulkentry = entry + '\n'
+
+                if len(bulkentry):
                     try: #!TODO Needs to be Tested!
-                        await self.dBot.sendMessage(self.console_channel,bulkentry[:-1])
-                        #await self.send_message(bulkentry[:-1])
+                        await self.console_send_message(bulkentry[:-1])
                     except Exception as e:
                         self.logger.error(f'Unable to Send Console Message...{e}')
-
-                    bulkentry = entry + '\n'
-
-            if len(bulkentry):
-                try: #!TODO Needs to be Tested!
-                    await self.dBot.sendMessage(self.console_channel,bulkentry[:-1])
-                    #await self.send_message(bulkentry[:-1])
-                except Exception as e:
-                    self.logger.error(f'Unable to Send Console Message...{e}')
-        return
+            return
     
+    async def console_send_message(self,message:str):
+        """This will handle sending console messages to Discord"""
+        if self.console_channel != None:
+            await self.dBot.sendMessage(self.console_channel,message)
+     
+
     async def console_filter(self,message):
         """This will filter depending on the console_filter setting and handle what to send to Discord."""
         print(message)

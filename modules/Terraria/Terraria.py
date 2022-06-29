@@ -13,7 +13,7 @@ class Terraria(commands.Cog):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'{self.name} Module Loaded')
+        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
 
         
         self.AMPHandler = AMP.getAMPHandler()

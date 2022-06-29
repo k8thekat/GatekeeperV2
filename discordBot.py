@@ -216,7 +216,9 @@ async def  initbot():
     main_DB = main_DBHandler.DB
     main_DB_Config = main_DB.GetConfig() #Can point to here or main_DBHandler.DBConfig
 
-    main_AMP = AMP.getAMPHandler().AMP
+    main_AMPHandler = AMP.getAMPHandler(client)
+    main_AMPHandler.setup_AMPInstances()
+    main_AMP = main_AMPHandler.AMP
 
     if main_AMP:
         await client.load_extension('modules.AMP_module')

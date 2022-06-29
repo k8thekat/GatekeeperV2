@@ -100,7 +100,7 @@ class StatusView(View):
         self.stop()
 
 class discordBot():
-    def __init__(self,client):
+    def __init__(self,client:discord.Client):
         self.botLogger = logging.getLogger(__name__)
         self._client = client
         self.botLogger.info(f'Utils Discord Loaded')
@@ -192,7 +192,7 @@ class discordBot():
             await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
 class botUtils():
-        def __init__ (self,client):
+        def __init__ (self,client:discord.Client):
             self._client = client
             self.logger = logging.getLogger(__name__)
             self.logger.info('Utils Bot Loaded')
@@ -205,7 +205,7 @@ class botUtils():
             self.AMPInstances = self.AMPHandler.AMP_Instances
 
 
-        def roleparse(self,context,guild_id:int,parameter:str) -> discord.Role: 
+        def roleparse(self,parameter:str,context,guild_id:int) -> discord.Role: 
             """This is the bot utils Role Parse Function\n
             It handles finding the specificed Discord `<role>` in multiple different formats.\n
             They can contain single quotes, double quotes and underscores. (" ",' ',_)\n
@@ -242,60 +242,70 @@ class botUtils():
                 #await context.reply(f'Unable to find the Discord Role: {parameter}')
                 return None
 
-        def channelparse(self,context,guild_id:int,parameter:str) -> discord.TextChannel:
+        def channelparse(self,parameter:str,context=None,guild_id:int=None) -> discord.TextChannel:
             """This is the bot utils Channel Parse Function\n
             It handles finding the specificed Discord `<channel>` in multiple different formats, either numeric or alphanumeric.\n
             returns `<channel>` object if True, else returns `None`
             **Note** Use context.guild.id"""
             self.logger.info('Channel Parse Called...')
-            guild = self._client.get_guild(guild_id)
 
+            if guild_id == None:
+                channel = self._client.get_channel(int(parameter))
+                self.logger.debug(f'Found the Discord Channel {channel}')
+                return channel
+
+            guild = self._client.get_guild(guild_id)
             channel_list = guild.channels
             if parameter.isnumeric():
                 channel = guild.get_channel(int(parameter))
-                self.logger.debug('Found the Discord Channel {channel}')
+                self.logger.debug(f'Found the Discord Channel {channel}')
                 return channel
             else:
                 for channel in channel_list:
                     if channel.name == parameter:
-                        self.logger.debug('Found the Discord Channel {channel}')
+                        self.logger.debug(f'Found the Discord Channel {channel}')
                         return channel
                 else:
                     self.logger.error('Unable to Find the Discord Channel')
                     #await context.reply(f'Unable to find the Discord Channel: {parameter}')
                     return None
         
-        def userparse(self,context,guild_id:int,parameter: str) -> discord.Member:
+        def userparse(self,parameter:str,context=None,guild_id:int=None) -> discord.Member:
             """This is the bot utils User Parse Function\n
             It handles finding the specificed Discord `<user>` in multiple different formats, either numeric or alphanumeric.\n
             It also supports '@', '#0000' and partial display name searching for user indentification (eg. k8thekat#1357)\n
             returns `<user>` object if True, else returns `None`
             **Note** Use context.guild.id"""
             self.logger.info('User Parse Called...')
+            if guild_id == None:
+                cur_member = self._client.get_user(int(parameter))
+                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
+                return cur_member
+
             guild = self._client.get_guild(guild_id)
             #Discord ID catch
             if parameter.isnumeric():
                 cur_member = guild.get_member(int(parameter))
-                self.logger.debug('Found the Discord Member {cur_member.display_name}')
+                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #Profile Name Catch
             if parameter.find('#') != -1:
                 cur_member = guild.get_member_named(parameter)
-                self.logger.debug('Found the Discord Member {cur_member.display_name}')
+                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #Using @ at user and stripping
             if parameter.startswith('<@!') and parameter.endswith('>'):
                 user_discordid = parameter[3:-1]
                 cur_member = guild.get_member(int(user_discordid))
-                self.logger.debug('Found the Discord Member {cur_member.display_name}')
+                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #DiscordName/IGN Catch(DB Get user can look this up)
             cur_member = guild.get_member_named(parameter)
             if cur_member != None:
-                self.logger.debug('Found the Discord Member {cur_member.display_name}')
+                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #Display Name Lookup
@@ -304,31 +314,40 @@ class botUtils():
                 for member in guild.members:
                     if member.display_name.lower().startswith(parameter.lower()) or (member.display_name.lower().find(parameter.lower()) != -1):
                         if cur_member != None:
-                            self.logger.error('Found multiple Discord Members: {parameter}, Returning None')
+                            self.logger.error(f'Found multiple Discord Members: {parameter}, Returning None')
                             #await context.reply('Found multiple Discord Members matching that name, please be more specific.')
                             return None
 
-                        self.logger.debug('Found the Discord Member {member.display_name}')
+                        self.logger.debug(f'Found the Discord Member {member.display_name}')
                         cur_member = member
                 return cur_member
                 
-        def serverparse(self,context,guild_id:int,parameter) -> AMP.AMPInstance:
+        def serverparse(self,parameter,context:None,guild_id:int=None) -> AMP.AMPInstance:
             """This is the botUtils Server Parse function.
             **Note** Use context.guild.id \n
             Returns `AMPInstance[server] <object>`"""
             self.logger.info('Bot Utility Server Parse')
             cur_server = None
-            print(parameter)
+            #print(parameter)
             if type(parameter) == tuple:
                 parameter = ' '.join(parameter)
             parameter = parameter.replace(' ','_').replace("'",'').replace('"','')
-            print(parameter)
+            #print(parameter)
+
+            #Lets check the DB First, this checks Nicknames and Display names.
+            cur_server = self.DB.GetServer(name = parameter)
+            if cur_server != None:
+                self.logger.debug(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
+                return cur_server
+
+            #Since the DB came up empty; lets continue and try all AMPInstances Friendly Names!
             for server in self.AMPInstances:
                 var = self.AMPInstances[server].FriendlyName.lower().find(parameter.lower())
+                self.logger.debug(f'{var}{self.AMPInstances[server].FriendlyName}')
 
-                if var != -1:
+                if var != -1: #When its FOUND an entry
                     if cur_server != None:
-                        self.logger.error('Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
+                        self.logger.error(f'Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
                         #await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
                         return None
 
@@ -345,26 +364,41 @@ class botUtils():
         
         def default_embedmsg(self,title,context,description=None,field=None,field_value=None):
             """This Embed has only one Field Entry."""
-            embed=discord.Embed(title=title, description=description, color=0x808000)
+            embed=discord.Embed(title=title, description=description, color=0x808000) #color is RED 
             embed.set_author(name=context.author.display_name, icon_url=context.author.avatar)
             embed.add_field(name=field, value=field_value, inline=False)
             return embed
 
+        def server_info_embed(self,server:AMP.AMPInstance, context:commands.Context):
+            """For Individual Server info embed replies"""
+            embed=discord.Embed(title=f'Server Info for {server.DisplayName}', color=0x00ff00, description=server.Description)
+            db_server = self.DB.GetServer(InstanceID = server.InstanceID)
+            if db_server != None:
+                embed.set_thumbnail(url=context.guild.icon)
+                embed.add_field(name='\u1CBC\u1CBC',value = f'========={server.DisplayName}=========',inline=False)
+
+                if db_server.IP != None:
+                    embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
+
+                embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
+                embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
+                embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
+
         def server_list_embed(self,context:commands.Context) -> list:
-            """This Embed is for Server Displays"""
+            """Possibly an Option for Server Displays? Currently Un-used..."""
             embed=discord.Embed(title=f'Server List for {context.guild.name}', color=0x00ff00)
             embed_fieldindex = 0
             embed_list = []
-            for server in AMP.AMP_Instances:
-                server = AMP.AMP_Instances[server]
+            for server in self.AMPInstances:
+                server = self.AMPInstances[server]
                 
                 #!TODO! Remove Test.DB
-                #db_server = self.DB.GetServer(server.InstanceID)
-                db_server = test.DB_Spoof()
+                db_server = self.DB.GetServer(server.InstanceID)
+                #db_server = test.DB_Spoof()
                 if db_server != None:
                     embed.set_thumbnail(url=context.guild.icon)
                     #!TODO! Verify server.DisplayName Works!
-                    embed.add_field(name='\u1CBC\u1CBC',value = '========={server.DisplayName}=========',inline=False)
+                    embed.add_field(name='\u1CBC\u1CBC',value = f'========={server.DisplayName}=========',inline=False)
                     embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
                     embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
                     embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
@@ -382,7 +416,7 @@ class botUtils():
 
         def server_status_embed(self,context:commands.Context,server:AMP.AMPInstance,TPS,Users,CPU,Memory,Uptime,Users_Online) -> discord.Embed:
             """This is the Server Status Embed Message"""
-            if server.Running:
+            if server.Server_Running:
                 server_status = 'Online'
             else:
                 server_status = 'Offline'

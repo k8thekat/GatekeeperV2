@@ -119,7 +119,7 @@ class DB_Module(commands.Cog):
     @utils.role_check()
     async def db_bot_channel_whitelist(self,context:commands.Context,id:str):
         self.logger.info('Bot Channel Whitelist...')
-        channel = self.uBot.channelparse(context,context.guild.id,id)
+        channel = self.uBot.channelparse(id,context,context.guild.id)
         if channel == None:
             await context.reply(f'Unable to find the Discord Channel: {id}')
         self.DBConfig.SetSetting('WhitelistChannel',channel.id)

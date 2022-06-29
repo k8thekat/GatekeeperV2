@@ -6,9 +6,9 @@ class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
-
-        #self.Console = MinecraftConsole(self)
-        self.APImodule = 'MinecraftModule'
+        
+        #self.APImodule = 'MinecraftModule'
+        #self.Console = AMPMinecraftConsole(self)
 
     def name_Conversion(self,name): 
         """Converts an IGN to a UUID/Name Table \n
@@ -80,9 +80,8 @@ class AMPMinecraft(AMP.AMPInstance):
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
 
-
 #!TODO! Need to figure the super() Init for the new console.
-# class MinecraftConsole(AMP.AMPConsole):
-#     def __init__(self,AMPInstance = AMPMinecraft):
-#         super().__init__(self,AMPInstance)
-#         self.AMPMinecraft = AMPMinecraft
+class AMPMinecraftConsole(AMP.AMPConsole):
+    def __init__(self,AMPInstance = AMPMinecraft):
+        super().__init__(self,AMPInstance)
+        #self.AMPMinecraft = AMPMinecraft

@@ -35,14 +35,14 @@ class Generic(commands.Cog):
         #This should help prevent errors in older databases.
         try:
             self.Auto_WL = self.DBConfig.Auto_whitelist
-            print(self.Auto_WL)
             self.WL_channel = self.DBConfig.Whitelist_channel #DBConfig is Case sensitive.
-            print(self.WL_channel)
             self.WL_delay = self.DBConfig.Whitelist_wait_time #Should only be an INT value; all values in Minutes.
-            print(self.WL_delay)
 
         except:
             self.DBHandler.dbWhitelistSetup()
+            self.Auto_WL = self.DBConfig.Auto_whitelist
+            self.WL_channel = self.DBConfig.Whitelist_channel #DBConfig is Case sensitive.
+            self.WL_delay = self.DBConfig.Whitelist_wait_time #Should only be an INT value; all values in Minutes.
         
         self.failed_whitelist = []
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
@@ -118,7 +118,7 @@ class Generic(commands.Cog):
     @utils.role_check()
     async def server_whitelist_true(self,context:commands.Context,server):
         """Set Servers Whitelist Allowed to True"""
-        server = self.uBot.serverparse(context,context.guild.id,server)
+        server = self.uBot.serverparse(server,context,context.guild.id)
         self.DB.GetServer(server.FriendlyName).Whitelist = True
         await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `True`")
 
@@ -126,7 +126,7 @@ class Generic(commands.Cog):
     @utils.role_check()
     async def server_whitelist_false(self,context:commands.Context,server):
         """Set Servers Whitelist Allowed to False"""
-        server = self.uBot.serverparse(context,context.guild.id,server)
+        server = self.uBot.serverparse(server,context,context.guild.id)
         self.DB.getServer(server.FriendlyName).Whitelist = False
         await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `False`")
 
@@ -134,7 +134,7 @@ class Generic(commands.Cog):
     @utils.role_check()
     async def server_whitelist_test(self,context:commands.Context,server=None,user=None):
         """Server Whitelist Test function."""
-        server = self.uBot.serverparse(context,context.guild.id,server)
+        server = self.uBot.serverparse(server,context,context.guild.id)
         if server != None:
             user = server.name_Conversion(context,user)
             # server_whitelist = server.getWhitelist()
@@ -145,7 +145,7 @@ class Generic(commands.Cog):
     @utils.role_check()
     async def server_whitelist_add(self,context:commands.Context,server,user):
         """Adds User to Servers Whitelist"""
-        server = self.uBot.serverparse(context,context.guild.id,server)
+        server = self.uBot.serverparse(server,context,context.guild.id)
         if server != None:
             user = server.name_Conversion(context,user)
             if user != None:
@@ -156,7 +156,7 @@ class Generic(commands.Cog):
     @utils.role_check()
     async def server_whitelist_remove(self,context:commands.Context,server,user):
         """Remove a User from the Servers Whitelist"""
-        server = self.uBot.serverparse(context,context.guild.id,server)
+        server = self.uBot.serverparse(server,context,context.guild.id)
         if server != None:
             #Converts the name to the proper format depending on the server type
             user = server.name_Conversion(context,user)
@@ -174,7 +174,7 @@ class Generic(commands.Cog):
             self.logger.info(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
             self.failed_whitelist.append(message)
         
-        amp_server = self.uBot.serverparse(message,message.guild.id,user_server)
+        amp_server = self.uBot.serverparse(user_server,message,message.guild.id)
         if amp_server == None:
             return
 
