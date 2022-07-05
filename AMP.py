@@ -688,7 +688,7 @@ class AMPConsole:
         self.console_message_list = []
 
         self.logger.info(f'**SUCCESS** Setting up {self.AMPInstance.FriendlyName} Console')
-        #self.console_start()
+        self.console_start()
      
     def console_start(self):
         #print(self,dir(self))
@@ -699,9 +699,14 @@ class AMPConsole:
                 #!TODO! Finish setting up Consoles
                 if self.AMPInstance.Module in self.AMP_Console_Modules:
                     self.logger.info(f'Loaded __AMPConsole_{self.AMPInstance.Module}__ for {self.AMPInstance.FriendlyName}')
-                    server_console = self.AMP_Console_Modules[self.AMPInstance.Module] #This should point to our AMP Console Object
-                    self.AMP_Console_Threads[self.AMPInstance.InstanceID] = server_console
-                    self.console_thread = threading.Thread(server_console.console_parse())
+                    #This should point to our AMP Console Object
+                    server_console = self.AMP_Console_Modules[self.AMPInstance.Module] 
+
+                    #This adds the AMPInstance Object into a dictionary with the key value of AMPInstance.InstanceID
+                    self.AMP_Console_Threads[self.AMPInstance.InstanceID] = server_console 
+
+                    #This sets our attribute of AMPConsole object to our Threading object; allowing us to call .start() or similar.
+                    self.console_thread = threading.Thread(server_console.console_parse()) 
                     self.console_thread_running = True
                     logging.info(f'Initiating Server Console for {self.AMPInstance.FriendlyName}...')
 

@@ -60,6 +60,7 @@ def role_check():
     return commands.check(async_rolecheck)
 
 class CustomButton(Button):
+    """ utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)"""
     def __init__(self,server,view,function,label:str,callback_label:str,callback_disabled:bool,style=discord.ButtonStyle.green,context=None):
         super().__init__(label=label, style=style, custom_id=label)
         self.server = server
@@ -91,6 +92,10 @@ class CustomButton(Button):
         self.label = self._label
         self.disabled = False
         await self._interaction.followup.edit_message(message_id=self._interaction.message.id,view=self._view)
+
+class StartButton(CustomButton):
+    def __init__(self,server,view,function):
+        super().__init__(server=server,view=view,function=function,label='Start', callback_label='Starting...',callback_disabled=True,style=discord.ButtonStyle.green)
 
 class StopButton(CustomButton):
     def __init__(self,server,view,function):
@@ -354,6 +359,8 @@ class botUtils():
             cur_server = self.DB.GetServer(Name = parameter)
             if cur_server != None:
                 self.logger.debug(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
+                #This converts the DB_Server object into our AMPInstance Object
+                cur_server = self.AMPInstances[cur_server.InstanceID]
                 return cur_server
 
             #Since the DB came up empty; lets continue and try all AMPInstances Friendly Names!
@@ -429,22 +436,41 @@ class botUtils():
                 embed_list.append(embed)
             return embed_list
 
-        def server_status_embed(self,context:commands.Context,server:AMP.AMPInstance,TPS,Users,CPU,Memory,Uptime,Users_Online) -> discord.Embed:
+        def server_status_embed(self,context:commands.Context,server:AMP.AMPInstance,TPS=None,Users=None,CPU=None,Memory=None,Uptime=None,Users_Online=None) -> discord.Embed:
             """This is the Server Status Embed Message"""
+            db_server = self.DB.GetServer(InstanceID= server.InstanceID)
             if server.Server_Running:
                 server_status = 'Online'
             else:
                 server_status = 'Offline'
 
-            embed=discord.Embed(title=f'{server.FriendlyName}', description=f'Instance Status: **{server_status}**', color=0x00ff40)
+            if db_server.DisplayName == None:
+                embed=discord.Embed(title=f'{db_server.InstanceName}', description=f'Dedicated Server Status: **{server_status}**', color=0x00ff40)
+            else:
+                embed=discord.Embed(title=f'{db_server.DisplayName}', description=f'Dedicated Server Status: **{server_status}**', color=0x00ff40)
+
             embed.set_thumbnail(url=context.guild.icon)
-            embed.add_field(name='TPS', value=TPS, inline=True)
-            embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
-            embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=False)
-            embed.add_field(name='CPU Usage', value=f'{CPU}/100%', inline=True)
-            embed.add_field(name='Uptime', value=Uptime, inline=True)
-            embed.add_field(name='Players Online', value=Users_Online, inline=False)
+            if db_server.IP != None:
+                embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
+
+            if len(db_server.Nicknames) != 0:
+                embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
+
+            #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
+            embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
+            embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
+            #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False) #This Generates a BLANK Field entirely.
+
+            if server.Server_Running:
+                embed.add_field(name='TPS', value=TPS, inline=True)
+                embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
+                embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=False)
+                embed.add_field(name='CPU Usage', value=f'{CPU}/100%', inline=True)
+                embed.add_field(name='Uptime', value=Uptime, inline=True)
+                embed.add_field(name='Players Online', value=Users_Online, inline=False)
             return embed
+                   
+
 
         def server_whitelist_embed(self,context:commands.Context,server:AMP.AMPInstance) -> discord.Embed:
             """Default Embed Reply for Successful Whitelist requests"""
