@@ -1,4 +1,4 @@
-import modules.AMP as AMP
+import AMP
 import requests
 import json
     

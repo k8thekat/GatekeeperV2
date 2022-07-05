@@ -4,10 +4,9 @@ import os
 import logging
 
 import utils
-import modules.AMP as AMP
-import modules.DB as DB
+import AMP as AMP
+import DB as DB
 import modules.Minecraft.amp_minecraft as AMPMC
-import bot_config
 
 
 
@@ -28,6 +27,8 @@ class Minecraft(commands.Cog):
 
         self.uBot = utils.botUtils(client) #Utilities Class for Embed's and other functionality.
         self.dBot = utils.discordBot(client) #Common Discord Bot functionality (messages/reactions/users)
+
+        self.DBConfig.AddSetting('Multiverse_Core', False)
 
 
     @commands.Cog.listener('on_message')
@@ -50,18 +51,6 @@ class Minecraft(commands.Cog):
         if message_before.author != self._client.user:
             self.logger.info(f'Edited Message Event for {self.name}')
             return message_before,message_after
-
-    # @commands.Cog.listener('on_reaction_add')
-    # async def on_reaction_add(self,reaction,user):
-    #     """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
-    #     self.logger.info(f'Reaction Add {self.name}: {user} Reaction: {reaction}')
-    #     return reaction,user
-
-    # @commands.Cog.listener('on_reaction_remove')
-    # async def on_reaction_remove(self,reaction,user:discord.Member):
-    #     """Called when a message has a reaction removed from it. Similar to on_message_edit, if the message is not found in the internal message cache, then this event will not be called."""
-    #     self.logger.info(f'Reaction Remove {self.name}: {user} Reaction: {reaction}')
-    #     return reaction,user
 
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):

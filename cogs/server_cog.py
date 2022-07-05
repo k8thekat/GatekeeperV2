@@ -1,18 +1,16 @@
 import os
-import datetime
-from pprint import pprint
-
-import utils
-import modules.AMP as AMP
 import logging
-import modules.DB as DB
+from datetime import datetime
 
 import discord
 from discord.ext import commands
-from discord.ui import Button,View
 
-class AMP_Module(commands.Cog):
-    def __init__ (self,client):
+import AMP
+import DB
+import utils
+
+class Server(commands.Cog):
+    def __init__(self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
@@ -23,42 +21,35 @@ class AMP_Module(commands.Cog):
         #self.AMPHandler.set_discord_client(self._client)   #This is to get the Discord Client functionality into AMPHandler and AMPConsole class
 
         self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB #Main Database object
+        self.DB = self.DBHandler.DB 
         self.DBConfig = self.DBHandler.DBConfig
 
-        self.server_list = self.amp_server_list
-        self.logger.info(f'**SUCCESS** Loading {self.name.replace("amp","AMP")}')
+        self.logger.info(f'**SUCCESS** Loading {self.name.capitalize()}')
    
         self.uBot = utils.botUtils(client)
-        
-        
-    @commands.Cog.listener('on_message')
-    async def on_message(self,message):
-        if message.content.startswith(self._client.command_prefix):
-            return message
-        if message.author != self._client.user:
-            self.logger.info(f'On Message Event for {self.name}')
-            return message
+        #self.uBot.sub_command_handler('server',self.server_whitelist) 
 
-    @commands.Cog.listener('on_user_update')
-    async def on_user_update(self,user_before,user_after):
-        """Called when a User updates any part of their Discord Profile; this provides access to the `user_before` and `user_after` <discord.Member> objects."""
-        self.logger.info(f'User Update {self.name}: {user_before} into {user_after}')
-        return user_before,user_after
 
     @commands.Cog.listener('on_member_remove')
-    async def on_member_remove(self,member):
+    async def on_member_remove(self,member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
-        self.logger.info(f'Member Removed {self.name}: {member}')
-        return member
+        self.logger.info(f'Member Leave {self.name}: {member.name} {member}')
 
+        db_user = self.DB.GetUser(str(member.id))
+        if db_user != None and db_user.InGameName != None:
+            for server in self.AMPInstances:
+                if self.AMPInstances[server].Module == 'Minecraft':
+                    self.AMPInstances[server].removeWhitelist(db_user.InGameName)
+
+    
     @commands.hybrid_group(name='server')
     @utils.role_check() #Only Needed on the group Command
-    async def amp_server(self,context:commands.Context):
+    async def server(self,context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Please try your command again...')
+       
 
-    @amp_server.command(name='list',description='Retrieves a list of a Discord Servers AMP Instances')
+    @server.command(name='list',description='Retrieves a list of a Discord Servers AMP Instances')
     @utils.role_check()
     async def amp_server_list(self,context:commands.Context):
         embed=discord.Embed(title=f'{context.guild.name} Server List',color=0x808000)
@@ -71,7 +62,7 @@ class AMP_Module(commands.Cog):
                 if db_server.DisplayName != None and db_server.IP != None:
                     self.logger.debug(f'Found a DisplayName and IP, using Display Name and IP for {db_server.InstanceName}')
                     embed.add_field(name=f'{db_server.DisplayName}',value=f'{db_server.IP}',inline=True)
-                    
+
                 else: #Fallback to Instance Name, since this is always set!
                     self.logger.debug(f'Unable to find DisplayName, using Instance Name for {db_server.InstanceName}')
                     embed.add_field(name=f'{db_server.InstanceName}',value='0.0.0.0',inline=True)
@@ -81,7 +72,7 @@ class AMP_Module(commands.Cog):
 
         await context.send(embed = embed)
 
-    @amp_server.command(name='start',description='Starts the AMP Instance')
+    @server.command(name='start',description='Starts the AMP Instance')
     @utils.role_check()
     async def amp_server_start(self,context:commands.Context,server):
         self.logger.info('AMP Server Started...')
@@ -94,7 +85,7 @@ class AMP_Module(commands.Cog):
             server.StartInstance()
             await context.send(f'Starting the AMP Instance {server.FriendlyName}')
     
-    @amp_server.command(name='stop',description='Stops the AMP Instance')
+    @server.command(name='stop',description='Stops the AMP Instance')
     @utils.role_check()
     async def amp_server_stop(self,context:commands.Context,server):
         self.logger.info('AMP Server Stopped...')
@@ -107,7 +98,7 @@ class AMP_Module(commands.Cog):
             server.StopInstance()
             await context.send(f'Stopping the AMP Instance {server.FriendlyName}')
 
-    @amp_server.command(name='restart',description='Restarts the AMP Instance')
+    @server.command(name='restart',description='Restarts the AMP Instance')
     @utils.role_check()
     async def amp_server_restart(self,context:commands.Context,server):
         self.logger.info('AMP Server Restart...')
@@ -120,7 +111,7 @@ class AMP_Module(commands.Cog):
             server.RestartInstance()
             await context.send(f'Restarting the AMP Instance {server.FriendlyName}')
     
-    @amp_server.command(name='kill',description='Kills the AMP Instance')
+    @server.command(name='kill',description='Kills the AMP Instance')
     @utils.role_check()
     async def amp_server_kill(self,context:commands.Context,server):
         self.logger.info('AMP Server Kill...')
@@ -133,7 +124,7 @@ class AMP_Module(commands.Cog):
             server.KillInstance()
             await context.send(f'Killing the AMP Instance {server.FriendlyName}')
 
-    @amp_server.command(name='msg',description='AMP Console Message/Commands')
+    @server.command(name='msg',description='AMP Console Message/Commands')
     @utils.role_check()
     async def amp_server_message(self,context:commands.Context,server,message:str):
         self.logger.info('AMP Server Message...')
@@ -149,7 +140,7 @@ class AMP_Module(commands.Cog):
                 msg_to_send.append(message['Contents'])
             await context.send('\n'.join(msg_to_send))
 
-    @amp_server.command(name='backup',description='AMP Console Message/Commands')
+    @server.command(name='backup',description='AMP Console Message/Commands')
     @utils.role_check()
     async def amp_server_backup(self,context:commands.Context,server):
         self.logger.info('AMP Server Backup...')
@@ -164,7 +155,7 @@ class AMP_Module(commands.Cog):
             server.takeBackup(title=title,description=description)
             await context.send(f'{server.FriendlyName} Backup' + description)
         
-    @amp_server.command(name='status',description='AMP Instance Status(TPS, Player Count, CPU Usage, Memory Usage and Online Players)')
+    @server.command(name='status',description='AMP Instance Status(TPS, Player Count, CPU Usage, Memory Usage and Online Players)')
     @utils.role_check()
     async def amp_server_status(self,context:commands.Context,server):
         self.logger.info('AMP Server Status...')
@@ -186,30 +177,8 @@ class AMP_Module(commands.Cog):
             await context.send(embed= self.uBot.server_status_embed(context,server,tps,Users,cpu,Memory,Uptime,Users_online))
             await context.send(view=view)
 
-    @amp_server.command(name='test',description='AMP test Function')
-    @utils.role_check()
-    async def amp_server_test(self,context:commands.Context,server):
-        """This is my AMP_Module Server Test Function"""
-        self.logger.info('AMP Server Test Function...')
 
-        server = self.uBot.serverparse(server,context,context.guild.id)
-
-        if server != None and server.Running:
-            return await context.send(f'Found multiple AMP Servers matching the provided name, please be more specific.')
-        await context.send(embed = self.uBot.server_whitelist_embed(context,server))
-        # if server != None:
-        #     print(server)
-        #     print(server.getAPItest)
-        # view = utils.StatusView()
-        # utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)
-        # utils.StopButton(server,view,server.StopInstance)
-        # utils.RestartButton(server,view,server.RestartInstance)
-        # utils.KillButton(server,view,server.KillInstance)
-        # msg = self.uBot.default_embedmsg(context,title= server.FriendlyName,description='Test Embed',field='Status',field_value='**6/10 Players**')
-        # await context.send(embed=msg)
-        # await context.send(view=view)
-
-    @amp_server.command(name='users',description='AMP Instance User List(Display Names)')
+    @server.command(name='users',description='AMP Instance User List(Display Names)')
     @utils.role_check()
     async def amp_server_users_list(self,context:commands.Context,server):
         self.logger.info('AMP Server Connected Users...')
@@ -219,12 +188,101 @@ class AMP_Module(commands.Cog):
             return await context.send(f'Found multiple AMP Servers matching the provided name, please be more specific.')
 
         if server != None and server.Running:
-            await context.send(', '.join(server.getUserList()))
+            cur_users = server.getUserList()
+            if len(cur_users) != 0:
+                await context.send("**Server Users**" + '\n' + ', '.join(server.getUserList()))
+            else:
+                await context.send('The Server currently has no online players.')
 
-    
-    async def amp_server_console_init(self):
+    #This section is Whitelist Specific Server Commands --------------------------------------------------------------------------------
+    @server.group(name='whitelist')
+    @utils.role_check()
+    async def server_whitelist(self,context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Invalid command passed...')
+
+    @server_whitelist.command(name='true')
+    @utils.role_check()
+    async def dbserver_whitelist_true(self,context:commands.Context,server):
+        """Set Servers Whitelist Allowed to True"""
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server != None:
+            self.DB.GetServer(server.FriendlyName).Whitelist = True
+        await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `True`")
+
+    @server_whitelist.command(name='false')
+    @utils.role_check()
+    async def dbserver_whitelist_false(self,context:commands.Context,server):
+        """Set Servers Whitelist Allowed to False"""
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server != None:
+            self.DB.getServer(server.FriendlyName).Whitelist = False
+        await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `False`")
+
+    @server_whitelist.command(name='test')
+    @utils.role_check()
+    async def dbserver_whitelist_test(self,context:commands.Context,server=None,user=None):
+        """Server Whitelist Test function."""
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server != None:
+            user = server.name_Conversion(context,user)
+            # server_whitelist = server.getWhitelist()
+            # print(server_whitelist)
+            await context.send(f'Test Function for Server Whitelist {server}{user[0]["name"]}')
+
+    @server_whitelist.command(name='add')
+    @utils.role_check()
+    async def amp_server_whitelist_add(self,context:commands.Context,server,user):
+        """Adds User to Servers Whitelist"""
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server != None:
+            user = server.name_Conversion(context,user)
+            if user != None:
+                server.addWhitelist(user[0]['name'])
+                await context.send(f'User: {user[0]["name"]} was whitelisted on Server: {server.FriendlyName}')
+
+    @server_whitelist.command(name='remove')
+    @utils.role_check()
+    async def amp_server_whitelist_remove(self,context:commands.Context,server,user):
+        """Remove a User from the Servers Whitelist"""
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server != None:
+            #Converts the name to the proper format depending on the server type
+            user = server.name_Conversion(context,user)
+
+            if user != None:
+                server.removeWhitelist(user[0]['name'])
+                await context.send(f'User: {user[0]["name"]} was removed from the Whitelist on Server: {server.FriendlyName}')
+
+
+    #This Section is DBServer Attributes -----------------------------------------------------------------------------------------------------
+    @server.command(name='displayname')
+    @utils.role_check()
+    async def db_server_displayname_set(self,context:commands.Context,server,name=None):
+        """Sets the Display Name for the provided Server"""
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if name == None:           
+            await context.send(f'Please provide a proper Display Name for {server.FriendlyName}')
+        if server != None:
+            self.DB.GetServer(server.InstanceID).DisplayName = name
+            await context.send(f"Set {server.FriendlyName} Display Name to {name}")
+
+    @server.command(name='description')
+    @utils.role_check()
+    async def db_server_description(self,context:commands.Context,server,desc=None):
+        """Sets the Description for the provided Server"""
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if desc == None:
+            await context.send(f'Please provide a proper Description for {server.FriendlyName}')
+        if server != None:
+            self.DB.GetServer(server.InstanceID).Description = desc
+            await context.send(f"Set {server.FriendlyName} Description to {desc}")
+        
+    @server.command(name='ip')
+    @utils.role_check()
+    async def db_server_ip(self,context:commands.Context,server,ip:str=None):
         print()
 
 
 async def setup(client):
-    await client.add_cog(AMP_Module(client))
+    await client.add_cog(Server(client))

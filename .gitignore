@@ -9,3 +9,14 @@ test*
 todo.txt
 hybrid*
 discordBot.db
+/dev/scrap
+/dev/**-REDO
+/dev/bot_test
+/dev/cog_template
+/dev/console*
+/dev/chat*
+/dev/endReset*
+/dev/gitUpdate.py
+/dev/timehandler
+/dev/bot_test.py
+

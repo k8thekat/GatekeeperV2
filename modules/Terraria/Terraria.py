@@ -4,8 +4,8 @@ import os
 import logging
 
 import utils
-import modules.AMP as AMP
-import modules.DB as DB
+import AMP
+import DB
 
 
 class Terraria(commands.Cog):

@@ -26,9 +26,7 @@ import json
 import time
 import logging
 
-from modules.AMP import AMPInstance
-
-
+from AMP import AMPInstance
 
 def dump_to_json(data):
 	for entry in data:
@@ -48,18 +46,23 @@ class DBHandler():
 		self.DB = Database(Handler = self)
 		self.DBConfig = self.DB.GetConfig()
 		self.SuccessfulDatabase = True
+
+		self.DBConfig.AddSetting('Staff', None)
 	
 	def dbWhitelistSetup(self):
 		"""This is set Default AMP Specific Whitelist Settings"""
 		try:
+			self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
 			self.DBConfig.AddSetting('Whitelist_Channel', None)
 			self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
 			self.DBConfig.AddSetting('Auto_Whitelist', False)
+			self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
+			self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
 		except:
 			self.logger.error('**ERROR** DBConfig Default Whitelist Settings have been set.')
 
 	def dbServerConsoleSetup(self,server:AMPInstance):
-		"""This is set Default AMP Specific Console Settings"""
+		"""This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
 		self.DB_Server = self.DB.GetServer(server.InstanceID)
 		try:
 			self.DB_Server.Console_Flag = False
@@ -631,15 +634,15 @@ class DBUser:
 	# 	cur.close()
 	# 	return ret
 
-	def GetServer(self, dbserver = None, InstanceID:str = None, Name:str = None):
-		if not dbserver:
-			Server = self._db.GetServer(InstanceID=InstanceID, Name=Name)
+	# def GetServer(self, dbserver = None, InstanceID:str = None, Name:str = None):
+	# 	if not dbserver:
+	# 		Server = self._db.GetServer(InstanceID=InstanceID, Name=Name)
 
-		if not Server:
-			return None
+	# 	if not Server:
+	# 		return None
 
-		#go find the entry
-		return self._db.GetServerUser(Server, self)
+	# 	#go find the entry
+	# 	return self._db.GetServerUser(Server, self)
 
 	# def GetAllServers(self):
 	# 	#get all servers that we are on
@@ -762,6 +765,18 @@ class DBServer:
 		self._db._execute("delete from ServerNicknames where ServerID=? and Nickname=?", (self.ID, Nickname))
 		jdata = dump_to_json({"Type": "DeleteServerNickname", "ServerID": self.ID, "Nickname": Nickname})
 		self._db._logdata(jdata)
+
+	def GetAllServers(self):
+		serverlist = []
+		(rows, cur) = self._db._fetchall("Select ID from Servers")
+		for entry in rows:
+			serverlist.append(DBServer(ID= entry["ID"]))
+		return serverlist
+
+	def delServer(self):
+		self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
+		self._db._execute("delete from Servers where ID=?", (self.ID,))
+
 
 	# def AddUser(self, dbuser:DBUser=None, DiscordID:str = None, DiscordName:str = None, IngameName:str = None, UUID:str = None):
 	# 	try:

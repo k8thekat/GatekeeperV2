@@ -32,12 +32,10 @@ import logging
 
 #Custom scripts
 import logger as bot_logger
-import bot_config
-import gitUpdate
 import utils
-import modules.AMP as AMP
-import modules.DB as DB
-import modules.DB_module as DB_module
+import AMP
+import DB
+import cogs.DB_cog as DB_cog
 
 Version = 'alpha-0.0.1'
 bot_logger.init()
@@ -59,7 +57,7 @@ async def setup_hook():
 @client.event
 async def on_ready():
     logger.info('Are you the Keymaster?...I am the Gatekeeper')
-    client.tree.copy_global_to(guild=client.get_guild(bot_config.Guild_ID))
+    client.tree.copy_global_to(guild=client.get_guild(602285328320954378)) #Kat's Paradise Guild ID = 602285328320954378
     #client.is_ready() #Lets wait to start this until the bot has fully setup.
     return
 
@@ -108,16 +106,28 @@ async def main_bot(context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...')
 
+@main_bot.command(name='setup')
+@commands.has_guild_permissions(administrator=True)
+async def bot_setup(context:commands.Context,staff_role):
+    guild_role = utils.botUtils.roleparse(staff_role,context,context.guild.id)
+    if guild_role == None:
+        await context.send(f'Unable to find role {staff_role}, please try again.')
+
+    if main_DB_Config.Staff != None:
+        main_DB_Config.Staff = guild_role.id
+        await context.send(f'Set Staff Role to {guild_role.name}.')
+
+
 @main_bot.command(name='test',description='Test Async Function...')
 @utils.role_check()
-async def bot_test(context):
+async def bot_test(context:commands.Context):
     """Test Async Function...**DO NOT USE**"""
-    print(dir(context.interaction))
-    print(dir(context.interaction.followup))
-    print(dir(context.interaction.user))
-    print(dir(context.interaction.guild))
-    print(dir(context.interaction.response))
-    print(dir(context.interaction.message))
+    # print(dir(context.interaction))
+    # print(dir(context.interaction.followup))
+    # print(dir(context.interaction.user))
+    # print(dir(context.interaction.guild))
+    # print(dir(context.interaction.response))
+    # print(dir(context.interaction.message))
     await context.send('Test Function Used')
     #await client.load_extension('modules.cogs.testcog')
     #await client.load_extension('modules.cogs.testcog2')
@@ -156,7 +166,7 @@ async def bot_setting(context):
     """Settings to control specific features of the discordBot."""
     logger.info('Bot Settings Called...')
     if main_DB:
-        DB_module.db_bot_settings()
+        DB_cog.db_bot_settings()
     return await context.send('Bot Settings here...')
 
 @main_bot.command(name='disconnect',description='Closes the connection to Discord')
@@ -197,7 +207,9 @@ async def bot_sync(context):
 @utils.role_check()
 async def bot_update(context):
     """Checks for gitHub Updates..."""
-    gitUpdate.githubUpdate
+    #!TODO! Not currently working
+    #import dev.gitUpdate as gitUpdate
+    #gitUpdate.githubUpdate
     await context.send('Updating the Bot...')
 
 @main_bot.command(name='log',description='Changes the Bot Logging level to specified level')
@@ -207,6 +219,7 @@ async def bot_log_level(context,level:str):
     logger.info(f'Set Logging level %s',level.upper())
     logger.setLevel(level.upper())
     await context.send(f'Adjusted Logging Level to {level.upper()}')
+
 
 async def  initbot():
     """This is the main startup function..."""
@@ -221,14 +234,16 @@ async def  initbot():
     main_AMP = main_AMPHandler.AMP
 
     if main_AMP:
-        await client.load_extension('modules.AMP_module')
+        await client.load_extension('cogs.AMP_cog')
 
     if main_DB:
-        await client.load_extension('modules.DB_module')
+        await client.load_extension('cogs.DB_cog')
 
-    import modules.module as module
-    Mod_Handler = module.ModuleHandler(client)
-    await Mod_Handler.cog_auto_loader()
+    import loader
+    Handler = loader.Handler(client)
+    await Handler.module_auto_loader()
+    await Handler.cog_auto_loader()
+
     #uBot = utils.botUtils(client)
 
 async def thread_loop():

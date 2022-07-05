@@ -5,12 +5,12 @@ import os
 import logging
 
 import utils
-import modules.AMP as AMP
-import modules.DB as DB
+import AMP as AMP
+import DB as DB
 
 
 class Cog_Template(commands.Cog):
-    def __init__ (self,client):
+    def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
 
@@ -18,16 +18,21 @@ class Cog_Template(commands.Cog):
         self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
 
         self.AMPHandler = AMP.getAMPHandler()
-        self.AMP =self.AMPHandler.AMP #Main AMP object
+        self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
-        self.DB = DB.getDatabase() #Main Database object
+        #use DBHandler for all DB related needs.
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
         self.DBCOnfig = self.DB.GetConfig()
 
+        #utils.botUtils provide access to utility functions such as serverparse,roleparse,channelparse,userparse.
         self.uBot = utils.botUtils(client)
+        #utils.discordBot provides access to utility functions such as sending/deleting messages, kicking/ban users.
         self.dBot = utils.discordBot(client)
 
-        self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
+        #Leave this commented out unless you need to create a sub-command.
+        #self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
 
     @commands.Cog.listener('on_message')
     async def on_message(self,message:discord.Message):

@@ -1,5 +1,5 @@
 #
-import modules.AMP as AMP
+import AMP as AMP
 
 
 class AMPGeneric(AMP.AMPInstance):

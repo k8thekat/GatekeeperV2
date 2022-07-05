@@ -34,9 +34,10 @@ import logging
 import threading
 import importlib.util
 import traceback
+import os
 import discord
 
-import modules.DB as DB
+import DB
 import tokens
 import utils
 
@@ -48,6 +49,7 @@ class AMPHandler():
         self.logger = logging.getLogger()
         self._client = client
         self._cwd = pathlib.Path.cwd()
+        self.name = os.path.basename(__file__)
 
         self.SessionIDlist = {}
 
@@ -136,7 +138,7 @@ class AMPHandler():
                         self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
                         self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
 
-                        self.logger.info(f'**SUCCESS** Loading AMP Module **{module_name}**')
+                        self.logger.info(f'**SUCCESS** {self.name} Loading AMP Module **{module_name}**')
                         #print(dir(class_module))
                     # module_name = script.name[4:-3].capitalize()
                     # script = str(script).replace("\\",".").replace("/",'.')
@@ -146,11 +148,11 @@ class AMPHandler():
                     #     class_module = importlib.import_module(name = f'{script[3:-3]}')
 
                     except Exception as e:
-                        self.logger.error(f'**ERROR** Loading AMP Module **{module_name}** - {e}')
+                        self.logger.error(f'**ERROR** {self.name} Loading AMP Module **{module_name}** - {e}')
                         continue
             print('My AMP Console Modules',self.AMP_Console_Modules)
         except Exception as e:
-            self.logger.error(f'**ERROR** Loading Module ** - File Not Found {e}')
+            self.logger.error(f'**ERROR** {self.name} Loading AMP Module ** - File Not Found {e}')
                     
 def getAMPHandler(client:discord.Client = None)-> AMPHandler:
     global Handler

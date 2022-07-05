@@ -6,10 +6,9 @@ import discord
 from discord.ext import commands,tasks
 
 import utils
-import modules.AMP as AMP
-import modules.DB as DB
+import AMP as AMP
+import DB as DB
 from modules.message_parser import ParseIGNServer
-import bot_config
 
 
 
@@ -29,7 +28,6 @@ class Generic(commands.Cog):
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
-        self.uBot.sub_command_handler('server',self.server_whitelist) 
         #self.uBot.sub_command_handler(self,'user',self.info)
 
         #This should help prevent errors in older databases.
@@ -37,18 +35,21 @@ class Generic(commands.Cog):
             self.Auto_WL = self.DBConfig.Auto_whitelist
             self.WL_channel = self.DBConfig.Whitelist_channel #DBConfig is Case sensitive.
             self.WL_delay = self.DBConfig.Whitelist_wait_time #Should only be an INT value; all values in Minutes.
+            self.WL_format = self.DBConfig.Whitelist_Format
+            self.WL_Pending_Emoji = self.DBConfig.Whitelist_Emoji_Pending
+            self.WL_Finished_Emoji = self.DBConfig.Whitelist_Emoji_Done
 
         except:
             self.DBHandler.dbWhitelistSetup()
             self.Auto_WL = self.DBConfig.Auto_whitelist
             self.WL_channel = self.DBConfig.Whitelist_channel #DBConfig is Case sensitive.
             self.WL_delay = self.DBConfig.Whitelist_wait_time #Should only be an INT value; all values in Minutes.
+            self.WL_format = self.DBConfig.Whitelist_format
+            self.WL_Pending_Emoji = self.DBConfig.Whitelist_emoji_pending
+            self.WL_Finished_Emoji = self.DBConfig.Whitelist_emoji_done
         
         self.failed_whitelist = []
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
-        self.WL_format = bot_config.WhitelistFormat
-        self.WL_Pending_Emoji = bot_config.Whitelist_Pending_Emoji
-        self.WL_Finished_Emoji = bot_config.Whitelist_Finished_Emoji
 
 
 
@@ -107,63 +108,6 @@ class Generic(commands.Cog):
                 self.WL_wait_list.pop(index)
                 self.logger.info(f'Removed {member.name} from Whitelist Wait List.')
         return member
-
-    @commands.hybrid_group(name='whitelist')
-    @utils.role_check()
-    async def server_whitelist(self,context:commands.Context):
-        if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...')
-
-    @server_whitelist.command(name='true')
-    @utils.role_check()
-    async def server_whitelist_true(self,context:commands.Context,server):
-        """Set Servers Whitelist Allowed to True"""
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        self.DB.GetServer(server.FriendlyName).Whitelist = True
-        await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `True`")
-
-    @server_whitelist.command(name='false')
-    @utils.role_check()
-    async def server_whitelist_false(self,context:commands.Context,server):
-        """Set Servers Whitelist Allowed to False"""
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        self.DB.getServer(server.FriendlyName).Whitelist = False
-        await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `False`")
-
-    @server_whitelist.command(name='test')
-    @utils.role_check()
-    async def server_whitelist_test(self,context:commands.Context,server=None,user=None):
-        """Server Whitelist Test function."""
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        if server != None:
-            user = server.name_Conversion(context,user)
-            # server_whitelist = server.getWhitelist()
-            # print(server_whitelist)
-            await context.send(f'Test Function for Server Whitelist {server}{user[0]["name"]}')
-
-    @server_whitelist.command(name='add')
-    @utils.role_check()
-    async def server_whitelist_add(self,context:commands.Context,server,user):
-        """Adds User to Servers Whitelist"""
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        if server != None:
-            user = server.name_Conversion(context,user)
-            if user != None:
-                server.addWhitelist(user[0]['name'])
-                await context.send(f'User: {user[0]["name"]} was whitelisted on Server: {server.FriendlyName}')
-
-    @server_whitelist.command(name='remove')
-    @utils.role_check()
-    async def server_whitelist_remove(self,context:commands.Context,server,user):
-        """Remove a User from the Servers Whitelist"""
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        if server != None:
-            #Converts the name to the proper format depending on the server type
-            user = server.name_Conversion(context,user)
-
-            if user != None:
-                server.removeWhitelist(user[0]['name'])
-                await context.send(f'User: {user[0]["name"]} was removed from the Whitelist on Server: {server.FriendlyName}')
 
     async def on_message_whitelist(self,message:discord.Message):
         """This handles on_message whitelist requests."""

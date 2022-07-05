@@ -8,14 +8,27 @@ from discord.ext import commands,tasks
 from discord.ui import Button,View
 import asyncio
 
-import bot_config
-import modules.DB as DB
-import modules.AMP as AMP
+import DB
+import AMP
 
-import test #!TESTING PURPOSE ONLY!
 
-async def async_rolecheck(context: discord.Interaction):
+
+async def async_rolecheck(context:commands.Context):
+    DBHandler = DB.getDBHandler()
+    DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
+
+    #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
+    admin = context.author.guild_permissions.administrator
+    if admin == True:
+        logger.info(f'Permission Check Okay on {context.author}')
+        return True
+    
+    if DBConfig.Staff == None:
+        await context.send(f'Please have an Adminstrator run `/bot setup (admin role)`.')
+        logger.error(f'DBConfig Staff role has not been set yet!')
+        return False
+
     staff_role,author_top_role = 0,0
     guild_roles = context.guild.roles
     
@@ -25,11 +38,12 @@ async def async_rolecheck(context: discord.Interaction):
     else:
         top_role_id = context.message.author.top_role.id
         author = context.message.author
+
     for i in range(0,len(guild_roles)):
         if guild_roles[i].id == top_role_id:
             author_top_role = i
 
-        if guild_roles[i].id == bot_config.Staff_Role:
+        if guild_roles[i].id == DBConfig.Staff:
             staff_role = i
             
     if author_top_role > staff_role:
@@ -42,7 +56,7 @@ async def async_rolecheck(context: discord.Interaction):
         return False
 
 def role_check():
-    """Use this before any Commands that require a Staff/Mod level permission Role"""
+    """Use this before any Commands that require a Staff/Mod level permission Role, this will also check for Administrator"""
     return commands.check(async_rolecheck)
 
 class CustomButton(Button):
@@ -103,7 +117,7 @@ class discordBot():
     def __init__(self,client:discord.Client):
         self.botLogger = logging.getLogger(__name__)
         self._client = client
-        self.botLogger.info(f'Utils Discord Loaded')
+        self.botLogger.debug(f'Utils Discord Loaded')
     
     async def userAddRole(self, user: discord.user, role: discord.role, reason:str=None):
         """Adds a Role to a User.\n
@@ -195,7 +209,7 @@ class botUtils():
         def __init__ (self,client:discord.Client):
             self._client = client
             self.logger = logging.getLogger(__name__)
-            self.logger.info('Utils Bot Loaded')
+            self.logger.debug('Utils Bot Loaded')
 
             self.DBHandler = DB.getDBHandler()
             self.DB = self.DBHandler.DB #Main Database object
@@ -277,6 +291,8 @@ class botUtils():
             returns `<user>` object if True, else returns `None`
             **Note** Use context.guild.id"""
             self.logger.info('User Parse Called...')
+
+            #Without a guild_ID its harder to parse members.
             if guild_id == None:
                 cur_member = self._client.get_user(int(parameter))
                 self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
@@ -328,14 +344,14 @@ class botUtils():
             Returns `AMPInstance[server] <object>`"""
             self.logger.info('Bot Utility Server Parse')
             cur_server = None
-            #print(parameter)
+
+            #This is to handle Instance Names or Display Names with spaces, also removes quotes.
             if type(parameter) == tuple:
                 parameter = ' '.join(parameter)
             parameter = parameter.replace(' ','_').replace("'",'').replace('"','')
-            #print(parameter)
 
             #Lets check the DB First, this checks Nicknames and Display names.
-            cur_server = self.DB.GetServer(name = parameter)
+            cur_server = self.DB.GetServer(Name = parameter)
             if cur_server != None:
                 self.logger.debug(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
                 return cur_server
@@ -384,6 +400,8 @@ class botUtils():
                 embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
                 embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
 
+        #This was designed for smaller servers showing only a few embed messages, it does support up to the buffer limit of discord sending embeds currently.
+        #See AMP_module for server list command that is text based.
         def server_list_embed(self,context:commands.Context) -> list:
             """Possibly an Option for Server Displays? Currently Un-used..."""
             embed=discord.Embed(title=f'Server List for {context.guild.name}', color=0x00ff00)
@@ -392,12 +410,9 @@ class botUtils():
             for server in self.AMPInstances:
                 server = self.AMPInstances[server]
                 
-                #!TODO! Remove Test.DB
-                db_server = self.DB.GetServer(server.InstanceID)
-                #db_server = test.DB_Spoof()
+                db_server = self.DB.GetServer(InstanceID= server.InstanceID)
                 if db_server != None:
                     embed.set_thumbnail(url=context.guild.icon)
-                    #!TODO! Verify server.DisplayName Works!
                     embed.add_field(name='\u1CBC\u1CBC',value = f'========={server.DisplayName}=========',inline=False)
                     embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
                     embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
@@ -434,14 +449,14 @@ class botUtils():
         def server_whitelist_embed(self,context:commands.Context,server:AMP.AMPInstance) -> discord.Embed:
             """Default Embed Reply for Successful Whitelist requests"""
             #!TODO! Update Database
-            #users_online = server.getUserList()
-            db_server = test.DB_Spoof()
-            users_online = ', '.join(db_server.users)
+            db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+            users_online = server.getUserList()
 
             embed=discord.Embed(title=f'{server.FriendlyName}', color=0x00ff00)
             if db_server != None:
                 embed.set_thumbnail(url=context.guild.icon)
-                embed.add_field(name='IP: ', value=db_server.IP, inline=False)
+                if db_server.IP != None:
+                    embed.add_field(name='IP: ', value=db_server.IP, inline=False)
                 embed.add_field(name='Users Online:' , value=users_online, inline=False)
             return embed
                 
