@@ -1,4 +1,3 @@
-import discordBot
 import DB
 import AMP
 import logger as bot_logger
@@ -19,4 +18,5 @@ class Setup:
         self.AMP = self.AMPHandler.AMP
 
 Start = Setup()
+#import discordBot
 #discordBot.client_run()

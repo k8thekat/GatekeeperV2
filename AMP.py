@@ -39,7 +39,7 @@ import discord
 import asyncio
 
 import DB
-import tokens
+
 import utils
 
 Handler = None
@@ -66,6 +66,8 @@ class AMPHandler():
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
+
+        self.tokens = ''
 
         self.val_settings()
         self.moduleHandler()
@@ -105,12 +107,14 @@ class AMPHandler():
         """Validates the tokens.py settings and 2FA."""
         self.logger.info('AMPHandler is validating your token file...')
         reset = False
-        if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
-            tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
-
         if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
             self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
             reset = True
+
+        import tokens
+        self.tokens = tokens
+        if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
+            tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
         if len(tokens.AMPAuth) < 7 or tokens.AMPAuth == '':
             self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
@@ -180,10 +184,10 @@ class AMPInstance:
         self.InstanceID = instanceID
         self.Server_Running = False #This is for the ADS (Dedicated Server) not the Instance!
 
-        self.url = tokens.AMPurl + '/API/' #base url for AMP console /API/
+        self.url = self.AMPHandler.tokens.AMPurl + '/API/' #base url for AMP console /API/
 
         try:
-            self.AMP2Factor = pyotp.TOTP(tokens.AMPAuth) #Handles time based 2Factory Auth Key/Code
+            self.AMP2Factor = pyotp.TOTP(self.AMPHandler.tokens.AMPAuth) #Handles time based 2Factory Auth Key/Code
             self.AMP2Factor.now()
             #self.logger.info('Found Two Factor Auth Code')
         except AttributeError:
@@ -266,8 +270,8 @@ class AMPInstance:
             else:
                 token = ''  
             parameters = {
-                    'username': tokens.AMPUser,
-                    'password': tokens.AMPPassword,
+                    'username': self.AMPHandler.tokens.AMPUser,
+                    'password': self.AMPHandler.tokens.AMPPassword,
                     'token': token, #get current 2Factor Code
                     'rememberMe': True}
 
