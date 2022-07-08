@@ -1,12 +1,13 @@
 import os
 import logging
+import re
 
 import discord
 from discord.ext import commands
 
 import utils
-import AMP as AMP
-import DB as DB
+import AMP 
+import DB
 
 
 def db_bot_settings():
@@ -34,13 +35,24 @@ class DB_Module(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
 
-        self.uBot.sub_command_handler('bot',self.db_bot_channel)
+        self.uBot.sub_command_handler('bot',self.db_bot_whitelist)
+
+        self.whitelist_emoji_message = '' 
+        self.whitelist_emoji_pending = False
+        self.whitelist_emoji_done = False
      
 
     @commands.Cog.listener('on_message')
     async def on_message(self,message:discord.Message):
         if message.content.startswith(self._client.command_prefix):
             return message
+
+        #This is purely for testing!
+        if message.content.startswith('test_emoji') and message.author.id == 144462063920611328: #This is my Discord ID
+            if self.DBConfig.Whitelist_emoji_pending != None:
+                emoji = self._client.get_emoji(int(self.DBConfig.Whitelist_emoji_pending))
+                await message.add_reaction(emoji)
+
         if message.author != self._client.user:
             self.logger.info(f'On Message Event for {self.name}')
             return message
@@ -67,25 +79,30 @@ class DB_Module(commands.Cog):
         if message_before.author != self._client.user:
             self.logger.info(f'Edited Message Event for {self.name}')
             return message_before,message_after
-
-    @commands.Cog.listener('on_reaction_add')
-    async def on_reaction_add(self,reaction:discord.Reaction,user:discord.User):
-        """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
-        print(f'{user.name} Added the Reaction: {reaction}')
-        return reaction,user
-
-    @commands.Cog.listener('on_reaction_remove')
-    async def on_reaction_remove(self,reaction:discord.Reaction,user:discord.User):
-        """Called when a message has a reaction removed from it. Similar to on_message_edit, if the message is not found in the internal message cache, then this event will not be called."""
-        print(f'{user.name} Removed the Reaction: {reaction}')
-        return reaction,user
-
     
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
         print(f'Member has left the server {member.name}')
         return member
-        
+
+    @commands.Cog.listener('on_reaction_add')
+    async def on_reaction_add(self,reaction:discord.Reaction,user:discord.User):
+        """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
+        self.logger.info(f'Reaction Add {self.name}: {user} Reaction: {reaction}')
+
+        #This is for setting the Whitelist_Emoji_pending after using the command!
+        if reaction.message.id == self.whitelist_emoji_message:
+            #This is for pending whitelist requests
+            if self.whitelist_emoji_pending:
+                self.DBConfig.Whitelist_emoji_pending = reaction.emoji.id
+                self.whitelist_emoji_pending = False
+            #This is for completed whitelist requests
+            if self.whitelist_emoji_done:
+                self.DBConfig.Whitelist_emoji_done = reaction.emoji.id
+                self.whitelist_emoji_done = False
+
+        return reaction,user
+
     @utils.role_check()
     @commands.hybrid_group()
     async def user(self,context:commands.Context):
@@ -108,27 +125,17 @@ class DB_Module(commands.Cog):
         self.logger.info('User Test Function')
         await context.send(cur_user)
 
-    # @commands.hybrid_command(name='dbwhitelist')
-    # @utils.role_check()
-    # async def server_whitelist_true(self,context,server,var='false'):
-    #     """Set DB Server Whitelist"""
-    #     server = await self.uBot.serverparse(context,context.guild.id,server)
-    #     if var.lower() == 'true':
-    #         self.DB.getServer(server.FriendlyName).Whitelist = True
-    #     if var.lower() == 'false':
-    #         self.DB.getServer(server.FriendlyName).Whitelist = False
-    #     await context.send(f"Server: {server.FriendlyName}, Whitelist set to : {var}")
-
-    @commands.hybrid_group(name='channel')
+    #All DBConfig Whitelist Specific function settings --------------------------------------------------------------
+    @commands.hybrid_group(name='whitelist')
     @utils.role_check()
-    async def db_bot_channel(self,context:commands.Context):
+    async def db_bot_whitelist(self,context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
-        
-    @db_bot_channel.command(name='whitelist')
+
+    @db_bot_whitelist.command(name='whitelist')
     @utils.role_check()
-    async def db_bot_channel_whitelist(self,context:commands.Context,id:str):
-        self.logger.info('Bot Channel Whitelist...')
+    async def db_bot_whitelist_channel_set(self,context:commands.Context,id:str):
+        self.logger.info('Bot Whitelist Channel Set...')
 
         channel = self.uBot.channelparse(id,context,context.guild.id)
         if channel == None:
@@ -136,7 +143,59 @@ class DB_Module(commands.Cog):
         else:
             self.DBConfig.SetSetting('WhitelistChannel',channel.id)
             await context.send(f'Set Bot Channel Whitelist to {channel.name}')
+    
+    @db_bot_whitelist.command(name='format')
+    @utils.role_check()
+    async def db_bot_whitelist_wait_time_set(self,context:commands.Context,time:str):
+        """Set the Whitelist wait time, this value is in minutes!"""
+        self.logger.info('Bot Whitelist wait time Set...')
+        if time.isalnum():
+            self.DBConfig.Whitelist_wait_time = time
+            await context.send(f'Whitelist wait time has been set to {time}')
+        else:
+            await context.send(f'Please use only numbers when setting the wait time. All values are in minutes!')
 
+    @db_bot_whitelist.command(name='auto')
+    @utils.role_check()
+    async def db_bot_whitelist_auto_whitelist(self,context:commands.Context,flag:str):
+        """This turns on or off Auto-Whitelisting"""
+        self.logger.info('Bot Whitelist Auto Whitelist...')
+        flag_reg = re.search("(true|false)",flag.lower())
+        if flag_reg == None:
+            return await context.send(f'Please use `true` or `false` for your flag.')
+        if flag_reg.group() == 'true':
+            self.DBConfig.Auto_Whitelist = True
+            return await context.send(f'Enabling Auto-Whitelist.')
+        if flag_reg.group() == 'false':
+            self.DBConfig.Auto_Whitelist = False
+            return await context.send(f'Disabling Auto-Whitelist')
+        
+    @db_bot_whitelist.command(name='pending_emoji')
+    @utils.role_check()
+    async def db_bot_whitelist_pending_emjoi_set(self,context:commands.Context):
+        """This sets the Whitelist pending emoji, you MUST ONLY use your Servers Emojis'"""
+        flag = 'pending Whitelist requests!'
+        await context.send(f'Please react to this message with the emoji you want for pending Whitelist requests!')
+        channel = self._client.get_channel(context.channel.id)
+        messages = [message async for message in channel.history(limit=5)]
+        for message in messages:
+            if flag in message.content:
+                self.whitelist_emoji_message = messages[0].id
+
+        self.whitelist_emoji_pending = True
+
+    async def db_bot_whitelist_done_emjoi_set(self,context:commands.Context):
+        """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
+        flag = 'completed Whitelist requests!'
+        await context.send(f'Please react to this message with the emoji you want for completed Whitelist requests!')
+        channel = self._client.get_channel(context.channel.id)
+        messages = [message async for message in channel.history(limit=5)]
+        for message in messages:
+            if flag in message.content:
+                self.whitelist_emoji_message = messages[0].id
+
+        self.whitelist_emoji_done = True
+       
     #!TODO! This function doesn't exist yet.
     async def db_bot_settings(self):
         """This is accessed through bot settings in Gatekeeper.py"""

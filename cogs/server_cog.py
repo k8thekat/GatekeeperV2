@@ -10,6 +10,7 @@ from discord.ext import commands
 import AMP
 import DB
 import utils
+from cogs.AMP_cog import AMP_Cog
 
 
 class Server(commands.Cog):
@@ -87,6 +88,7 @@ class Server(commands.Cog):
 
         if server != None:
             server.StartInstance()
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f'Starting the AMP Instance {server.FriendlyName}')
     
     @server.command(name='stop',description='Stops the AMP Instance')
@@ -100,6 +102,7 @@ class Server(commands.Cog):
 
         if server != None and server.Running:
             server.StopInstance()
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f'Stopping the AMP Instance {server.FriendlyName}')
 
     @server.command(name='restart',description='Restarts the AMP Instance')
@@ -113,6 +116,7 @@ class Server(commands.Cog):
 
         if server != None and server.Running:
             server.RestartInstance()
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f'Restarting the AMP Instance {server.FriendlyName}')
     
     @server.command(name='kill',description='Kills the AMP Instance')
@@ -126,6 +130,7 @@ class Server(commands.Cog):
 
         if server != None and server.Running:
             server.KillInstance()
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f'Killing the AMP Instance {server.FriendlyName}')
 
     @server.command(name='msg',description='AMP Console Message/Commands')
@@ -221,6 +226,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).Whitelist = True
+            server.attr_update() #This will update the AMPInstance Attributes
         await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `True`")
 
     @server_whitelist.command(name='false')
@@ -232,6 +238,7 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).Whitelist = False
+            server.attr_update() #This will update the AMPInstance Attributes
         await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `False`")
 
     @server_whitelist.command(name='test')
@@ -292,6 +299,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).DisplayName = name
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f"Set {server.FriendlyName} Display Name to {name}")
 
     @server.command(name='description')
@@ -306,6 +314,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).Description = desc
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f"Set {server.FriendlyName} Description to {desc}")
         
     @server.command(name='ip')
@@ -320,6 +329,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).IP = ip
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f"Set {server.FriendlyName} IP to {ip}")
 
     @server.group(name='donator')
@@ -340,6 +350,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).Donator = True
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f"Set {server.FriendlyName} Donator Only to True")
 
     @db_server_donator.command(name='false')
@@ -354,6 +365,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).Donator = False
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f"Set {server.FriendlyName} Donator Only to False")
 
     @server.group(name='console')
@@ -374,6 +386,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).Console_Flag = True
+            server.attr_update() #This will update the AMPConsole Attributes
 
             if self.AMPThreads[server.InstanceID].console_thread_running != True:
                 self.AMPThreads[server.InstanceID].console_thread.start()
@@ -394,6 +407,7 @@ class Server(commands.Cog):
 
         if server != None:
             self.DB.GetServer(InstanceID= server.InstanceID).Console_Flag = False
+            server.attr_update() #This will update the AMPConsole Attributes
 
             if self.AMPThreads[server.InstanceID].console_thread_running == True:
                 self.AMPThreads[server.InstanceID].console_thread_running = False
@@ -412,11 +426,16 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         channel = self.uBot.channelparse(channel,context,context.guild.id)
+        print(channel)
         if channel == None:
             return await context.send(f'Unable to find the provided channel, please try again.')
-
+        
         if server != None and channel != None:
-            self.DB.GetServer(InstanceID= server.InstanceID).Discord_Console_Channel = channel.id
+            print(self.DB.GetServer(InstanceID= server.InstanceID).Discord_Console_Channel)
+            self.DB.GetServer(InstanceID= server.InstanceID).Discord_Console_Channel = str(channel.id)
+            print(self.DB.GetServer(InstanceID= server.InstanceID).Discord_Console_Channel)
+
+            server.attr_update() #This will update the AMPConsole Attribute
             await context.send(f'Set {server.FriendlyName} Console channel to {channel.name}')
     
     @db_server_console.command(name='filter')
@@ -436,9 +455,11 @@ class Server(commands.Cog):
             
             if flag_reg.group() == 'true':
                 self.DB.GetServer(InstanceID= server.InstanceID).Console_Filtered = True
+                server.attr_update() #This will update the AMPConsole Attributes
                 return await context.send(f'Filtering the Console for {server.FriendlyName}')
             if flag_reg.group() == 'false':
                 self.DB.GetServer(InstanceID= server.InstanceID).Console_Filtered = False
+                server.attr_update() #This will update the AMPConsole Attributes
                 return await context.send(f'Not Filtering the Console for {server.FriendlyName}')
 
         
@@ -464,6 +485,7 @@ class Server(commands.Cog):
 
         if server != None and channel != None:
             self.DB.GetServer(server.InstanceID).Discord_Chat_Channel = channel.id
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f'Set {server.FriendlyName} Chat channel to {channel.name}')
 
     @server.command(name='role')
@@ -481,6 +503,7 @@ class Server(commands.Cog):
 
         if server != None and role != None:
             self.DB.GetServer(server.InstanceID).Discord_Role = role.id
+            server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f'Set {server.FriendlyName} Discord Role to {role.name}')
 
         

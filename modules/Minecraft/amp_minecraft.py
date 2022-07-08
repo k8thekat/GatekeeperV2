@@ -8,7 +8,7 @@ class AMPMinecraft(AMP.AMPInstance):
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
         
         #self.APImodule = 'MinecraftModule'
-        #self.Console = AMPMinecraftConsole(self)
+        self.Console = AMPMinecraftConsole(self)
 
     def name_Conversion(self,name): 
         """Converts an IGN to a UUID/Name Table \n
@@ -79,9 +79,13 @@ class AMPMinecraft(AMP.AMPInstance):
         parameters = {'id': ID}
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
+    
+    def send_message(self, message):
+        self.Login()
+        self.ConsoleMessage(f'tellraw @a [{{"text":"(Discord)","color":"blue"}},{{"text":"<{message.author.name}>: {message.content}","color":"white"}}]')
 
 #!TODO! Need to figure the super() Init for the new console.
 class AMPMinecraftConsole(AMP.AMPConsole):
-    def __init__(self,AMPInstance = AMPMinecraft):
-        super().__init__(self,AMPInstance)
+    def __init__(self, AMPInstance = AMPMinecraft):
+        super().__init__(AMPInstance)
         #self.AMPMinecraft = AMPMinecraft

@@ -65,7 +65,7 @@ class DBHandler():
 		"""This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
 		self.DB_Server = self.DB.GetServer(server.InstanceID)
 		try:
-			self.DB_Server.Console_Flag = False
+			self.DB_Server.Console_Flag = True
 			self.DB_Server.Console_Filtered = True
 			self.DB_Server.Discord_Console_Channel = None #Should be a str, can be an int. eg 289450670581350401
 		except:
@@ -113,7 +113,8 @@ class Database:
 						Console_Filtered integer not null,
 						Discord_Console_Channel text nocase,
 						Discord_Chat_Channel text nocase,
-						Discord_Role text collate nocase
+						Discord_Role text collate nocase,
+						Discord_Reaction text nocase
 						)""")
 
 		cur.execute("""create table ServerNicknames (
@@ -296,9 +297,9 @@ class Database:
 	# 		ret.append(DBRole(self, DiscordID=entry))
 	# 	return ret
 
-	def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=False, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None):
+	def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Discord_Reaction:str=None):
 		#try:
-		return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role)
+		return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role, Discord_Reaction=Discord_Reaction)
 		#except:
 			#return None
 
@@ -355,14 +356,14 @@ class Database:
 		cur.close()
 		return ret
 
-	def AddUser(self, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, GlobalBanExpiration:datetime.datetime=None, Donator:bool=False, ServerModerator:bool=False):
+	def AddUser(self, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, SteamID:str=None, Donator:bool=False, ServerModerator:bool=False):
 		try:
-			return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, IngameName=IngameName, UUID=UUID, GlobalBanExpiration=GlobalBanExpiration, Donator=Donator, ServerModerator=ServerModerator)
+			return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, IngameName=IngameName, UUID=UUID, SteamID=SteamID, Donator=Donator, ServerModerator=ServerModerator)
 		except Exception as e:
 			print(e)
 			return None
 
-	def GetAllUsers(self, GlobalBanExpiration=None, Donator=None, ServerModerator=None):
+	def GetAllUsers(self, Donator=None, ServerModerator=None):
 		#get all servers that we are on
 		SQL = "Select ID from Users"
 		SQLWhere = []
@@ -656,7 +657,7 @@ class DBUser:
 	# 	return ret
 
 class DBServer:
-	def __init__(self, db:Database, ID:int=None, InstanceID:str=None, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Console_Flag:bool=False, Console_Filtered:bool=True):
+	def __init__(self, db:Database, ID:int=None, InstanceID:str=None, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Reaction:str=None):
 		#set defaults
 		Params = locals()
 		Params.pop("self")

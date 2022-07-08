@@ -38,7 +38,6 @@ import DB
 import cogs.DB_cog as DB_cog
 
 Version = 'alpha-0.0.1'
-bot_logger.init()
 logger = logging.getLogger(__name__)
 
 #Discord Specific
@@ -228,9 +227,8 @@ async def  initbot():
     main_DBHandler = DB.getDBHandler()
     main_DB = main_DBHandler.DB
     main_DB_Config = main_DB.GetConfig() #Can point to here or main_DBHandler.DBConfig
-
+   
     main_AMPHandler = AMP.getAMPHandler(client)
-    main_AMPHandler.setup_AMPInstances()
     main_AMP = main_AMPHandler.AMP
 
     if main_AMP:
@@ -243,11 +241,6 @@ async def  initbot():
     Handler = loader.Handler(client)
     await Handler.module_auto_loader()
     await Handler.cog_auto_loader()
-
-    #uBot = utils.botUtils(client)
-
-async def thread_loop():
-    curtime = datetime.now()
 
 def client_start():
     """`*** DO NOT USE ***`"""
@@ -262,4 +255,4 @@ def client_run():
     client.run(tokens.token, reconnect = True)# bot = True)
 
 
-client_run()
+#client_run()

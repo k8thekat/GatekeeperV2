@@ -158,7 +158,7 @@ class Generic(commands.Cog):
         if self.WL_delay != 0: #This handles Whitelist Delays if set.
             self.WL_wait_list.append({'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user})
             await self.dBot.messageAddReaction(message,self.WL_Pending_Emoji)
-            self.logger.info('Added {message.author} to Whitelist Wait List.')
+            self.logger.info(f'Added {message.author} to Whitelist Wait List.')
             #self._client.get_emoji(self.WL_Pending_Emoji)
             #await message.add_reaction(self.WL_Pending_Emoji) #This should point to bot_config Emoji
 
