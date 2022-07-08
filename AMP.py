@@ -245,7 +245,7 @@ class AMPInstance:
     def server_check(self):
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
         Success = self.Login()
-        print('Server Check', Success)
+        self.logger.debug('Server Check' + str(Success))
         if Success:
             parameters = {}
             self.CallAPI('Core/GetStatus', parameters)
@@ -254,15 +254,6 @@ class AMPInstance:
             return False
 
     def Login(self):
-        #def wrapper(*args, **kargs):
-        #global SessionIDlist
-        #logger = logging.getLogger()
-        #self = args[0]
-
-        #if self.Running == False:
-            #print(f'Instance offline: {self.FriendlyName}')
-            #return False
-
         if self.SessionID == 0:
             if self.InstanceID in self.AMPHandler.SessionIDlist:
                 self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
@@ -292,12 +283,8 @@ class AMPInstance:
                 self.logger.error(f'{self.FriendlyName} - Instance is Offline')
                 self.Running = False
                 return False
-            #if ("checkup" not in kargs) or (kargs["checkup"] == False):
-            return True
         return True
         
-        #return func(*args, **kargs)
-    #return wrapper
 
     def CallAPI(self,APICall,parameters):
         #global SuccessfulConnection
@@ -333,21 +320,6 @@ class AMPInstance:
         self.logger.debug(post_req.json())
         return post_req.json()
 
-    # def class_handler(self,instance:dict,Index:int):
-    #     #pprint(instance)
-    #     """This houses all my AMP Classes to override AMP Instance for a specific server type."""
-    #     if instance['Module'] == 'Minecraft':
-    #         self.logger.info(f'Loaded AMP{instance["Module"]} for {instance["FriendlyName"]}')
-    #         from modules.Minecraft.amp_minecraft import AMPMinecraft as AMPMC
-    #         server = AMPMC(instance['InstanceID'],instance,Index = Index)
-
-    #     else:
-    #         from modules.GenericModule.amp_Generic import AMPGeneric
-    #         #server = AMPGeneric(instance['InstanceID'],instance,Index = Index)
-    #         server = AMPInstance(instance['InstanceID'],instance,Index = Index)
-
-    #     return server
-
     def getInstances(self):
         """This gets all Instances on AMP and puts them into a dictionary.\n {'InstanceID': AMPAPI class}"""
         global InstancesFound
@@ -382,7 +354,6 @@ class AMPInstance:
         """Returns `{'ConsoleEntries':[{'Contents': 'String','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`\n
         Will post all updates from previous API call of console update"""
         parameters = {}
-        # Will post all updates from previous API call of console update.
         result = self.CallAPI('Core/GetUpdates', parameters)
         return result
 
@@ -478,7 +449,6 @@ class AMPInstance:
                 'ContainerMaxCPU': self.ContainerCPUs}
         response = f'{self.FriendlyName} is about to be changed to {name}; this will restart the instance.'
         self.CallAPI('ADSModule/UpdateInstanceInfo', parameters)
-        #print(result)
         return response
 
     def getAPItest(self):
@@ -486,19 +456,8 @@ class AMPInstance:
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetModuleInfo', parameters)
-        #pprint(result)
+        pprint(result)
         return result
-
-    # @Login
-    # def addTask(self,triggerID,methodID,parammap):
-    #     """Adds an AMP Task to the Schedule"""
-    #     parameters = {
-    #             'TriggerID' : triggerID,
-    #             'MethodID' : methodID,
-    #             'ParameterMapping' : parammap
-    #             }
-    #     self.CallAPI('Core/AddTask', parameters)
-    #     return
 
     def copyFile(self,source,destination):
         self.Login()
@@ -607,16 +566,6 @@ class AMPInstance:
         self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
         return
 
-    #TODO - Need to fix list
-    # def sessionCleanup(self):
-    #     global SessionIDlist
-    #     sessions = self.getActiveAMPSessions()
-    #     for entry in sessions['result']:
-    #         if entry['Username'] == tokens.AMPUser:
-    #             if entry['SessionID'] not in SessionIDlist:
-    #                 self.endUserSession(entry['SessionID'])
-    #     return
-
     def addWhitelist(self,user):
         """Base Function for AMP.addWhitelist"""
         return user
@@ -715,6 +664,7 @@ class AMPConsole:
             console = self.AMPInstance.ConsoleUpdate()
             
             for entry in console['ConsoleEntries']:
+                #print(entry)
                 if self.console_filter(entry):
                     continue
                 

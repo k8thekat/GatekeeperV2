@@ -120,6 +120,9 @@ class Generic(commands.Cog):
         
         amp_server = self.uBot.serverparse(user_server,message,message.guild.id)
         if amp_server == None:
+            await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with this format! \n{self.WL_format}')
+            self.logger.info(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
+            self.failed_whitelist.append(message)
             return
 
         #!TODO! Need to Handle Failed Whitelist Requests Properply
@@ -147,7 +150,12 @@ class Generic(commands.Cog):
             return
 
         if db_server.Whitelist == False:
-            await message.reply(f'Ooops, it appears that the server {db_server.Name} has their Whitelisting Closed. If this is an error please contact a Staff Member.')
+            if db_server.DisplayName != None:
+                server_name = db_server.DisplayName
+            else:
+                server_name = db_server.InstanceName
+
+            await message.reply(f'Ooops, it appears that the server {server_name} has their Whitelisting Closed. If this is an error please contact a Staff Member.')
             return
 
         if db_server.Donator == True and db_user.Donator != True:
@@ -157,7 +165,10 @@ class Generic(commands.Cog):
         
         if self.WL_delay != 0: #This handles Whitelist Delays if set.
             self.WL_wait_list.append({'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user})
-            await self.dBot.messageAddReaction(message,self.WL_Pending_Emoji)
+
+            if self.WL_Pending_Emoji != None:
+                await self.dBot.messageAddReaction(message,self.WL_Pending_Emoji)
+                
             self.logger.info(f'Added {message.author} to Whitelist Wait List.')
             #self._client.get_emoji(self.WL_Pending_Emoji)
             #await message.add_reaction(self.WL_Pending_Emoji) #This should point to bot_config Emoji

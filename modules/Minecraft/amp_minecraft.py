@@ -84,8 +84,7 @@ class AMPMinecraft(AMP.AMPInstance):
         self.Login()
         self.ConsoleMessage(f'tellraw @a [{{"text":"(Discord)","color":"blue"}},{{"text":"<{message.author.name}>: {message.content}","color":"white"}}]')
 
-#!TODO! Need to figure the super() Init for the new console.
+
 class AMPMinecraftConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPMinecraft):
         super().__init__(AMPInstance)
-        #self.AMPMinecraft = AMPMinecraft
