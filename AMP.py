@@ -643,8 +643,7 @@ class AMPInstance:
 
     def send_message(self,message):
         """Base Function for Discord Chat Messages to AMP ADS"""
-        self.Login()
-        self.ConsoleMessage(message)
+        return
 
 class AMPConsole:
     def __init__(self, AMPInstance = AMPInstance):
