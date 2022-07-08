@@ -664,7 +664,8 @@ class AMPConsole:
             console = self.AMPInstance.ConsoleUpdate()
             
             for entry in console['ConsoleEntries']:
-                #print(entry)
+                print('Name:',self.AMPInstance.FriendlyName,'Module:',self.AMPInstance.Module,'Console Entry:', entry)
+                return
                 if self.console_filter(entry):
                     continue
                 

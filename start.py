@@ -19,4 +19,4 @@ class Setup:
         self.AMP = self.AMPHandler.AMP
 
 Start = Setup()
-discordBot.client_run()
+#discordBot.client_run()
