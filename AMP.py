@@ -141,22 +141,19 @@ class AMPHandler():
                         class_module = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(class_module)
 
-                        self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
-                        self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
+                        # self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
+                        # self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
+                        
+                        for DIS in getattr(class_module,f'DisplayImageSources'):
+                            self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
+                            self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
 
                         self.logger.info(f'**SUCCESS** {self.name} Loading AMP Module **{module_name}**')
-                        #print(dir(class_module))
-                    # module_name = script.name[4:-3].capitalize()
-                    # script = str(script).replace("\\",".").replace("/",'.')
-                    # #print(script[:-3])
-                
-                    # try:
-                    #     class_module = importlib.import_module(name = f'{script[3:-3]}')
 
                     except Exception as e:
                         self.logger.error(f'**ERROR** {self.name} Loading AMP Module **{module_name}** - {e}')
                         continue
-            #print('My AMP Console Modules',self.AMP_Console_Modules)
+   
         except Exception as e:
             self.logger.error(f'**ERROR** {self.name} Loading AMP Module ** - File Not Found {e}')
                     
@@ -206,6 +203,7 @@ class AMPInstance:
             #This gets all the dictionary values tied to AMP and makes them attributes
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
+            #pprint(serverdata)
 
             self.FriendlyName = self.FriendlyName.replace(' ', '_')
             #print('Instance Attr',dir(self))
@@ -220,8 +218,9 @@ class AMPInstance:
                 self.logger.info(f'*SUCCESS** Added {self.FriendlyName} to the Database.')
             else:
                 self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
+
             if dev:
-                print('Name:',self.FriendlyName,'Module:',self.Module,'Port:',self.Port)
+                self.logger.info(f"'Name:'{self.FriendlyName} 'Module:' {self.Module} 'Port:'{self.Port} 'DisplayImageSource:'{self.DisplayImageSource}")
             #This sets all my DB_Server attributes.
             self.attr_update()
 
@@ -622,37 +621,43 @@ class AMPConsole:
         self.console_message_list = []
         self.console_message_lock = threading.Lock()
 
+        self.console_chat_messages = []
+        self.console_chat_messages_list = []
+        self.console_chat_message_lock = threading.Lock()
 
 
-        self.logger.info(f'**SUCCESS** Setting up {self.AMPInstance.FriendlyName} Console Class')
+        self.logger.info(f'**SUCCESS** Setting up {self.AMPInstance.FriendlyName} Console')
         self.console_init()
 
 
     def console_init(self):
         """This starts our console threads..."""
+        #print(self.)
         if self.AMPInstance.Console_Flag:
             #print('Console testing','Module:',self.AMPInstance.Module,'Name:',self.AMPInstance.FriendlyName,'ADS Running:',self.AMPInstance.Server_Running)
             try:
                 #!TODO! Finish setting up Consoles
-                if self.AMPInstance.Module in self.AMPHandler.AMP_Console_Modules: #Should be AMP_Console_Modules: {Module_Name: 'Module_class_object'}
+                # self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
+                # self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
+                if self.AMPInstance.DisplayImageSource in self.AMPHandler.AMP_Console_Modules: #Should be AMP_Console_Modules: {Module_Name: 'Module_class_object'}
                     if self.AMPInstance.Server_Running: #This is the Instance's ADS 
-                        self.logger.info(f'Loaded __AMPConsole_{self.AMPInstance.Module}__ for {self.AMPInstance.FriendlyName}')
+                        self.logger.info(f'Loaded {self.AMPHandler.AMP_Console_Modules[self.AMPInstance.DisplayImageSource]} for {self.AMPInstance.FriendlyName}')
         
                         self.console_thread_running = True
 
                         #This starts the console parse on our self in a seperate thread.
                         self.console_thread = threading.Thread(target=self.console_parse, name=self.AMPInstance.FriendlyName)
-                        self.logger.info(f'Initiating Server Console for {self.AMPInstance.FriendlyName}...')
 
                         #This adds the AMPConsole Thread Object into a dictionary with the key value of AMPInstance.InstanceID
                         self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
                         #print(self.console_thread)
                         self.console_thread.start()
+                        self.logger.info(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
                     else:
                         self.logger.info(f'**ERROR** Server: {self.AMPInstance.FriendlyName} Instance is not currently Running')
 
                 else:
-                    self.logger.info(f'Loaded __AMPConsole_Generic__ for {self.AMPInstance.FriendlyName}')
+                    self.logger.info(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generi"]} for {self.AMPInstance.FriendlyName}')
                     #server_console = self.AMP_Console_Modules['Generic']
                     self.console_thread_running = False
                     self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
@@ -671,8 +676,10 @@ class AMPConsole:
             console = self.AMPInstance.ConsoleUpdate()
             
             for entry in console['ConsoleEntries']:
-                print('Name:',self.AMPInstance.FriendlyName,'Module:',self.AMPInstance.Module,'Console Entry:', entry)
-                return
+                if dev:
+                    print('Name:',self.AMPInstance.FriendlyName,'DisplayImageSource:',self.AMPInstance.DisplayImageSource,'Console Entry:', entry)
+                    continue
+
                 if self.console_filter(entry):
                     continue
                 

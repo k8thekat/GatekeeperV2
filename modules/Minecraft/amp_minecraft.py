@@ -1,7 +1,10 @@
 import AMP
 import requests
 import json
-    
+
+
+DisplayImageSources = ["internal:MinecraftJava"]
+
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
@@ -88,3 +91,4 @@ class AMPMinecraft(AMP.AMPInstance):
 class AMPMinecraftConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPMinecraft):
         super().__init__(AMPInstance)
+
