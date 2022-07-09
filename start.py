@@ -16,6 +16,14 @@ class Setup:
         self.AMPHandler.setup_AMPInstances() 
         #print("Setup init:", self.AMPHandler.AMP_Instances)
         self.AMP = self.AMPHandler.AMP
+        
+        #self.pip_install()
+
+    def pip_install(self):
+        import sys
+        import subprocess
+        # implement pip as a subprocess:
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install' '-r','requirements.txt'])
 
 Start = Setup()
 #import discordBot

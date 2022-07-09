@@ -117,9 +117,10 @@ class AMPHandler():
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
-        if len(tokens.AMPAuth) < 7 or tokens.AMPAuth == '':
-            self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
-            reset = True
+        if tokens.AMPAuth != None:
+            if len(tokens.AMPAuth) < 7:
+                self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
+                reset = True
 
         if reset:
             input("Press any Key to Exit")
@@ -182,15 +183,17 @@ class AMPInstance:
         self.InstanceID = instanceID
         self.Server_Running = False #This is for the ADS (Dedicated Server) not the Instance!
 
+        self.AMP2Factor = None
         self.url = self.AMPHandler.tokens.AMPurl + '/API/' #base url for AMP console /API/
-
-        try:
-            self.AMP2Factor = pyotp.TOTP(self.AMPHandler.tokens.AMPAuth) #Handles time based 2Factory Auth Key/Code
-            self.AMP2Factor.now()
-            #self.logger.info('Found Two Factor Auth Code')
-        except AttributeError:
-            self.AMP2Factor = None
-            return
+        if self.AMPHandler.tokens.AMPAuth != None:
+            try:
+                self.AMP2Factor = pyotp.TOTP(self.AMPHandler.tokens.AMPAuth) #Handles time based 2Factory Auth Key/Code
+                self.AMP2Factor.now()
+                #self.logger.info('Found Two Factor Auth Code')
+            except AttributeError:
+                self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
+                self.AMP2Factor = None
+                return
 
         self.AMPheader = {'Accept': 'text/javascript'} #custom header for AMP API POST requests. AMP is pure POST requests. ***EVERY REQUEST MUST HAVE THIS***
         if instanceID != 0:
@@ -266,8 +269,10 @@ class AMPInstance:
                 return
 
             self.logger.info(f'AMPInstance Logging in {self.InstanceID}')
+
             if self.AMP2Factor != None:
                 token = self.AMP2Factor.now()
+                
             else:
                 token = ''  
             parameters = {
@@ -657,7 +662,7 @@ class AMPConsole:
                         self.logger.info(f'**ERROR** Server: {self.AMPInstance.FriendlyName} Instance is not currently Running')
 
                 else:
-                    self.logger.info(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generi"]} for {self.AMPInstance.FriendlyName}')
+                    self.logger.info(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generic"]} for {self.AMPInstance.FriendlyName}')
                     #server_console = self.AMP_Console_Modules['Generic']
                     self.console_thread_running = False
                     self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
