@@ -40,8 +40,8 @@ import asyncio
 
 import DB
 
-import utils
-
+#import utils
+dev = True
 Handler = None
 
 
@@ -107,9 +107,10 @@ class AMPHandler():
         """Validates the tokens.py settings and 2FA."""
         self.logger.info('AMPHandler is validating your token file...')
         reset = False
-        if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
-            self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
-            reset = True
+        if not dev:
+            if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
+                self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
+                reset = True
 
         import tokens
         self.tokens = tokens
@@ -219,7 +220,8 @@ class AMPInstance:
                 self.logger.info(f'*SUCCESS** Added {self.FriendlyName} to the Database.')
             else:
                 self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
-
+            if dev:
+                print('Name:',self.FriendlyName,'Module:',self.Module,'Port:',self.Port)
             #This sets all my DB_Server attributes.
             self.attr_update()
 
@@ -293,7 +295,8 @@ class AMPInstance:
     def CallAPI(self,APICall,parameters):
         #global SuccessfulConnection
         self.logger.debug(f'Function {APICall} was called with {parameters}.')
-        self.logger.info(f'Function {APICall}')
+        if dev:
+            self.logger.info(f'Function {APICall}')
 
         if self.SessionID != 0:
             parameters['SESSIONID'] = self.SessionID
