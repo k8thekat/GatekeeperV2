@@ -345,7 +345,7 @@ class AMPInstance:
             InstancesFound = True
             for i in range(0,len(result["result"][0]['AvailableInstances'])): #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
                 instance = result["result"][0]['AvailableInstances'][i] 
-                
+
                 #This exempts the AMPTemplate Gatekeeper
                 if instance["FriendlyName"].lower() == 'Gatekeeper':
                     continue 
@@ -666,17 +666,22 @@ class AMPConsole:
                         #print(self.console_thread)
                         self.console_thread.start()
                         self.logger.info(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
+                        
                     else:
                         self.logger.info(f'**ERROR** Server: {self.AMPInstance.FriendlyName} Instance is not currently Running')
 
                 else: #If we can't find the proper module; lets load the Generic.
-                    self.logger.info(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generic"]} for {self.AMPInstance.FriendlyName}')
-                    #server_console = self.AMP_Console_Modules['Generic']
-                    self.console_thread_running = True
-                    self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
-                    self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
-                    self.console_thread.start()
-                    self.logger.info(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
+                    if self.AMPInstance.Server_Running: #This is the Instance's ADS 
+                        self.logger.info(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generic"]} for {self.AMPInstance.FriendlyName}')
+                        #server_console = self.AMP_Console_Modules['Generic']
+                        self.console_thread_running = True
+                        self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
+                        self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
+                        self.console_thread.start()
+                        self.logger.info(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
+
+                    else:
+                        self.logger.info(f'**ERROR** Server: {self.AMPInstance.FriendlyName} Instance is not currently Running')
 
             except Exception as e:
                 self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.AMPHandler.AMP_Console_Modules['Generic']
