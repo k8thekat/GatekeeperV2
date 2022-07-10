@@ -21,6 +21,7 @@
 #AMP API 
 # by k8thekat // Lightning
 # 11/10/2021
+from ast import Continue
 import requests
 import requests.sessions
 import pyotp # 2Factor Authentication Python Module
@@ -37,6 +38,7 @@ import traceback
 import os
 import discord
 import asyncio
+import re
 
 import DB
 
@@ -346,10 +348,12 @@ class AMPInstance:
             for i in range(0,len(result["result"][0]['AvailableInstances'])): #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
                 instance = result["result"][0]['AvailableInstances'][i] 
 
-                #This exempts the AMPTemplate Gatekeeper
-                if instance["FriendlyName"].lower() == 'Gatekeeper':
-                    continue 
-
+                #This exempts the AMPTemplate Gatekeeper *hopefully*
+                flag_reg = re.search("(gatekeeper)",instance['FriendlyName'].lower())
+                if flag_reg != None:
+                    if flag_reg.group() == True:
+                        continue 
+                
                 if instance['Module'] in self.AMPHandler.AMP_Modules:
                     self.logger.info(f'Loaded __AMP_{instance["Module"]}__ for {instance["FriendlyName"]}')
                     #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
@@ -666,7 +670,7 @@ class AMPConsole:
                         #print(self.console_thread)
                         self.console_thread.start()
                         self.logger.info(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
-                        
+
                     else:
                         self.logger.info(f'**ERROR** Server: {self.AMPInstance.FriendlyName} Instance is not currently Running')
 
