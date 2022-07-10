@@ -349,6 +349,7 @@ class AMPInstance:
                 instance = result["result"][0]['AvailableInstances'][i] 
 
                 #This exempts the AMPTemplate Gatekeeper *hopefully*
+                #*Fixes*
                 flag_reg = re.search("(gatekeeper)",instance['FriendlyName'].lower())
                 if flag_reg != None:
                     if flag_reg.group():
