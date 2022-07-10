@@ -351,7 +351,7 @@ class AMPInstance:
                 #This exempts the AMPTemplate Gatekeeper *hopefully*
                 flag_reg = re.search("(gatekeeper)",instance['FriendlyName'].lower())
                 if flag_reg != None:
-                    if flag_reg.group() == True:
+                    if flag_reg.group():
                         continue 
                 
                 if instance['Module'] in self.AMPHandler.AMP_Modules:
