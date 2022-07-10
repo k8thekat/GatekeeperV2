@@ -117,7 +117,7 @@ class AMPHandler():
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
-        if tokens.AMPAuth != None:
+        if tokens.AMPAuth != '':
             if len(tokens.AMPAuth) < 7:
                 self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
                 reset = True
@@ -183,9 +183,10 @@ class AMPInstance:
         self.InstanceID = instanceID
         self.Server_Running = False #This is for the ADS (Dedicated Server) not the Instance!
 
-        self.AMP2Factor = None
         self.url = self.AMPHandler.tokens.AMPurl + '/API/' #base url for AMP console /API/
-        if self.AMPHandler.tokens.AMPAuth != None:
+
+        self.AMP2Factor = None
+        if self.AMPHandler.tokens.AMPAuth != '':
             try:
                 self.AMP2Factor = pyotp.TOTP(self.AMPHandler.tokens.AMPAuth) #Handles time based 2Factory Auth Key/Code
                 self.AMP2Factor.now()
