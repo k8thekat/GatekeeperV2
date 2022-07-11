@@ -55,6 +55,8 @@ class AMPHandler():
         self._cwd = pathlib.Path.cwd()
         self.name = os.path.basename(__file__)
 
+        self.AMP2FA = False
+
         self.SessionIDlist = {}
 
         self.AMP_Instances = {}
@@ -120,14 +122,19 @@ class AMPHandler():
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
-        if tokens.AMPAuth == '':
-            self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
-            reset = True
-            
+        if tokens.AMPAuth < 7:
+            if tokens.AMPAuth == '':
+                self.AMP2FA = False
+                return
+            else:
+                self.logger.critical('**ERROR** Please use your 2 Factor Generator Code (Should be over 25 characters long), not the 6 digit numeric generated code that expires with time.')
+                reset = True
 
         if reset:
             input("Press any Key to Exit")
             sys.exit(0)
+
+        self.AMP2FA = True
     
     def moduleHandler(self):
         """AMPs class Loader for specific server types."""
@@ -189,7 +196,7 @@ class AMPInstance:
         self.url = self.AMPHandler.tokens.AMPurl + '/API/' #base url for AMP console /API/
 
         self.AMP2Factor = None
-        if self.AMPHandler.tokens.AMPAuth != '':
+        if self.AMPHandler.AMP2FA:
             try:
                 self.AMP2Factor = pyotp.TOTP(self.AMPHandler.tokens.AMPAuth) #Handles time based 2Factory Auth Key/Code
                 self.AMP2Factor.now()
