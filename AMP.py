@@ -120,7 +120,7 @@ class AMPHandler():
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
-        if tokens.AMPAuth != '':
+        if tokens.AMPAuth == '':
             self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
             reset = True
             
