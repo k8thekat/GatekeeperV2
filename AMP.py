@@ -43,12 +43,13 @@ import re
 import DB
 
 #import utils
-dev = True
 Handler = None
 
 
 class AMPHandler():
-    def __init__(self,client:discord.Client):
+    def __init__(self,client:discord.Client,args:list=None):
+        self.args = args
+        #print(self.args)
         self.logger = logging.getLogger()
         #self._client = client
         self._cwd = pathlib.Path.cwd()
@@ -109,7 +110,7 @@ class AMPHandler():
         """Validates the tokens.py settings and 2FA."""
         self.logger.info('AMPHandler is validating your token file...')
         reset = False
-        if not dev:
+        if '-dev' not in self.args:
             if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
                 self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
                 reset = True
@@ -120,9 +121,9 @@ class AMPHandler():
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
         if tokens.AMPAuth != '':
-            if len(tokens.AMPAuth) < 7:
-                self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
-                reset = True
+            self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
+            reset = True
+            
 
         if reset:
             input("Press any Key to Exit")
@@ -160,10 +161,10 @@ class AMPHandler():
         except Exception as e:
             self.logger.error(f'**ERROR** {self.name} Loading AMP Module ** - File Not Found {e}')
                     
-def getAMPHandler(client:discord.Client = None)-> AMPHandler:
+def getAMPHandler(client:discord.Client = None,args:bool=False)-> AMPHandler:
     global Handler
     if Handler == None:
-        Handler = AMPHandler(client)
+        Handler = AMPHandler(client= client,args=args)
     return Handler
 
 class AMPInstance:
@@ -225,7 +226,7 @@ class AMPInstance:
             else:
                 self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
 
-            if dev:
+            if '-dev' in self.AMPHandler.args:
                 self.logger.info(f"'Name:'{self.FriendlyName} 'Module:' {self.Module} 'Port:'{self.Port} 'DisplayImageSource:'{self.DisplayImageSource}")
             #This sets all my DB_Server attributes.
             self.attr_update()
@@ -302,7 +303,7 @@ class AMPInstance:
     def CallAPI(self,APICall,parameters):
         #global SuccessfulConnection
         self.logger.debug(f'Function {APICall} was called with {parameters}.')
-        if dev:
+        if '-amp' in self.AMPHandler.args:
             self.logger.info(f'Function {APICall}')
 
         if self.SessionID != 0:
@@ -349,8 +350,6 @@ class AMPInstance:
                 instance = result["result"][0]['AvailableInstances'][i] 
 
                 #This exempts the AMPTemplate Gatekeeper *hopefully*
-                #*Fixes*
-                #Help me! 
                 flag_reg = re.search("(gatekeeper)",instance['FriendlyName'].lower())
                 if flag_reg != None:
                     if flag_reg.group():
@@ -702,7 +701,7 @@ class AMPConsole:
             console = self.AMPInstance.ConsoleUpdate()
             
             for entry in console['ConsoleEntries']:
-                if dev:
+                if '-dev' in self.AMPHandler.args:
                     print('Name:',self.AMPInstance.FriendlyName,'DisplayImageSource:',self.AMPInstance.DisplayImageSource,'Console Entry:', entry)
                     continue
 
