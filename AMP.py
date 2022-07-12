@@ -122,7 +122,7 @@ class AMPHandler():
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
-        if tokens.AMPAuth < 7:
+        if len(tokens.AMPAuth) < 7:
             if tokens.AMPAuth == '':
                 self.AMP2FA = False
                 return

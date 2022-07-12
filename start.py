@@ -11,6 +11,7 @@ class Setup:
 
         self.args = sys.argv
         #print(self.args)
+        self.pip_install()
 
         import DB
         self.DBHandler = DB.getDBHandler()
@@ -23,10 +24,8 @@ class Setup:
         #print("Setup init:", self.AMPHandler.AMP_Instances)
         self.AMP = self.AMPHandler.AMP
 
-        self.pip_install()
 
     def pip_install(self):
-        # implement pip as a subprocess:
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r','requirements.txt'])
         try:
             import discord
@@ -42,5 +41,9 @@ class Setup:
             sys.exit(1)
 
 Start = Setup()
+
+for instance in Start.AMPHandler.AMP_Instances:
+    #if Start.AMPHandler.AMP_Instances[instance].Running:
+    Start.AMPHandler.AMP_Instances[instance].getAPItest()
 #import discordBot 
 #discordBot.client_run()
