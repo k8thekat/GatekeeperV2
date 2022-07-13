@@ -80,14 +80,23 @@ class Parser():
                     #print(entry)
                     #Need to find ign and see if the name is attached to the same entry.
                     if len(msg_split) > pos+1:
-                        possible_name = msg_split[pos+1][0:len(msg_split[pos+1])]
-                        possible_name = re.sub(self.symbol_reg,"",possible_name)
-                        flag_str_filter = re.search(self.str_filter,possible_name) #Need to make it so that str has to be "alone" not inside of a name/server etc..
-                        if flag_str_filter != None and len(msg_split) > pos+2:
-                            possible_name = msg_split[pos+2][0:len(msg_split[pos+2])]
-                            print('possible name with str filter:',possible_name) #We look this up in the DB if not there, we add it. Add all there Discord details too!
+                        start,end = flag_ign.span()
+                        #print(start,end)
+                        #print(len(msg_split[pos]))
+                        if end < len(msg_split[pos])-1: #This catch's IGNs if they are attached to the IGN (eg:IGN:k8thekat)
+                            #print(msg_split[pos][end:len(msg_split[pos])])
+                            possible_name = msg_split[pos][end:len(msg_split[pos])]
+                            possible_name = re.sub(self.symbol_reg, "",possible_name)
+                            print('possible name attached to IGN:',possible_name)
                         else:
-                            print('possible name:',possible_name) #We look this up in the DB if not there, we add it. Add all there Discord details too!
+                            possible_name = msg_split[pos+1][0:len(msg_split[pos+1])]
+                            possible_name = re.sub(self.symbol_reg,"",possible_name)
+                            flag_str_filter = re.search(self.str_filter,possible_name) #Need to make it so that str has to be "alone" not inside of a name/server etc..
+                            if flag_str_filter != None and len(msg_split) > pos+2:
+                                possible_name = msg_split[pos+2][0:len(msg_split[pos+2])]
+                                print('possible name with str filter:',possible_name) #We look this up in the DB if not there, we add it. Add all there Discord details too!
+                            else:
+                                print('possible name:',possible_name) #We look this up in the DB if not there, we add it. Add all there Discord details too!
 
                     if len(msg_split) > pos+2:
                         flag_search = re.search(f"{self.server_reg}|{self.ign_reg}",msg_split[pos+2].lower())
@@ -100,8 +109,10 @@ class Parser():
 
 
                 flag_whitelist = re.search("(whitelist)",entry.lower())
+                #print(flag_whitelist)
                 if flag_whitelist != None:
                     if len(msg_split) > pos+1:
+                        print(msg_split[pos+1])
                         #Check next entry if its apart of the str_filter if not then use it; else go one entry further.
                         flag_str_filter = re.search(self.str_filter,msg_split[pos+1])
                         if flag_str_filter != None and len(msg_split) > pos+2:
