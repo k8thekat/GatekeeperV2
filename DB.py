@@ -128,8 +128,8 @@ class Database:
 						ID integer primary key,
 						DiscordID text not null unique collate nocase,
 						DiscordName text collate nocase,
-						IngameName text collate nocase,
-						UUID text unique collate nocase,
+						MC_IngameName text collate nocase,
+						MC_UUID text unique collate nocase,
 						SteamID text unique collate nocase,
 						Donator integer not null
 						)""")
@@ -356,9 +356,9 @@ class Database:
 		cur.close()
 		return ret
 
-	def AddUser(self, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, SteamID:str=None, Donator:bool=False, ServerModerator:bool=False):
+	def AddUser(self, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False, ServerModerator:bool=False):
 		try:
-			return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, IngameName=IngameName, UUID=UUID, SteamID=SteamID, Donator=Donator, ServerModerator=ServerModerator)
+			return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, MC_IngameName=MC_IngameName, MC_UUID=MC_UUID, SteamID=SteamID, Donator=Donator, ServerModerator=ServerModerator)
 		except Exception as e:
 			print(e)
 			return None
@@ -522,7 +522,7 @@ class Database:
 		return ret
 
 class DBUser:
-	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, SteamID:str=None, Donator:bool=False):
+	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False):
 		#set defaults
 		Params = locals()
 		Params.pop("self")
