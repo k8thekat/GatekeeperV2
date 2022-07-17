@@ -159,15 +159,6 @@ async def bot_cog_unloader(context,cog:str):
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
-@main_bot.command(name='settings',description='Settings to control specific features of the discordBot.')
-@utils.role_check()
-async def bot_setting(context):
-    """Settings to control specific features of the discordBot."""
-    logger.info('Bot Settings Called...')
-    if main_DB:
-        DB_cog.db_bot_settings()
-    return await context.send('Bot Settings here...')
-
 @main_bot.command(name='disconnect',description='Closes the connection to Discord')
 @utils.role_check()
 async def bot_stop(context):

@@ -211,7 +211,7 @@ class discordBot():
             await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
 class botUtils():
-        def __init__ (self,client:discord.Client):
+        def __init__ (self,client:discord.Client=None):
             self._client = client
             self.logger = logging.getLogger(__name__)
             self.logger.debug('Utils Bot Loaded')
@@ -474,7 +474,7 @@ class botUtils():
 
         def server_whitelist_embed(self,context:commands.Context,server:AMP.AMPInstance) -> discord.Embed:
             """Default Embed Reply for Successful Whitelist requests"""
-            #!TODO! Update Database
+            #!TODO! Update Database/Setup DisplayName for Title
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
             users_online = server.getUserList()
 
@@ -486,3 +486,16 @@ class botUtils():
                 embed.add_field(name='Users Online:' , value=users_online, inline=False)
             return embed
                 
+
+        def bot_settings_embed(self,context:commands.Context,settings:list) -> discord.Embed:
+            """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
+            embed=discord.Embed(title=f'**Bot Settings**', color=0x00ff00)
+            embed.set_thumbnail(url= context.guild.icon)
+            embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
+            for value in settings:
+                key_value = list(value.values())[0]
+                if key_value == '0' or key_value == '1':
+                    key_value = bool(key_value)
+
+                embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+            return embed

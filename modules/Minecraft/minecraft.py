@@ -28,7 +28,7 @@ class Minecraft(commands.Cog):
         self.uBot = utils.botUtils(client) #Utilities Class for Embed's and other functionality.
         self.dBot = utils.discordBot(client) #Common Discord Bot functionality (messages/reactions/users)
 
-        self.DBConfig.AddSetting('Multiverse_Core', False)
+        self.DBConfig.AddSetting('Minecraft_Multiverse_Core', False)
 
 
     @commands.Cog.listener('on_message')

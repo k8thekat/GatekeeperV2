@@ -712,11 +712,17 @@ class AMPConsole:
                     print('Name:',self.AMPInstance.FriendlyName,'DisplayImageSource:',self.AMPInstance.DisplayImageSource,'Console Entry:', entry)
                     continue
 
+                #This will filter any messages such as errors or mods loading, etc..
                 if self.console_filter(entry):
                     continue
                 
-                #This will vary depending on the server type.
+                #This will vary depending on the server type. 
+                # I don't want to filter out the chat message here though. Just send it to two different places!
                 if self.console_chat(entry):
+                    continue
+                
+                #This should handle server events(such as join/leave/disconnects)
+                if self.console_events(entry):
                     continue
 
                 if self.AMPInstance.Discord_Console_Channel == None:
@@ -771,7 +777,18 @@ class AMPConsole:
 
     def console_chat(self,message):
         """This will handle all player chat messages from AMP to Discord"""
-        #print(message)
+        #**EXAMPLE** Name: ARK_-_Lost_Island DisplayImageSource: steam:346110 Console Entry: 
+        #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message'}
+
+        #Currently all servers set "Type" to Chat! So lets use those.
+        if message["Type"] == 'Chat':
+            self.console_chat_message_lock.acquire()
+            self.console_chat_messages.append({message['Contents'],message['Source']})
+            self.console_chat_message_lock.release()
+        return False
+
+    def console_events(self,message):
+        """This will handle all player join/leave/disconnects and other achievements."""
         return False
 
 

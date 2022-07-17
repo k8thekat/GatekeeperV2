@@ -4,12 +4,13 @@ import os
 import datetime
 from pprint import pprint
 from datetime import timedelta
+from sre_constants import IN
 
 import utils
 import AMP
 import logging
 import DB
-from modules.message_parser import ParseIGNServer
+from modules.parser import Parser
 
 import discord
 from discord.ext import commands,tasks
@@ -34,13 +35,14 @@ class AMP_Cog(commands.Cog):
         self.logger.info(f'**SUCCESS** Loading {self.name.replace("amp","AMP")}')
    
         self.uBot = utils.botUtils(client)
+        self.Parser = Parser()
 
         #This should help prevent errors in older databases.
         try:
             self.Auto_WL = self.DBConfig.Auto_whitelist
             self.WL_channel = self.DBConfig.Whitelist_channel #DBConfig is Case sensitive.
             self.WL_delay = self.DBConfig.Whitelist_wait_time #Should only be an INT value; all values in Minutes.
-            self.WL_format = self.DBConfig.Whitelist_Format
+            #self.WL_format = self.DBConfig.Whitelist_Format
             self.WL_Pending_Emoji = self.DBConfig.Whitelist_Emoji_Pending
             self.WL_Finished_Emoji = self.DBConfig.Whitelist_Emoji_Done
 
@@ -49,7 +51,7 @@ class AMP_Cog(commands.Cog):
             self.Auto_WL = self.DBConfig.Auto_whitelist
             self.WL_channel = self.DBConfig.Whitelist_channel #DBConfig is Case sensitive.
             self.WL_delay = self.DBConfig.Whitelist_wait_time #Should only be an INT value; all values in Minutes.
-            self.WL_format = self.DBConfig.Whitelist_format
+            #self.WL_format = self.DBConfig.Whitelist_format
             self.WL_Pending_Emoji = self.DBConfig.Whitelist_emoji_pending
             self.WL_Finished_Emoji = self.DBConfig.Whitelist_emoji_done
         
@@ -127,9 +129,6 @@ class AMP_Cog(commands.Cog):
                 continue
         return False
 
-    async def amp_server_console_messages_listen(self):
-        print()
-
     @tasks.loop(seconds= 1)
     async def amp_server_console_messages_send(self):
         if self._client.is_ready():
@@ -175,49 +174,117 @@ class AMP_Cog(commands.Cog):
 
     @tasks.loop(seconds= 1)
     async def amp_server_console_chat_messages_send(self):
-        print()
+        #!TODO Finish handling chat messages!
+        if self._client.is_ready():
+            for amp_server in self.AMPInstances:
+                self.AMPServer = self.AMPInstances[amp_server]
+                self.AMP_Server_Console = self.AMPServer.Console
+
+                if self.AMPServer.Discord_Chat_Channel == None:
+                    continue
+
+                channel = self._client.get_channel(int(self.AMPServer.Discord_Chat_Channel))
+                if channel == None:
+                    continue
+
+                self.AMP_Server_Console.console_chat_message_lock.acquire()
+                chat_messages = self.AMP_Server_Console.console_chat_messages
+                #Lets reset our list.
+                self.AMP_Server_Console.console_chat_messages = []
+                self.AMP_Server_Console.console_chat_message_lock.release()
+
+                #This setup is for getting/used old webhooks and allowing custom avatar names per message.
+                self.webhook_list = await channel.webhooks()
+                self.logger.debug(f'webhooks {self.webhook_list}')
+                if len(self.webhook_list) == 0:
+                    self.logger.debug(f'creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
+                    webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Chat')
+                else:
+                    for webhook in self.webhook_list:
+                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Console":
+                            self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
+                            webhook = webhook
+
+                if len(chat_messages) != 0:
+                    #{message['Contents'],message['Source']})
+                    author_db = self.DB.GetUser(message['Source'])
+                    if author_db != None:
+                        author = self._client.get_user(int(author.DiscordID))      
+                    else:
+                        author = message['Source']
+
+                    for message in chat_messages:
+                            #This handles Minecraft specific chat messages, replacing the avatar with there MC user head and MC In game name as Display Name
+                            if self.AMPServer.Module == 'Minecraft' and author_db.MC_IngameName != None and author_db.MC_UUID != None:
+                                self.logger.debug('sending a message with Minecraft information')
+                                await webhook.send(message['Contents'], username= author_db.MC_IngameName, avatar_url=self.AMPServer.getHeadbyUUID(author_db.MC_UUID))
+
+                            #This will use discord Information for there Display name and Avatar if possible.
+                            if author != None:
+                                self.logger.debug('sending a message with discord information')
+                                await webhook.send(message['Contents'], username= author.name, avatar_url=author.avatar)
+
+                            else:
+                                self.logger.debug('sending a message with default information')
+                                await webhook.send(message['Contents'], username= author, avatar_url=self._client.user.avatar)
+                            
+                    self.AMP_Server_Console.console_chat_messages = []
 
 
     async def on_message_whitelist(self,message:discord.Message):
         """This handles on_message whitelist requests."""
-        user_ign,user_server = ParseIGNServer(message.content)
+        user_ign,user_servers = self.Parser(message.content)
+        amp_servers = []
 
-        if user_ign or user_server == None:
-            await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with this format! \n{self.WL_format}')
-            self.logger.info(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
+        if user_ign == None or len(user_servers) == 0:
+            await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with the updated information!')
+            self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
             self.failed_whitelist.append(message)
-        
-        amp_server = self.uBot.serverparse(user_server,message,message.guild.id)
-        if amp_server == None:
-            await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with this format! \n{self.WL_format}')
-            self.logger.info(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
-            self.failed_whitelist.append(message)
-            return
 
-        #!TODO! Need to Handle Failed Whitelist Requests Properply
-        user_UUID = amp_server.name_Conversion(user_ign) #Returns None if Multiple or incorrect.
-        if user_UUID == None:
-            await message.reply(f'Hey! I am having trouble finding your IGN, please edit your previous message or send another message with the correct information!')
-            self.logger.info(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
-            self.failed_whitelist.append(message)
-            return
-        
+        for server in user_servers:
+            index = 0
+            amp_server = self.uBot.serverparse(server,message,message.guild.id)
+            if amp_server == None:
+                index+1
+                if len(user_servers)-1 == index:
+                    await message.reply(f'Hey! I was unable to Whitelist you on the servers you requested, please edit your previous message or send another message with the updated information!')
+                    self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
+                    self.failed_whitelist.append(message)
+                    return
+                else:
+                    continue
+
+            if amp_server != None:
+                #user_servers.pop(server) #Lets pop off the server we FOUND and replace it with the AMP Server object!
+                amp_servers.append(amp_server)    
+
+            user_UUID = amp_server.name_Conversion(user_ign) #Returns None if Multiple or incorrect.
+            if user_UUID == None:
+                await message.reply(f'Hey! I am having trouble finding your IGN, please edit your previous message or send another message with the correct information!')
+                self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
+                self.failed_whitelist.append(message)
+                return
+
         db_user = self.DB.GetUser(message.author.name)
         if db_user == None:
-            db_user = self.DB.AddUser(message.author.id,message.author.name,user_ign,user_UUID)
+            if self.Parser.isSteam:
+                db_user = self.DB.AddUser(DiscordID= message.author.id, DiscordName= message.author.name, MC_IngameName= user_ign, SteamID= user_UUID)
+            else:
+                db_user = self.DB.AddUser(DiscordID = message.author.id, Discordname= message.author.name, MC_IngameName= user_ign, MC_UUID= user_UUID)
         
-        db_server = self.DB.GetServer(amp_server.InstanceID)
+        if not self.Auto_WL:
+            self.logger.error(f'Hey an Whitelist request came in, but Auto-Whitelisting is currently disabled!')
+            return
 
-        #!TODO! Add this function to AMP.py 
+
         user_check = amp_server.check_Whitelist(user_UUID)
         if user_check == True:
-            await message.reply(f'You are already Whitelisted on {amp_server.FriendlyName}. If this is an error contact Staff, otherwise Have fun! <3')
-            self.logger.info(f'Discord User: {message.author.name} is already Whitelisted on {amp_server.FriendlyName}')
+            await message.reply(f'You are already Whitelisted on {amp_server.FriendlyName}. If this is an error contact Staff, otherwise have fun! <3')
+            self.logger.error(f'Discord User: {message.author.name} is already Whitelisted on {amp_server.FriendlyName}')
             return
 
-        if not self.Auto_WL:
-            return
 
+        db_server = self.DB.GetServer(amp_server.InstanceID)
         if db_server.Whitelist == False:
             if db_server.DisplayName != None:
                 server_name = db_server.DisplayName
@@ -231,25 +298,25 @@ class AMP_Cog(commands.Cog):
             await message.reply(f'*Waves* Hey this server is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')
             return
 
-        
-        if self.WL_delay != 0: #This handles Whitelist Delays if set.
+        #This handles Whitelist Delays if set.
+        if self.WL_delay != 0: 
             self.WL_wait_list.append({'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user})
 
             if self.WL_Pending_Emoji != None:
                 await self.dBot.messageAddReaction(message,self.WL_Pending_Emoji)
                 
             self.logger.info(f'Added {message.author} to Whitelist Wait List.')
-            #self._client.get_emoji(self.WL_Pending_Emoji)
-            #await message.add_reaction(self.WL_Pending_Emoji) #This should point to bot_config Emoji
+            emoji = self._client.get_emoji(self.WL_Pending_Emoji)
+            if emoji != None:
+                await message.add_reaction(emoji) #This should point to bot_config Emoji
 
             #Checks if the Tasks is running, if not starts the task.
             if not self.whitelist_waitlist_handler.is_running():
                 self.whitelist_waitlist_handler.start()
-                
             return
-
+                
         if amp_server.Running and db_server.Whitelist == True:
-            amp_server.addWhitelist(db_user.InGameName)
+            amp_server.addWhitelist(db_user.IngameName)
             await message.reply(embed = self.uBot.server_whitelist_embed(message,amp_server))
             self.logger.info(f'Whitelisting {message.author.name} on {amp_server.FriendlyName}')
             return

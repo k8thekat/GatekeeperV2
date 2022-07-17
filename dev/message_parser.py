@@ -18,12 +18,17 @@
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
    02110-1301, USA. 
 '''
-def ParseIGNServer(msg):
+def ParseIGNServer(msg:str):
+	print(msg)
 	message_commafilter = msg.find(',')
+	message_semicolonfilter = msg.find(';')
 	if message_commafilter != -1:
-		msg.replace(',',' ')
+		msg = msg.replace(',',' ')
+	
+	if message_semicolonfilter != -1:
+		msg = msg.replace(';',':')
 
-	ret = ['', '']
+	ret = ['', ''] #0,1
 
 	#split on tab, newline, and space
 	msg = msg.split()
@@ -33,6 +38,7 @@ def ParseIGNServer(msg):
 	pos = 0
 	while pos < len(msg):
 		curentry = msg[pos].lower()
+		print('curentry',curentry)
 		if curentry.startswith("server") and (fieldflag == 1):
 			ret[fieldflag] += f' {msg[pos]}'
 		elif curentry.startswith("ign") or curentry.startswith("server") or curentry.startswith("in-game-name") or curentry.startswith('in-gamename') or curentry.startswith('ingamename'):

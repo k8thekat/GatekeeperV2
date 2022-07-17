@@ -42,8 +42,8 @@ class Setup:
 
 Start = Setup()
 
-for instance in Start.AMPHandler.AMP_Instances:
-    #if Start.AMPHandler.AMP_Instances[instance].Running:
-    Start.AMPHandler.AMP_Instances[instance].getAPItest()
-#import discordBot 
-#discordBot.client_run()
+# for instance in Start.AMPHandler.AMP_Instances:
+#     #if Start.AMPHandler.AMP_Instances[instance].Running:
+#     Start.AMPHandler.AMP_Instances[instance].getAPItest()
+import discordBot 
+discordBot.client_run()

@@ -6,11 +6,8 @@ import discord
 from discord.ext import commands,tasks
 
 import utils
-import AMP as AMP
-import DB as DB
-from modules.message_parser import ParseIGNServer
-
-
+import AMP
+import DB
 
 class Generic(commands.Cog):
     def __init__ (self,client):

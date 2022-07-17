@@ -47,12 +47,12 @@ class DBHandler():
 		self.DBConfig = self.DB.GetConfig()
 		self.SuccessfulDatabase = True
 
-		self.DBConfig.AddSetting('Staff', None)
+		self.DBConfig.AddSetting('Staff_Role_ID', None)
 	
 	def dbWhitelistSetup(self):
 		"""This is set Default AMP Specific Whitelist Settings"""
 		try:
-			self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
+			#self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
 			self.DBConfig.AddSetting('Whitelist_Channel', None)
 			self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
 			self.DBConfig.AddSetting('Auto_Whitelist', False)
@@ -1035,7 +1035,7 @@ class DBConfig:
 
 	#list(self._ConfigNameToID.keys())
 	def GetSettingList(self):
-		settings = list(self._ConfigNameToID.leys())
+		settings = list(self._ConfigNameToID.keys())
 		return settings
 
 	def SetSetting(self, name:str, value):

@@ -10,12 +10,6 @@ import AMP
 import DB
 
 
-def db_bot_settings():
-    #!TODO!
-    print('Get all the DB config settings')
-
-
-
 class DB_Module(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client
@@ -36,6 +30,7 @@ class DB_Module(commands.Cog):
         self.dBot = utils.discordBot(client)
 
         self.uBot.sub_command_handler('bot',self.db_bot_whitelist)
+        self.uBot.sub_command_handler('bot',self.db_bot_settings)
 
         self.whitelist_emoji_message = '' 
         self.whitelist_emoji_pending = False
@@ -184,6 +179,8 @@ class DB_Module(commands.Cog):
 
         self.whitelist_emoji_pending = True
 
+    @db_bot_whitelist.command(name='done_emoji')
+    @utils.role_check()
     async def db_bot_whitelist_done_emjoi_set(self,context:commands.Context):
         """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
         flag = 'completed Whitelist requests!'
@@ -195,13 +192,18 @@ class DB_Module(commands.Cog):
                 self.whitelist_emoji_message = messages[0].id
 
         self.whitelist_emoji_done = True
-       
-    #!TODO! This function doesn't exist yet.
-    async def db_bot_settings(self):
+
+    @commands.hybrid_command(name='settings')
+    @utils.role_check()
+    async def db_bot_settings(self,context:commands.Context):
         """This is accessed through bot settings in Gatekeeper.py"""
-        settings = self.DBConfig.GetSettingList()
-        print(settings)
-        return settings
+        dbsettings_list = self.DBConfig.GetSettingList()
+        settings_list = []
+        for setting in dbsettings_list:
+            config = self.DBConfig.GetSetting(setting)
+            settings_list.append({f'{setting.capitalize()}': f'{str(config)}'})
+        await context.send(embed= self.uBot.bot_settings_embed(context,settings_list))
+        
 
     @commands.hybrid_group(name='dbserver')
     @utils.role_check()
