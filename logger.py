@@ -14,9 +14,9 @@ def init(args):
     if dircheck != True:
         print('Making Log Directory...')
         pathlib.Path.mkdir(pathlib.Path.cwd().joinpath('logs'))
-        
+    
     logging.basicConfig(level=logginglevel, format='%(asctime)s [%(threadName)s] [%(levelname)s]  %(message)s', 
                         datefmt='%m/%d/%Y %I:%M:%S %p',
                         handlers = [logging.StreamHandler(sys.stdout),
-                        TimedRotatingFileHandler(pathlib.Path.as_posix(pathlib.Path.cwd().joinpath('log')),'midnight',atTime=datetime.datetime.min.time(),backupCount= 4,encoding='utf-8',utc=True)])
+                        TimedRotatingFileHandler(pathlib.Path.as_posix(pathlib.Path.cwd().joinpath('logs')) + '/log','midnight',atTime=datetime.datetime.min.time(),backupCount= 4,encoding='utf-8',utc=True)])
     return
