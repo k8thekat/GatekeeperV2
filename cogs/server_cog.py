@@ -29,10 +29,10 @@ class Server(commands.Cog):
         self.DB = self.DBHandler.DB 
         self.DBConfig = self.DBHandler.DBConfig
 
-        self.logger.info(f'**SUCCESS** Loading {self.name.capitalize()}')
    
         self.uBot = utils.botUtils(client)
         #self.uBot.sub_command_handler('server',self.server_whitelist) 
+        self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
 
     @commands.Cog.listener('on_member_remove')
