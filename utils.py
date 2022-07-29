@@ -224,6 +224,24 @@ class botUtils():
             self.AMPInstances = self.AMPHandler.AMP_Instances
 
 
+        def name_to_uuid_MC(self,name): 
+            """Converts an IGN to a UUID/Name Table \n
+            `returns 'uuid'` else returns `None`, multiple results return `None`"""
+            url = 'https://api.mojang.com/profiles/minecraft'
+            header = {'Content-Type': 'application/json'}
+            jsonhandler = json.dumps(name)
+            post_req = requests.post(url, headers=header, data=jsonhandler)
+            minecraft_user = post_req.json()
+
+            if len(minecraft_user) == 0: 
+                return None
+
+            if len(minecraft_user) > 1:
+                return None
+
+            else:
+                return minecraft_user[0]['id'] #returns [{'id': 'uuid', 'name': 'name'}] 
+
         def roleparse(self,parameter:str,context,guild_id:int) -> discord.Role: 
             """This is the bot utils Role Parse Function\n
             It handles finding the specificed Discord `<role>` in multiple different formats.\n
@@ -343,7 +361,7 @@ class botUtils():
                         cur_member = member
                 return cur_member
                 
-        def serverparse(self,parameter,context:None,guild_id:int=None) -> AMP.AMPInstance:
+        def serverparse(self,parameter,context=None,guild_id:int=None) -> AMP.AMPInstance:
             """This is the botUtils Server Parse function.
             **Note** Use context.guild.id \n
             Returns `AMPInstance[server] <object>`"""
