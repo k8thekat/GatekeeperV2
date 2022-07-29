@@ -13,7 +13,6 @@ class Terraria(commands.Cog):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
 
         
         self.AMPHandler = AMP.getAMPHandler()
@@ -27,14 +26,7 @@ class Terraria(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
         #self.uBot.sub_command_handler(self,'user',self.info)
-
-    @commands.Cog.listener('on_message')
-    async def on_message(self,message):
-        if message.content.startswith(self._client.command_prefix):
-            return message
-        if message.author != self._client.user:
-            self.logger.info(f'On Message Event for {self.name}')
-            return message
+        self.logger.info(f'**SUCCESS** Initializing Module **{self.name}**')
 
     @commands.Cog.listener('on_user_update')
     async def on_user_update(self,user_before,user_after):
