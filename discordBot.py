@@ -67,11 +67,15 @@ async def on_user_update(user_before,user_after):
 
 @client.listen('on_message')
 async def on_message(message):
+    if message.webhook_id != None:
+            return message
     if message.content.startswith(prefix):
         return message
     if message.author != client.user:
         logger.info(f'On Message Event for {os.path.basename(__file__)}')
         return message
+
+    await client.process_commands(message)
 
 @client.event
 async def on_message_edit(message_before,message_after):
