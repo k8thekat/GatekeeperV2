@@ -21,16 +21,17 @@
 #AMP API 
 # by k8thekat // Lightning
 # 11/10/2021
+from argparse import Namespace
 from ast import Continue
 import requests
 import requests.sessions
 import pyotp # 2Factor Authentication Python Module
 import json
 import time
-from pprint import pprint
+from pprint import pp, pprint
 import sys
 import pathlib
-from datetime import datetime
+from datetime import datetime, timezone, tzinfo
 import logging
 import threading
 import importlib.util
@@ -47,7 +48,7 @@ Handler = None
 
 
 class AMPHandler():
-    def __init__(self,client:discord.Client,args:list=None):
+    def __init__(self,client:discord.Client,args:Namespace):
         self.args = args
         #print(self.args)
         self.logger = logging.getLogger()
@@ -86,6 +87,8 @@ class AMPHandler():
     def setup_AMPInstances(self):
         """Intializes the connection to AMP and creates AMP_Instance objects."""
         self.AMP = AMPInstance(Handler = self)
+        #self.AMP.getRole('5f677644-8bfa-4875-ad69-e65c7786ef33') #This is the Bot Admin Role
+        #self.AMP.setAMPRolePermissions('5f677644-8bfa-4875-ad69-e65c7786ef33',)
         self.AMP_Instances = self.AMP.getInstances()
 
     def instanceCheck(self):
@@ -112,7 +115,8 @@ class AMPHandler():
         """Validates the tokens.py settings and 2FA."""
         self.logger.info('AMPHandler is validating your token file...')
         reset = False
-        if '-dev' not in self.args:
+
+        if not self.args.dev:
             if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
                 self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
                 reset = True
@@ -141,7 +145,7 @@ class AMPHandler():
         #traceback.print_stack()
         self.logger.info('AMPHandler moduleHandler loading modules...')
         try:
-            dir_list = pathlib.Path.cwd().joinpath('modules').iterdir()
+            dir_list = self._cwd.joinpath('modules').iterdir()
             for folder in dir_list:
                 file_list = folder.glob('amp_*.py')
                 for script in file_list:
@@ -233,7 +237,7 @@ class AMPInstance:
             else:
                 self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
 
-            if '-dev' in self.AMPHandler.args:
+            if self.AMPHandler.args.dev:
                 self.logger.info(f"'Name:'{self.FriendlyName} 'Module:' {self.Module} 'Port:'{self.Port} 'DisplayImageSource:'{self.DisplayImageSource}")
             #This sets all my DB_Server attributes.
             self.attr_update()
@@ -254,7 +258,7 @@ class AMPInstance:
         self.IP = self.DB_Server.IP
         self.Whitelist = self.DB_Server.Whitelist
         self.Donator = self.DB_Server.Donator
-        self.Console_Flag = self.DB_Server.Console_Flag
+        self.Console_Flag = self.DB_Server.Console_Flag #This should be default to True
         self.Console_Filtered = self.DB_Server.Console_Filtered
         self.Discord_Console_Channel = self.DB_Server.Discord_Console_Channel
         self.Discord_Chat_Channel = self.DB_Server.Discord_Chat_Channel
@@ -310,7 +314,8 @@ class AMPInstance:
     def CallAPI(self,APICall,parameters):
         #global SuccessfulConnection
         self.logger.debug(f'Function {APICall} was called with {parameters}.')
-        if '-amp' in self.AMPHandler.args:
+
+        if self.AMPHandler.args.dev:
             self.logger.info(f'Function {APICall}')
 
         if self.SessionID != 0:
@@ -320,9 +325,15 @@ class AMPInstance:
         while(True):
             try:
                 post_req = requests.post(self.url+APICall, headers=self.AMPheader, data=jsonhandler)
+
                 if len(post_req.content) > 0:
                     break
-                self.logger.error('AMP API recieved no Data; sleeping for 5 seconds...')
+
+                #Since we are using GetUpdates every second for Console Updates; lets ignore them here so we don't sleep our thread.
+                if APICall == 'Core/GetUpdates':
+                    break
+
+                self.logger.error(f'{self.FriendlyName}: AMP API recieved no Data; sleeping for 5 seconds...')
                 time.sleep(5)
 
             except:
@@ -339,7 +350,19 @@ class AMPInstance:
             self.logger.error(f"AMP_API CallAPI ret is 0: status_code {post_req.status_code}")
             self.logger.error(post_req.raw)
 
-        self.logger.debug(post_req.json())
+        self.logger.debug(f'Post Request Prints: {post_req.json()}')
+
+        #Permission errors will trigger this, unsure what else.
+        if "result" in post_req.json():
+            if type(post_req.json()['result']) == bool and "Status" in post_req.json()['result'] and (post_req.json()['result']['Status'] == False):
+                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
+                return
+
+        if "Title" in post_req.json():
+            if type(post_req.json()['Title']) == str and post_req.json()['Title'] == 'Unauthorized Access':
+                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
+                return
+    
         return post_req.json()
 
     def getInstances(self):
@@ -361,11 +384,13 @@ class AMPInstance:
                 if flag_reg != None:
                     if flag_reg.group():
                         continue 
-                
-                if instance['Module'] in self.AMPHandler.AMP_Modules:
-                    self.logger.info(f'Loaded __AMP_{instance["Module"]}__ for {instance["FriendlyName"]}')
+
+                #!TODO! This may change when and IF AMP adds a better table value for unique Server types!
+                if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
+                    name = str(self.AMPHandler.AMP_Modules[instance["DisplayImageSource"]]).split("'")[1]
+                    self.logger.info(f'Loaded __{name}__ for {instance["FriendlyName"]}')
                     #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
-                    server = self.AMPHandler.AMP_Modules[instance['Module']](instance['InstanceID'],instance,i,self.AMPHandler)
+                    server = self.AMPHandler.AMP_Modules[instance['DisplayImageSource']](instance['InstanceID'],instance,i,self.AMPHandler)
                     serverlist[server.InstanceID] = server
 
                 else:
@@ -597,6 +622,51 @@ class AMPInstance:
         self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
         return
 
+    def getPermissions(self):
+        self.Login()
+        parameters = {}
+        result = self.CallAPI('Core/GetPermissionsSpec', parameters)
+        pprint(result)
+
+    def getRoleIds(self):
+        """Gets a List of all Roles"""
+        self.Login()
+        parameters = {}
+        result = self.CallAPI('Core/GetRoleIds', parameters)
+        pprint(result)
+
+    def getRole(self,Roleid:str):
+        """Gets the AMP Role"""
+        self.Login()
+        parameters = {
+            'RoleId' : Roleid
+        }
+        result = self.CallAPI('Core/GetRole', parameters)
+        pprint(result)
+    
+    def setAMPUserRoleMembership(self,UserID,RoleID,isMember:bool):
+        """ Sets the AMP Users Role Membership"""
+        self.Login()
+        parameters = {
+            'UserId' : UserID,
+            'RoleId' : RoleID,
+            'IsMember' : isMember
+        }
+        result = self.CallAPI('Core/SetAMPUserRoleMembership',parameters)
+        pprint(result)
+
+    def setAMPRolePermissions(self,RoleID,PermissionNode:str,Enabled:bool):
+        """Sets the AMP Role permission Node eg `Core.RoleManagement.DeleteRoles`"""
+        self.Login()
+        parameters = {
+            'RoleId' : RoleID,
+            'PermissionNode' : PermissionNode,
+            'Enabled' : Enabled
+        }
+        result = self.CallAPI('Core/SetAMPRolePermission', parameters)
+        pprint(result)
+
+    #These are GENERIC Methods below this point ---------------------------------------------------------------------------
     def addWhitelist(self,user):
         """Base Function for AMP.addWhitelist"""
         return user
@@ -625,6 +695,10 @@ class AMPInstance:
         """Base Function for Discord Chat Messages to AMP ADS"""
         return
 
+    def discord_message(self,user):
+        """Base Function for customized discord messages"""
+        return False
+
 class AMPConsole:
     def __init__(self, AMPInstance = AMPInstance):
         self.logger = logging.getLogger()
@@ -650,18 +724,14 @@ class AMPConsole:
         self.console_chat_messages_list = []
         self.console_chat_message_lock = threading.Lock()
 
-
         self.logger.info(f'**SUCCESS** Setting up {self.AMPInstance.FriendlyName} Console')
         self.console_init()
 
 
     def console_init(self):
         """This starts our console threads..."""
-        #print(self.)
         if self.AMPInstance.Console_Flag:
-            #print('Console testing','Module:',self.AMPInstance.Module,'Name:',self.AMPInstance.FriendlyName,'ADS Running:',self.AMPInstance.Server_Running)
             try:
-                #!TODO! Finish setting up Consoles
                 # self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
                 # self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
                 if self.AMPInstance.DisplayImageSource in self.AMPHandler.AMP_Console_Modules: #Should be AMP_Console_Modules: {Module_Name: 'Module_class_object'}
@@ -675,7 +745,6 @@ class AMPConsole:
 
                         #This adds the AMPConsole Thread Object into a dictionary with the key value of AMPInstance.InstanceID
                         self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
-                        #print(self.console_thread)
                         self.console_thread.start()
                         self.logger.info(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
 
@@ -703,29 +772,41 @@ class AMPConsole:
     def console_parse(self):
         """This handles AMP Console Updates; turns them into bite size messages and sends them to Discord"""
         time.sleep(5)
+        last_entry_time = 0
         while(self.console_thread_running):
             time.sleep(1)
             console = self.AMPInstance.ConsoleUpdate()
-            
+
             for entry in console['ConsoleEntries']:
-                if '-dev' in self.AMPHandler.args:
-                    print('Name:',self.AMPInstance.FriendlyName,'DisplayImageSource:',self.AMPInstance.DisplayImageSource,'Console Entry:', entry)
+                #This prevents old messages from getting handled again and spamming on restart.
+                entry_time = datetime.fromtimestamp(float(entry['Timestamp'][6:-2])/1000,tz= timezone.utc)
+                if last_entry_time == 0:
+                    last_entry_time = entry_time
+                    break
+
+                if entry_time < last_entry_time:
+                    last_entry_time = entry_time
                     continue
 
+                if self.AMPHandler.args.dev:
+                    print('Name:',self.AMPInstance.FriendlyName,'DisplayImageSource:',self.AMPInstance.DisplayImageSource,'Console Entry:', entry)
+                    print("Console Channel:",self.AMPInstance.Discord_Console_Channel,"Chat Channel:", self.AMPInstance.Discord_Chat_Channel)
+
                 #This will filter any messages such as errors or mods loading, etc..
+                #print('Console Filter')
                 if self.console_filter(entry):
+                    print(f"Filtered message {entry}")
                     continue
                 
                 #This will vary depending on the server type. 
                 # I don't want to filter out the chat message here though. Just send it to two different places!
+                #print('Console Chat')
                 if self.console_chat(entry):
                     continue
                 
                 #This should handle server events(such as join/leave/disconnects)
+                #print('Console Events')
                 if self.console_events(entry):
-                    continue
-
-                if self.AMPInstance.Discord_Console_Channel == None:
                     continue
 
                 if len(entry['Contents']) > 1500:
@@ -772,7 +853,7 @@ class AMPConsole:
 
     def console_filter(self,message):
         """This will filter depending on the console_filter setting and handle what to send to Discord."""
-        #print(message)
+        #print("Filtered Console?", self.AMPInstance.Console_Filtered)
         return False
 
     def console_chat(self,message):
@@ -782,13 +863,19 @@ class AMPConsole:
 
         #Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
+            print('Found a Chat message')
             self.console_chat_message_lock.acquire()
-            self.console_chat_messages.append({message['Contents'],message['Source']})
+            self.console_chat_messages.append(message)
             self.console_chat_message_lock.release()
+
+            self.console_message_lock.acquire()
+            self.console_messages.append(f"{message['Source']}: {message['Contents']}")
+            self.console_message_lock.release()
+            return True
         return False
 
     def console_events(self,message):
-        """This will handle all player join/leave/disconnects and other achievements."""
+        """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!"""
         return False
 
 
