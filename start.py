@@ -1,27 +1,40 @@
 import sys
 import subprocess
 import re
+import argparse
+
+from numpy import require
 
 class Setup:
     def __init__(self):
+        parser = argparse.ArgumentParser(description='AMP Discord Bot')
+        parser.add_argument('-token', help='Bypasse tokens validation check.',required= False, action="store_true")
+        parser.add_argument('-dev', help='Enable development print statments.',required= False, action="store_true")
+        #Use action="store_true", then check the arg via "args.name" eg. "args.dev"
+        parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
+        parser.add_argument('-discord', help='Disables Discord Intigration (Used for Testing)',required= False, action="store_false")
+        parser.add_argument('-setup', help='First time setup of AMP and DB', required= False, action="store_false")
+        self.args = parser.parse_args()
+
         import logger
-        logger.init()
+        logger.init(self.args)
         import logging 
         self.logger = logging.getLogger()
 
-        self.args = sys.argv
-        #print(self.args)
+        self.logger.info(f'Current Startup Args:{self.args}')
         self.pip_install()
 
+
+        #This sets up our SQLite Database!
         import DB
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB
         self.DB_Config = self.DB.GetConfig()
 
+        #This connects and creates all our AMP related parts
         import AMP
         self.AMPHandler = AMP.getAMPHandler(args=self.args)
         self.AMPHandler.setup_AMPInstances() 
-        #print("Setup init:", self.AMPHandler.AMP_Instances)
         self.AMP = self.AMPHandler.AMP
 
 
@@ -40,10 +53,15 @@ class Setup:
             self.logger.error('Please visit: https://github.com/Rapptz/discord.py to install discord.py development version!')
             sys.exit(1)
 
-Start = Setup()
 
-# for instance in Start.AMPHandler.AMP_Instances:
-#     #if Start.AMPHandler.AMP_Instances[instance].Running:
-#     Start.AMPHandler.AMP_Instances[instance].getAPItest()
-import discordBot 
-discordBot.client_run()
+Start = Setup()
+if Start.args.dev:
+    Start.logger.critical("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
+
+if not Start.args.discord:
+    Start.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
+
+if Start.args.discord:
+    import discordBot 
+    discordBot.client_run()
+    
