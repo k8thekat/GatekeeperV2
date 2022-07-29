@@ -15,7 +15,6 @@ class Minecraft(commands.Cog):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name.capitalize()}**')
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
@@ -29,15 +28,7 @@ class Minecraft(commands.Cog):
         self.dBot = utils.discordBot(client) #Common Discord Bot functionality (messages/reactions/users)
 
         self.DBConfig.AddSetting('Minecraft_Multiverse_Core', False)
-
-
-    @commands.Cog.listener('on_message')
-    async def on_message(self,message:discord.Message):
-        if message.content.startswith(self._client.command_prefix):
-            return message
-        if message.author != self._client.user:
-            self.logger.info(f'On Message Event for {self.name}')
-            return message
+        self.logger.info(f'**SUCCESS** Initializing Module **{self.name.capitalize()}**')
 
     @commands.Cog.listener('on_user_update')
     async def on_user_update(self,user_before,user_after:discord.User):
