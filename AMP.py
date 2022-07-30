@@ -57,7 +57,10 @@ class AMPHandler():
         self.name = os.path.basename(__file__)
 
         self.AMP2FA = False
+        self.tokens = ''
 
+        self.superUser = False
+    
         self.SessionIDlist = {}
 
         self.AMP_Instances = {}
@@ -73,7 +76,6 @@ class AMPHandler():
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
 
-        self.tokens = ''
 
         self.val_settings()
         self.moduleHandler()
@@ -87,10 +89,10 @@ class AMPHandler():
     def setup_AMPInstances(self):
         """Intializes the connection to AMP and creates AMP_Instance objects."""
         self.AMP = AMPInstance(Handler = self)
-        #self.AMP.getRole('5f677644-8bfa-4875-ad69-e65c7786ef33') #This is the Bot Admin Role
-        #self.AMP.setAMPRolePermissions('5f677644-8bfa-4875-ad69-e65c7786ef33',)
-        self.AMP_Instances = self.AMP.getInstances()
+        if len(self.AMP_Instances) == 0:
+            self.AMP_Instances = self.AMP.getInstances()
 
+    #!TODO This needs to be finished
     def instanceCheck(self):
         """Checks for any new Instances since after startup. `(Advise using this in some sort of loop every so often)`\n
         This keeps the AMP_Instance Dictionary Current
@@ -198,6 +200,9 @@ class AMPInstance:
         self.Server_Running = False #This is for the ADS (Dedicated Server) not the Instance!
 
         self.url = self.AMPHandler.tokens.AMPurl + '/API/' #base url for AMP console /API/
+        self.perms = ['Core.*','Core.RoleManagement.*','Core.UserManagement.*','Instances.*','ADS.*','Settings.*','ADS.InstanceManagement.*','FileManager.*','LocalFileBackup.*','Core.AppManagement.*']
+        self.super_AdminID = None
+        self.AMP_BotRoleID = None
 
         self.AMP2Factor = None
         if self.AMPHandler.AMP2FA:
@@ -205,6 +210,7 @@ class AMPInstance:
                 self.AMP2Factor = pyotp.TOTP(self.AMPHandler.tokens.AMPAuth) #Handles time based 2Factory Auth Key/Code
                 self.AMP2Factor.now()
                 #self.logger.info('Found Two Factor Auth Code')
+
             except AttributeError:
                 self.logger.critical("**ERROR** Please check your 2 Factor Set-up Code in tokens.py, should not contain spaces,escape characters and enclosed in quotes!")
                 self.AMP2Factor = None
@@ -221,14 +227,11 @@ class AMPInstance:
             #This gets all the dictionary values tied to AMP and makes them attributes
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
-            #pprint(serverdata)
 
+            #This cleans up the friendly name making it easier to use.
             self.FriendlyName = self.FriendlyName.replace(' ', '_')
-            #print('Instance Attr',dir(self))
-            #print('Instance Running',self.Running)
             
             #This gets me the DB_Server object if it's not there; it adds the server.
-            #self.DB_Server = None
             self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
             #Possible DB_Server Attributes = InstanceID, InstanceName, DisplayName, Description, IP, Whitelist, Donator, Console_Flag, Console_Filtered, Discord_Console_Channel, Discord_Chat_Channel, Discord_Role
             if self.DB_Server == None:
@@ -239,8 +242,78 @@ class AMPInstance:
 
             if self.AMPHandler.args.dev:
                 self.logger.info(f"'Name:'{self.FriendlyName} 'Module:' {self.Module} 'Port:'{self.Port} 'DisplayImageSource:'{self.DisplayImageSource}")
+
             #This sets all my DB_Server attributes.
             self.attr_update()
+
+        if instanceID == 0 or self.Running:
+            if self.check_AMPpermissions():
+                AMP_userinfo = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser)
+                self.getRoleIds(True)
+                #Lets see if we are a Super Admin and if the discord_bot role doesn't exist!
+                if self.AMP_BotRoleID == None and self.super_AdminID in AMP_userinfo['result']['Roles']:
+                    self.logger.info(f'***ATTENTION*** We have `Super Admins`, setting up AMP Permissions and creating `discord_bot` role!')
+                    self.setup_AMPpermissions()
+
+                if self.AMP_BotRoleID == None:
+                    self.logger.critical('***ATTENTION*** We are missing our bot role! Please create a role under "Configuration -> Role Management" called `discord_bot` or give the bot user `Super Admins`, then restart the bot.')
+                    
+                if self.AMP_BotRoleID != None and self.super_AdminID in AMP_userinfo['result']['Roles']:
+                    self.AMP_UserID = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser,True)
+                    self.setAMPUserRoleMembership(self.AMP_UserID,self.super_AdminID,False) 
+                    self.logger.info(f'***ATTENTION*** Removing {self.AMPHandler.tokens.AMPUser} from `Super Admins` Role!')
+            else:
+                self.logger.critical('***ATTENTION*** We are missing permissions for AMP! Please consider giving us `Super Admins` and the bot will set its own permissions and role!')
+                
+
+    def setup_AMPpermissions(self):
+        """Sets the Permissions for main AMP Module"""
+        self.logger.info('Setting AMP permissions')
+        self.createRole('discord_bot')
+        self.getRoleIds(True)
+        self.logger.info(f'Created `discord_bot` role. ID: {self.AMP_BotRoleID}')
+        self.AMP_UserID = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser,True)
+        self.setAMPUserRoleMembership(self.AMP_UserID,self.AMP_BotRoleID,True)
+        self.logger.info(f'***ATTENTION*** Adding {self.AMPHandler.tokens.AMPUser} to `discord_bot` Role!')
+
+        import amp_permissions as AMPPerms
+        core = AMPPerms.perms_super()
+        for perm in core:
+            enabled = True
+            if perm.startswith('-'):
+                enabled = False
+                perm = perm[1:]
+            self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
+            self.logger.info(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
+
+        self.AMPHandler.AMP_Instances = self.getInstances()
+        #This removes Super Admins from the bot user!
+        self.setAMPUserRoleMembership(self.AMP_UserID,self.super_AdminID,False) 
+        self.logger.info(f'***ATTENTION*** Removing {self.AMPHandler.tokens.AMPUser} from `Super Admins` Role!')
+        return True
+
+    def check_AMPpermissions(self):
+        """These check the permissions for AMP Modules"""
+        self.logger.info('Checking AMP for proper permissions.')
+        failed = False
+        for perm in self.perms:
+            if perm.startswith('-'):
+                perm = perm[1:]
+            check = self.CurrentSessionHasPermission(perm)
+
+            if self.AMPHandler.args.dev:
+                self.logger.info(f'Permission check on __{perm}__ is: {check}')
+
+            if check != True:
+                self.logger.error(f'The Bot is missing the permission {perm}! Please check under Configuration -> User Management for the Bot.')
+                failed = True
+
+        if failed:
+            self.logger.error(f'***ATTENTION*** The Bot is missing permissions, some or all functionality may not work properly!')
+            #Please see this image for the required bot user Permissions **(Github link to AMP Basic Perms image here)**
+            return False
+
+        return True
 
     def attr_update(self):
         """This will update AMP Instance attributes."""
@@ -289,7 +362,8 @@ class AMPInstance:
                 token = self.AMP2Factor.now()
                 
             else:
-                token = ''  
+                token = '' 
+
             parameters = {
                     'username': self.AMPHandler.tokens.AMPUser,
                     'password': self.AMPHandler.tokens.AMPPassword,
@@ -313,10 +387,10 @@ class AMPInstance:
 
     def CallAPI(self,APICall,parameters):
         #global SuccessfulConnection
-        self.logger.debug(f'Function {APICall} was called with {parameters}.')
+        self.logger.debug(f'Function {APICall} was called with {parameters} by {self.InstanceID}')
 
         if self.AMPHandler.args.dev:
-            self.logger.info(f'Function {APICall}')
+            self.logger.info(f'Function {APICall} by {self.InstanceID}')
 
         if self.SessionID != 0:
             parameters['SESSIONID'] = self.SessionID
@@ -354,6 +428,14 @@ class AMPInstance:
 
         #Permission errors will trigger this, unsure what else.
         if "result" in post_req.json():
+
+            if type(post_req.json()['result']) == bool and post_req.json()['result'] == True:
+                return post_req.json()
+
+            if type(post_req.json()['result']) == bool and post_req.json()['result'] != True:
+                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
+                return post_req.json()
+
             if type(post_req.json()['result']) == bool and "Status" in post_req.json()['result'] and (post_req.json()['result']['Status'] == False):
                 self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
                 return
@@ -402,7 +484,7 @@ class AMPInstance:
 
         else:
             InstancesFound = False
-            self.logger.critical(f'Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
+            self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
             time.sleep(30)
             
 
@@ -622,18 +704,77 @@ class AMPInstance:
         self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
         return
 
+    def getAMPUserInfo(self,name:str,IdOnly=False):
+        """Gets AMP user info"""
+        self.Login()
+        parameters = {
+            'Username' : name
+        }
+        result = self.CallAPI('Core/GetAMPUserInfo', parameters)
+        if IdOnly:
+            return result['result']['ID']
+        return result
+
+    def CurrentSessionHasPermission(self,PermissionNode:str):
+        """Gets current Sessions permission spec"""
+        self.Login()
+        parameters = {
+            'PermissionNode' : PermissionNode
+        }
+        result = self.CallAPI('Core/CurrentSessionHasPermission', parameters)
+        return result['result']
+
+    def getAMPRolePermissions(self,RoleID:str):
+        """Gets full permission spec for Role (returns permission nodes)"""
+        self.Login()
+        parameters = {
+            'RoleId' : RoleID
+        }
+        result = self.CallAPI('Core/GetAMPRolePermissions', parameters)
+        return result
+
     def getPermissions(self):
+        """Gets full Permission spec for self"""
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetPermissionsSpec', parameters)
-        pprint(result)
+        return result
 
-    def getRoleIds(self):
+    def getRoleIds(self,set_roleID= False):
         """Gets a List of all Roles"""
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetRoleIds', parameters)
+
+        if set_roleID:
+            roles = result['result']
+            for role in roles:
+                if roles[role] == 'discord_bot':
+                    self.AMP_BotRoleID = role
+                    print('AMP Bot Role',self.AMP_BotRoleID,role)
+
+                if roles[role] == 'Super Admins':
+                    self.super_AdminID = role
+                    print('Super Admin',self.super_AdminID,role)
+                
+            if self.AMP_BotRoleID == None:
+                return False
+
+            if self.AMP_BotRoleID != None and self.super_AdminID != None:
+                return True
+
+        return result['result']
+
+    def createRole(self,name:str,AsCommonRole=False):
+        """Creates a AMP User role"""
+        self.Login()
+        parameters = {
+            'Name' : name,
+            'AsCommonRole' : AsCommonRole
+        }
+        result = self.CallAPI('Core/CreateRole', parameters)
         pprint(result)
+        return result
 
     def getRole(self,Roleid:str):
         """Gets the AMP Role"""
@@ -642,7 +783,7 @@ class AMPInstance:
             'RoleId' : Roleid
         }
         result = self.CallAPI('Core/GetRole', parameters)
-        pprint(result)
+        return result
     
     def setAMPUserRoleMembership(self,UserID,RoleID,isMember:bool):
         """ Sets the AMP Users Role Membership"""
@@ -653,7 +794,7 @@ class AMPInstance:
             'IsMember' : isMember
         }
         result = self.CallAPI('Core/SetAMPUserRoleMembership',parameters)
-        pprint(result)
+        return result
 
     def setAMPRolePermissions(self,RoleID,PermissionNode:str,Enabled:bool):
         """Sets the AMP Role permission Node eg `Core.RoleManagement.DeleteRoles`"""
@@ -664,7 +805,8 @@ class AMPInstance:
             'Enabled' : Enabled
         }
         result = self.CallAPI('Core/SetAMPRolePermission', parameters)
-        pprint(result)
+        #pprint(result)
+        return result
 
     #These are GENERIC Methods below this point ---------------------------------------------------------------------------
     def addWhitelist(self,user):

@@ -22,6 +22,7 @@ import AMP
 import requests
 import json
 import discord
+import os
 
 
 DisplayImageSources = ["internal:MinecraftJava"]
@@ -33,6 +34,23 @@ class AMPMinecraft(AMP.AMPInstance):
         
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
         self.Console = AMPMinecraftConsole(self)
+
+        self.perms = [f'{instanceID}.Minecraft.InGameActions.*',f'{instanceID}.Minecraft.',f'-{instanceID}.Minecraft.PluginManagement.*']
+
+        print(os.path.basename(__file__),self.Running, 'instanceID',self.InstanceID)
+         
+
+    def setup_AMPpermissions(self):
+        """Sets the Permissions for Minecraft Modules"""
+        for perm in self.perms:
+            enabled = True
+            if perm.startswith('-'):
+                enabled = False
+                perm = perm[1:]
+            print(self.AMP_BotRoleID)
+            self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
+            self.logger.info(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
+        return True
 
     def name_Conversion(self,name): 
         """Converts an IGN to a UUID/Name Table \n
