@@ -1,4 +1,3 @@
-from http import server
 import os
 import logging
 import re
@@ -69,14 +68,6 @@ class DB_Module(commands.Cog):
 
             self.logger.info(f'User Update {self.name}: {user_before.name} into {user_after.name}')
             return user_after
-
-    #This is called when a message in any channel of the guild is edited. Returns <message> object.
-    @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self,message_before:discord.Message,message_after:discord.Message):
-        """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        if message_before.author != self._client.user:
-            self.logger.info(f'Edited Message Event for {self.name}')
-            return message_before,message_after
     
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
@@ -109,15 +100,15 @@ class DB_Module(commands.Cog):
 
     @user.command(name='info')
     @utils.role_check()
-    async def user_info(self,context:commands.Context,user:str=None):
+    async def user_info(self,context:commands.Context,user:str):
         """Displays the Discord Users Database information"""
-        #Call on DB User specific Info from here
         self.logger.info('User Information')
         discord_user = self.uBot.userparse(user,context,context.guild.id)
         if discord_user != None:
             db_user = self.DB.GetUser(str(discord_user.id))
             if db_user != None:
-                print(db_user.DiscordID,db_user.DiscordName,db_user.MC_IngameName,db_user.MC_UUID,db_user.SteamID,db_user.Donator)
+                await context.send(embed= self.uBot.user_info_embed(context,db_user,discord_user))
+               
 
     @user.command(name='add')
     @utils.role_check()
@@ -138,32 +129,35 @@ class DB_Module(commands.Cog):
 
     @user.command(name='update')
     @utils.role_check()
-    async def user_update(self,context:commands.Context,discord_name:str,discord_id:str=None,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=False):
+    async def user_update(self,context:commands.Context,discord_name:str,discord_id:str=None,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=None):
         """Updated a Discord Users information in the Database"""
         self.logger.info('User Update Function')
         discord_user = None
         db_user = None
-        print(discord_name,discord_id,mc_ign,mc_uuid,steamid,donator)
+        params = locals()
+        db_params = {'discord_name': 'DiscordName',
+                    'discord_id': 'DiscordID',
+                    'mc_ign' : 'MC_IngameName',
+                    'mc_uuid' : 'MC_UUID',
+                    'steamid' : 'SteamID',
+                    'donator' : 'Donator'}
 
         if mc_ign != None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
-            print(mc_uuid)
+            params['mc_uuid'] = mc_uuid
 
         if discord_id == None:
             discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
-            print(discord_user)
         else:
             discord_user = self._client.get_user(int(discord_id))
 
         if discord_user != None:
             db_user = self.DB.GetUser(discord_user.id)
-            print(db_user)
             if db_user != None:
-                db_user.DiscordName = discord_user.name
-                db_user.MC_IngameName = mc_ign
-                db_user.MC_UUID = mc_uuid
-                db_user.SteamID = steamid
-                db_user.Donator = donator
+                for entry in db_params:
+                    if params[entry] != None:
+                        setattr(db_user,db_params[entry],params[entry])
+
                 await context.send(f'We Updated the user {db_user.DiscordName}')
             else:
                 await context.send(f'Looks like this user is not in the Database, please use `/user add`')
