@@ -47,12 +47,12 @@ class DBHandler():
 		self.DBConfig = self.DB.GetConfig()
 		self.SuccessfulDatabase = True
 
-		self.DBConfig.AddSetting('Staff', None)
+		self.DBConfig.AddSetting('Staff_Role_ID', None)
 	
 	def dbWhitelistSetup(self):
 		"""This is set Default AMP Specific Whitelist Settings"""
 		try:
-			self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
+			#self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
 			self.DBConfig.AddSetting('Whitelist_Channel', None)
 			self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
 			self.DBConfig.AddSetting('Auto_Whitelist', False)
@@ -128,8 +128,8 @@ class Database:
 						ID integer primary key,
 						DiscordID text not null unique collate nocase,
 						DiscordName text collate nocase,
-						IngameName text collate nocase,
-						UUID text unique collate nocase,
+						MC_IngameName text collate nocase,
+						MC_UUID text unique collate nocase,
 						SteamID text unique collate nocase,
 						Donator integer not null
 						)""")
@@ -345,7 +345,7 @@ class Database:
 
 	def GetUser(self, value:str):
 		#find the user
-		(row, cur) = self._fetchone(f"select ID from Users where DiscordID=? or DiscordName=? or IngameName=? or UUID=?", (value,value,value,value))
+		(row, cur) = self._fetchone(f"select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?", (value,value,value,value,value))
 		if not row:
 			cur.close()
 			return None
@@ -356,14 +356,14 @@ class Database:
 		cur.close()
 		return ret
 
-	def AddUser(self, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, SteamID:str=None, Donator:bool=False, ServerModerator:bool=False):
+	def AddUser(self, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False):
 		try:
-			return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, IngameName=IngameName, UUID=UUID, SteamID=SteamID, Donator=Donator, ServerModerator=ServerModerator)
+			return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, MC_IngameName=MC_IngameName, MC_UUID=MC_UUID, SteamID=SteamID, Donator=Donator)
 		except Exception as e:
-			print(e)
+			print('DBUser error',e)
 			return None
 
-	def GetAllUsers(self, Donator=None, ServerModerator=None):
+	def GetAllUsers(self, Donator=None):
 		#get all servers that we are on
 		SQL = "Select ID from Users"
 		SQLWhere = []
@@ -522,7 +522,7 @@ class Database:
 		return ret
 
 class DBUser:
-	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, IngameName:str=None, UUID:str=None, SteamID:str=None, Donator:bool=False):
+	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False):
 		#set defaults
 		Params = locals()
 		Params.pop("self")
@@ -545,7 +545,7 @@ class DBUser:
 			super().__setattr__("DiscordID", int(self.DiscordID))
 		else:
 			#we should have a discord id
-			if not DiscordID or (not len(DiscordID)):
+			if not DiscordID or DiscordID == 0:
 				raise Exception("Missing discord ID on new user")
 
 			#add user to the database
@@ -1035,7 +1035,7 @@ class DBConfig:
 
 	#list(self._ConfigNameToID.keys())
 	def GetSettingList(self):
-		settings = list(self._ConfigNameToID.leys())
+		settings = list(self._ConfigNameToID.keys())
 		return settings
 
 	def SetSetting(self, name:str, value):

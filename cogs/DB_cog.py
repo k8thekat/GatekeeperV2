@@ -10,19 +10,12 @@ import AMP
 import DB
 
 
-def db_bot_settings():
-    #!TODO!
-    print('Get all the DB config settings')
-
-
-
 class DB_Module(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
 
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'**SUCESS** Loading **{self.name.replace("db","DB")}**')
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP#Main AMP object
@@ -36,14 +29,18 @@ class DB_Module(commands.Cog):
         self.dBot = utils.discordBot(client)
 
         self.uBot.sub_command_handler('bot',self.db_bot_whitelist)
+        self.uBot.sub_command_handler('bot',self.db_bot_settings)
 
         self.whitelist_emoji_message = '' 
         self.whitelist_emoji_pending = False
         self.whitelist_emoji_done = False
+        self.logger.info(f'**SUCESS** Initializing **{self.name.replace("db","DB")}**')
      
 
     @commands.Cog.listener('on_message')
     async def on_message(self,message:discord.Message):
+        if message.webhook_id != None:
+            return message
         if message.content.startswith(self._client.command_prefix):
             return message
 
@@ -71,14 +68,6 @@ class DB_Module(commands.Cog):
 
             self.logger.info(f'User Update {self.name}: {user_before.name} into {user_after.name}')
             return user_after
-
-    #This is called when a message in any channel of the guild is edited. Returns <message> object.
-    @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self,message_before:discord.Message,message_after:discord.Message):
-        """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        if message_before.author != self._client.user:
-            self.logger.info(f'Edited Message Event for {self.name}')
-            return message_before,message_after
     
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
@@ -111,10 +100,77 @@ class DB_Module(commands.Cog):
 
     @user.command(name='info')
     @utils.role_check()
-    async def user_info(self,context:commands.Context,user:str=None):
-        """DB User Information"""
-        #Call on DB User specific Info from here
+    async def user_info(self,context:commands.Context,user:str):
+        """Displays the Discord Users Database information"""
         self.logger.info('User Information')
+        discord_user = self.uBot.userparse(user,context,context.guild.id)
+        if discord_user != None:
+            db_user = self.DB.GetUser(str(discord_user.id))
+            if db_user != None:
+                await context.send(embed= self.uBot.user_info_embed(context,db_user,discord_user))
+               
+
+    @user.command(name='add')
+    @utils.role_check()
+    async def user_add(self,context:commands.Context,discord_name:str,discord_id:str=None,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=False):
+        """Adds the Discord Users information to the Database"""
+        self.logger.info('User Add Function')
+        if mc_ign != None:
+            mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
+
+        if discord_id == None:
+            discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
+            if discord_user != None:
+                self.DB.AddUser(DiscordID=discord_user.id,DiscordName=discord_user.name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid,Donator=donator)
+        else:
+            self.DB.AddUser(DiscordID=discord_id,DiscordName=discord_name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid,Donator=donator)
+        await context.send(f'Added {discord_user.name} to the Database!')
+            
+
+    @user.command(name='update')
+    @utils.role_check()
+    async def user_update(self,context:commands.Context,discord_name:str,discord_id:str=None,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=None):
+        """Updated a Discord Users information in the Database"""
+        self.logger.info('User Update Function')
+        discord_user = None
+        db_user = None
+        params = locals()
+        db_params = {'discord_name': 'DiscordName',
+                    'discord_id': 'DiscordID',
+                    'mc_ign' : 'MC_IngameName',
+                    'mc_uuid' : 'MC_UUID',
+                    'steamid' : 'SteamID',
+                    'donator' : 'Donator'}
+
+        if mc_ign != None:
+            mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
+            params['mc_uuid'] = mc_uuid
+
+        if discord_id == None:
+            discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
+        else:
+            discord_user = self._client.get_user(int(discord_id))
+
+        if discord_user != None:
+            db_user = self.DB.GetUser(discord_user.id)
+            if db_user != None:
+                for entry in db_params:
+                    if params[entry] != None:
+                        setattr(db_user,db_params[entry],params[entry])
+
+                await context.send(f'We Updated the user {db_user.DiscordName}')
+            else:
+                await context.send(f'Looks like this user is not in the Database, please use `/user add`')
+        else:
+            await context.send(f'Hey I was unable to find the User: {discord_name}')
+        
+
+    @user.command(name='uuid')
+    @utils.role_check()
+    async def user_uuid(self,context:commands.Context,mc_ign:str):
+        """This will convert a Minecraft IGN to a UUID if it exists"""
+        self.logger.info('User UUID Function')
+        await context.send(f'The UUID of {mc_ign} is: {self.uBot.name_to_uuid_MC(mc_ign)}')
 
     @user.command(name='test')
     @utils.role_check()
@@ -132,26 +188,27 @@ class DB_Module(commands.Cog):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
 
-    @db_bot_whitelist.command(name='whitelist')
+    @db_bot_whitelist.command(name='channel')
     @utils.role_check()
     async def db_bot_whitelist_channel_set(self,context:commands.Context,id:str):
+        """Sets the Whitelist Channel for the Bot to monitor"""
         self.logger.info('Bot Whitelist Channel Set...')
 
         channel = self.uBot.channelparse(id,context,context.guild.id)
         if channel == None:
             return await context.reply(f'Unable to find the Discord Channel: {id}')
         else:
-            self.DBConfig.SetSetting('WhitelistChannel',channel.id)
+            self.DBConfig.SetSetting('Whitelist_channel',channel.id)
             await context.send(f'Set Bot Channel Whitelist to {channel.name}')
     
-    @db_bot_whitelist.command(name='format')
+    @db_bot_whitelist.command(name='waittime')
     @utils.role_check()
     async def db_bot_whitelist_wait_time_set(self,context:commands.Context,time:str):
-        """Set the Whitelist wait time, this value is in minutes!"""
+        """Set the Bots Whitelist wait time , this value is in minutes!"""
         self.logger.info('Bot Whitelist wait time Set...')
         if time.isalnum():
             self.DBConfig.Whitelist_wait_time = time
-            await context.send(f'Whitelist wait time has been set to {time}')
+            await context.send(f'Whitelist wait time has been set to {time} minutes.')
         else:
             await context.send(f'Please use only numbers when setting the wait time. All values are in minutes!')
 
@@ -164,10 +221,10 @@ class DB_Module(commands.Cog):
         if flag_reg == None:
             return await context.send(f'Please use `true` or `false` for your flag.')
         if flag_reg.group() == 'true':
-            self.DBConfig.Auto_Whitelist = True
+            self.DBConfig.Auto_whitelist = True
             return await context.send(f'Enabling Auto-Whitelist.')
         if flag_reg.group() == 'false':
-            self.DBConfig.Auto_Whitelist = False
+            self.DBConfig.Auto_whitelist = False
             return await context.send(f'Disabling Auto-Whitelist')
         
     @db_bot_whitelist.command(name='pending_emoji')
@@ -184,6 +241,8 @@ class DB_Module(commands.Cog):
 
         self.whitelist_emoji_pending = True
 
+    @db_bot_whitelist.command(name='done_emoji')
+    @utils.role_check()
     async def db_bot_whitelist_done_emjoi_set(self,context:commands.Context):
         """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
         flag = 'completed Whitelist requests!'
@@ -195,14 +254,18 @@ class DB_Module(commands.Cog):
                 self.whitelist_emoji_message = messages[0].id
 
         self.whitelist_emoji_done = True
-       
-    #!TODO! This function doesn't exist yet.
-    async def db_bot_settings(self):
-        """This is accessed through bot settings in Gatekeeper.py"""
-        settings = self.DBConfig.GetSettingList()
-        print(settings)
-        return settings
 
+    @commands.hybrid_command(name='settings')
+    @utils.role_check()
+    async def db_bot_settings(self,context:commands.Context):
+        """Displays currently set Bot settings"""
+        dbsettings_list = self.DBConfig.GetSettingList()
+        settings_list = []
+        for setting in dbsettings_list:
+            config = self.DBConfig.GetSetting(setting)
+            settings_list.append({f'{setting.capitalize()}': f'{str(config)}'})
+        await context.send(embed= self.uBot.bot_settings_embed(context,settings_list))
+        
     @commands.hybrid_group(name='dbserver')
     @utils.role_check()
     async def db_server(self,context:commands.Context):

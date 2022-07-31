@@ -13,7 +13,6 @@ class Terraria(commands.Cog):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
 
         
         self.AMPHandler = AMP.getAMPHandler()
@@ -27,14 +26,7 @@ class Terraria(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
         #self.uBot.sub_command_handler(self,'user',self.info)
-
-    @commands.Cog.listener('on_message')
-    async def on_message(self,message):
-        if message.content.startswith(self._client.command_prefix):
-            return message
-        if message.author != self._client.user:
-            self.logger.info(f'On Message Event for {self.name}')
-            return message
+        self.logger.info(f'**SUCCESS** Initializing Module **{self.name}**')
 
     @commands.Cog.listener('on_user_update')
     async def on_user_update(self,user_before,user_after):
@@ -42,13 +34,6 @@ class Terraria(commands.Cog):
         self.logger.info(f'User Update {self.name}: {user_before} into {user_after}')
         return user_before,user_after
 
-    #This is called when a message in any channel of the guild is edited. Returns <message> object.
-    @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self,message_before,message_after):
-        """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        if message_before.author != self._client.user:
-            self.logger.info(f'Edited Message Event for {self.name}')
-            return message_before,message_after
 
     @commands.Cog.listener('on_reaction_add')
     async def on_reaction_add(self,reaction,user):

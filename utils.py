@@ -211,7 +211,7 @@ class discordBot():
             await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
 class botUtils():
-        def __init__ (self,client:discord.Client):
+        def __init__ (self,client:discord.Client=None):
             self._client = client
             self.logger = logging.getLogger(__name__)
             self.logger.debug('Utils Bot Loaded')
@@ -223,6 +223,24 @@ class botUtils():
             self.AMPHandler = AMP.getAMPHandler()
             self.AMPInstances = self.AMPHandler.AMP_Instances
 
+
+        def name_to_uuid_MC(self,name): 
+            """Converts an IGN to a UUID/Name Table \n
+            `returns 'uuid'` else returns `None`, multiple results return `None`"""
+            url = 'https://api.mojang.com/profiles/minecraft'
+            header = {'Content-Type': 'application/json'}
+            jsonhandler = json.dumps(name)
+            post_req = requests.post(url, headers=header, data=jsonhandler)
+            minecraft_user = post_req.json()
+
+            if len(minecraft_user) == 0: 
+                return None
+
+            if len(minecraft_user) > 1:
+                return None
+
+            else:
+                return minecraft_user[0]['id'] #returns [{'id': 'uuid', 'name': 'name'}] 
 
         def roleparse(self,parameter:str,context,guild_id:int) -> discord.Role: 
             """This is the bot utils Role Parse Function\n
@@ -343,7 +361,7 @@ class botUtils():
                         cur_member = member
                 return cur_member
                 
-        def serverparse(self,parameter,context:None,guild_id:int=None) -> AMP.AMPInstance:
+        def serverparse(self,parameter,context=None,guild_id:int=None) -> AMP.AMPInstance:
             """This is the botUtils Server Parse function.
             **Note** Use context.guild.id \n
             Returns `AMPInstance[server] <object>`"""
@@ -474,7 +492,7 @@ class botUtils():
 
         def server_whitelist_embed(self,context:commands.Context,server:AMP.AMPInstance) -> discord.Embed:
             """Default Embed Reply for Successful Whitelist requests"""
-            #!TODO! Update Database
+            #!TODO! Update Database/Setup DisplayName for Title
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
             users_online = server.getUserList()
 
@@ -484,5 +502,35 @@ class botUtils():
                 if db_server.IP != None:
                     embed.add_field(name='IP: ', value=db_server.IP, inline=False)
                 embed.add_field(name='Users Online:' , value=users_online, inline=False)
+            return embed
+                
+
+        def bot_settings_embed(self,context:commands.Context,settings:list) -> discord.Embed:
+            """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
+            embed=discord.Embed(title=f'**Bot Settings**', color=0x00ff00)
+            embed.set_thumbnail(url= context.guild.icon)
+            embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
+            for value in settings:
+                key_value = list(value.values())[0]
+                if key_value == '0' or key_value == '1':
+                    key_value = bool(key_value)
+
+                embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+            return embed
+
+        def user_info_embed(self,context:commands.Context,db_user:DB.DBUser,discord_user:discord.User):
+            #print(db_user.DiscordID,db_user.DiscordName,db_user.MC_IngameName,db_user.MC_UUID,db_user.SteamID,db_user.Donator)
+            embed=discord.Embed(title=f'{discord_user.name}',description=f'Discord ID: {discord_user.id}', color=0x00ff00)
+            embed.set_thumbnail(url= discord_user.avatar.url)
+            if db_user != None:
+                embed.add_field(name='In Database', value='True')
+                if db_user.Donator != None:
+                    embed.add_field(name='Donator', value=f'{bool(db_user.Donator)}')
+                if db_user.MC_IngameName != None:
+                    embed.add_field(name='Minecraft IGN', value=f'{db_user.MC_IngameName}',inline= False)
+                if db_user.MC_UUID != None:
+                    embed.add_field(name='Minecraft UUID', value=f'{db_user.MC_UUID}',inline= True)
+                if db_user.SteamID != None:
+                    embed.add_field(name='Steam ID', value=f'{db_user.SteamID}',inline=False)
             return embed
                 

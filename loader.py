@@ -42,7 +42,7 @@ class Handler():
 
         #Just to make it easier; always load the Generic Module as a base.
         await self._client.load_extension('modules.Generic.Generic')
-        self.logger.info(f'**SUCCESS** Loading Module **modules.Generic.Generic**')
+        self.logger.info(f'**SUCCESS** {self.name} Loading Cog Module **modules.Generic.Generic**')
         loaded.append('Generic')
 
         for instance in self.AMPInstances:
