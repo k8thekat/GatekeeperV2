@@ -7,13 +7,15 @@ from numpy import require
 
 class Setup:
     def __init__(self):
+        #Use action="store_true", then check the arg via "args.name" eg. "args.dev"
         parser = argparse.ArgumentParser(description='AMP Discord Bot')
         parser.add_argument('-token', help='Bypasse tokens validation check.',required= False, action="store_true")
         parser.add_argument('-dev', help='Enable development print statments.',required= False, action="store_true")
-        #Use action="store_true", then check the arg via "args.name" eg. "args.dev"
         parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
         parser.add_argument('-discord', help='Disables Discord Intigration (Used for Testing)',required= False, action="store_false")
-        parser.add_argument('-setup', help='First time setup of AMP and DB', required= False, action="store_false")
+        parser.add_argument('guildID', help='Set to your Discord Server ID for local Sync', default=None) #Defaults to Kat's Paradise Guild ID
+        parser.add_argument('-super', help='This leaves AMP Super Admin role intact, use at your own risk.', required= False, action="store_false")
+        parser.add_argument('-setup', help='***NOT IN USE*** First time setup of AMP and DB', required= False, action="store_false")
         self.args = parser.parse_args()
 
         import logger
@@ -63,5 +65,5 @@ if not Start.args.discord:
 
 if Start.args.discord:
     import discordBot 
-    discordBot.client_run()
+    discordBot.client_run(args= Start.args)
     
