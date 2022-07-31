@@ -19,25 +19,21 @@
    02110-1301, USA. 
 
 '''
-from datetime import datetime
+
 import discord
-from discord import Guild, app_commands
 from discord.ext import commands
 import tokens
 import os,sys
-import threading
 import asyncio
-import time
 import logging
 
 #Custom scripts
-import logger as bot_logger
+import logger
 import utils
 import AMP
 import DB
-import cogs.DB_cog as DB_cog
 
-Version = 'alpha-0.0.1'
+Version = 'beta-1.0.0'
 logger = logging.getLogger(__name__)
 
 #Discord Specific
@@ -46,6 +42,7 @@ intents.members = True
 intents.message_content = True
 prefix = '$'
 client = commands.Bot(command_prefix= prefix, intents = intents)
+guild_id = None
 #command_tree = app_commands.CommandTree(client = client)
 
 
@@ -56,8 +53,9 @@ async def setup_hook():
 @client.event
 async def on_ready():
     logger.info('Are you the Keymaster?...I am the Gatekeeper')
-    client.tree.copy_global_to(guild=client.get_guild(602285328320954378)) #Kat's Paradise Guild ID = 602285328320954378
-    #client.is_ready() #Lets wait to start this until the bot has fully setup.
+    if guild_id != None:
+        logger.info(f'Syncing Commands locally to guild: {client.get_guild(int(guild_id))}')
+        client.tree.copy_global_to(guild=client.get_guild(int(guild_id)))
     return
 
 @client.event
@@ -215,7 +213,7 @@ async def bot_log_level(context,level:str):
     await context.send(f'Adjusted Logging Level to {level.upper()}')
 
 
-async def  initbot():
+async def initbot():
     """This is the main startup function..."""
     global main_AMP,main_DB,main_DB_Config
     #gitUpdate.init(Version)
@@ -244,7 +242,9 @@ def client_start():
     asyncio.set_event_loop(async_loop)
     async_loop.run_until_complete(client.start(tokens.token, reconnect = True, bot = True))
 
-def client_run():
+def client_run(args):
+    global guild_id
+    guild_id = args.guildID
     logger.info('Bot Intializing...')
     logger.info(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}')
     client.run(tokens.token, reconnect = True)# bot = True)
