@@ -1025,6 +1025,21 @@ class AMPConsole:
     def console_filter(self,message):
         """This will filter depending on the console_filter setting and handle what to send to Discord."""
         #print("Filtered Console?", self.AMPInstance.Console_Filtered)
+        #Removed the odd character for color idicators on text
+        #!TODO Needs to be implemented
+        # char =  '�'
+        # if entry['Contents'].find(char) != -1:
+        #     logging.info('Color strip triggered...')
+        #     index = 0
+        #     while 1:
+        #         index = entry['Contents'].find(char,index)
+        #         if index == -1:
+        #             break
+        #         newchar = entry['Contents'][index:index+2]
+        #         entry['Contents'] = entry['Contents'].replace(newchar,'')
+        #     return entry
+        # return entry
+
         return False
 
     def console_chat(self,message):
