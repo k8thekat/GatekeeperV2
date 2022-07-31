@@ -34,13 +34,6 @@ class Terraria(commands.Cog):
         self.logger.info(f'User Update {self.name}: {user_before} into {user_after}')
         return user_before,user_after
 
-    #This is called when a message in any channel of the guild is edited. Returns <message> object.
-    @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self,message_before,message_after):
-        """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        if message_before.author != self._client.user:
-            self.logger.info(f'Edited Message Event for {self.name}')
-            return message_before,message_after
 
     @commands.Cog.listener('on_reaction_add')
     async def on_reaction_add(self,reaction,user):
