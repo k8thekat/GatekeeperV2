@@ -18,8 +18,6 @@
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
    02110-1301, USA. 
 '''
-import asyncio
-from http import client
 import os
 import datetime
 from pprint import pprint
@@ -92,6 +90,7 @@ class AMP_Cog(commands.Cog):
 
     @commands.Cog.listener('on_message')
     async def on_message(self,message:discord.Message):
+        context = await self._client.get_context(message)
         if message.webhook_id != None:
             return message
         if message.content.startswith(self._client.command_prefix):
@@ -99,11 +98,9 @@ class AMP_Cog(commands.Cog):
         if message.author != self._client.user:
             self.logger.info(f'On Message Event for {self.name}')
             if message.channel.id == int(self.WL_channel): #This is AMP Specific; for handling whitelist requests to any server.
-                print(f'{self.name} Whitelist Channel Message Found')
-                await self.on_message_whitelist(message)
+                await self.on_message_whitelist(message,context)
 
             if not self.webhook_verify(message):
-
                 for amp_server in self.AMPInstances:
                     self.AMPServer = self.AMPInstances[amp_server]
 
@@ -121,12 +118,12 @@ class AMP_Cog(commands.Cog):
         if message_before.author != self._client.user:
             #This handles edited whitelist requests!
             if message_before in self.failed_whitelist and message_before.channel.id == self.WL_channel:
-                self.on_message_whitelist(message_after)
+                context = await self._client.get_context(message_before)
+                await self.on_message_whitelist(message_after,context)
 
             self.logger.info(f'Edited Message Event for {self.name}')
             return message_before,message_after
 
-    
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
@@ -233,10 +230,7 @@ class AMP_Cog(commands.Cog):
                             self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
                             webhook = webhook
 
-                #print(len(chat_messages))
                 if len(chat_messages) != 0:
-                #!TODO! Set up AMPConsole.Send_message method; allowing modular chat sending.
-                    #{message['Contents'],message['Source']})
                     for message in chat_messages:
                         author = None
                         author_db = self.DB.GetUser(message['Source'])
@@ -263,7 +257,7 @@ class AMP_Cog(commands.Cog):
                     self.AMP_Server_Console.console_chat_messages = []
 
 
-    async def on_message_whitelist(self,message:discord.Message):
+    async def on_message_whitelist(self,message:discord.Message,context:commands.context):
         """This handles on_message whitelist requests."""
         user_ign,user_servers = self.Parser.ParseIGNServer(message.content)
         print('ign:',user_ign,'servers:',user_servers)
@@ -272,7 +266,7 @@ class AMP_Cog(commands.Cog):
         if user_ign == None or len(user_servers) == 0:
             await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with the updated information!')
             self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
-            self.failed_whitelist.append(message.id)
+            self.failed_whitelist.append(message)
             return
 
         for server in user_servers:
@@ -335,8 +329,7 @@ class AMP_Cog(commands.Cog):
 
         #This handles Whitelist Delays if set.
         if self.WL_delay != 0: 
-            print('WL delay')
-            self.WL_wait_list.append({'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user})
+            self.WL_wait_list.append({'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user, 'context' : context})
 
             if self.WL_Pending_Emoji != None:
                 await self.dBot.messageAddReaction(message,self.WL_Pending_Emoji)
@@ -361,7 +354,6 @@ class AMP_Cog(commands.Cog):
     async def whitelist_waitlist_handler(self):
         """This is the Whitelist Wait list handler, every 60 seconds it will check the list and whitelist them after the alotted wait time."""
         self.logger.info(f'Checking the Whitelist Wait List.')
-        print('length of Wait list', len(self.WL_wait_list))
         if len(self.WL_wait_list) == 0:
             self.whitelist_waitlist_handler.stop()
 
@@ -374,16 +366,12 @@ class AMP_Cog(commands.Cog):
         for index in range(0,len(self.WL_wait_list)):
             cur_message = self.WL_wait_list[index]
 
-            #!TODO! This math may fail; needs to be tested
             #This should compare datetime objects and if the datetime of when the message was created plus the wait time is greater than or equal the cur_time they get whitelisted.
-            print(cur_message['msg'].created_at + wait_time, cur_time)
             if cur_message['msg'].created_at + wait_time <= cur_time: 
                 cur_message['ampserver'].addWhitelist(cur_message['dbuser'].MC_IngameName)
-                await cur_message.reply(embed = self.uBot.server_whitelist_embed(cur_message,cur_message['ampserver']))
-                self.logger.info(f'Whitelisting {cur_message["author"]} on {cur_message["amp_server"].FriendlyName}')
+                await cur_message['msg'].reply(embed = self.uBot.server_whitelist_embed(cur_message['context'],cur_message['ampserver']))
+                self.logger.info(f'Whitelisting {cur_message["author"]} on {cur_message["ampserver"].FriendlyName}')
 
     
-
-
 async def setup(client:commands.Bot):
     await client.add_cog(AMP_Cog(client))
