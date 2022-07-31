@@ -36,13 +36,6 @@ class Minecraft(commands.Cog):
         self.logger.info(f'User Update {self.name}: {user_before} into {user_after}')
         return user_before,user_after
 
-    @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self,message_before:discord.Message,message_after:discord.Message):
-        """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        if message_before.author != self._client.user:
-            self.logger.info(f'Edited Message Event for {self.name}')
-            return message_before,message_after
-
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
