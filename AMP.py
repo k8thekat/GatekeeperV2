@@ -27,7 +27,7 @@ import requests.sessions
 import pyotp # 2Factor Authentication Python Module
 import json
 import time
-from pprint import pp, pprint
+from pprint import pprint
 import sys
 import pathlib
 from datetime import datetime, timezone
@@ -121,7 +121,7 @@ class AMPHandler():
         self.logger.info('AMPHandler is validating your token file...')
         reset = False
 
-        if not self.args.dev:
+        if not self.args.token:
             if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
                 self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
                 reset = True

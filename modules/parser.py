@@ -18,27 +18,6 @@
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
    02110-1301, USA. 
 '''
-
-# test = [ 'Can i get re-whitelisted for TNP 5?  ign: rahz_vael',
-#     'server: Tnp5 Name: Speamy3',
-#     'Not sure if I need to resubmit a request or not  IGN: Codemeister101 TNP5',
-#     'Can I be whitelisted for E6 please ign aimhreidh1 ',
-#     'an i get a whitelist on E6 Normal    ing Solclaim',
-#     'server(s): TNP5, E6 ign: Clinomanic_Sloth',
-#     'IGN: Warteks; Server: DW20',
-#     'IGN: Kalvsund Server; Dw20',
-#     'I assume were allowed to be whitelisted in multiple servers, so may i ask to be whitelisted in tnp5?',
-#     'Can i please get whitelisted to e6',
-#     'IGN: Rat_And_the_Gat Server: e6',
-#     'Ign spontaneo server SB2',
-#     'Can I be whitelisted for sky bees please IGN is aimhreidh1 thanks.',
-#     'SoulessJoke SB2',
-#     'MarceloFelix enigmatic 6',
-#     'IGN Cyantrent Server SkyBee 2',
-#     'TheGamingPigeon Sky Bees 2',
-#     'Hello, ign:k8thekat E6',
-#     'Hey whitelist please server:TNP5 k8thekat']
-#test = ['Can I be whitelisted for sky bees please IGN is aimhreidh1 thanks.']
 import re
 import utils
 import DB
