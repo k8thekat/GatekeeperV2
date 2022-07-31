@@ -30,24 +30,21 @@ DisplayImageSources = ["internal:MinecraftJava"]
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
-        super().__init__(instanceID, serverdata, Index,Handler= Handler)
-        
-        self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
-        self.Console = AMPMinecraftConsole(self)
-
         self.perms = [f'{instanceID}.Minecraft.InGameActions.*',f'{instanceID}.Minecraft.',f'-{instanceID}.Minecraft.PluginManagement.*']
-
-        print(os.path.basename(__file__),self.Running, 'instanceID',self.InstanceID)
+        self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
+        
+        super().__init__(instanceID, serverdata, Index,Handler= Handler)
+        self.Console = AMPMinecraftConsole(self)
          
-
     def setup_AMPpermissions(self):
         """Sets the Permissions for Minecraft Modules"""
+        self.logger.info('Setting up Minecraft Module permissions.')
         for perm in self.perms:
             enabled = True
             if perm.startswith('-'):
                 enabled = False
                 perm = perm[1:]
-            print(self.AMP_BotRoleID)
+            #print(self.AMP_BotRoleID)
             self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
             self.logger.info(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return True
@@ -80,10 +77,10 @@ class AMPMinecraft(AMP.AMPInstance):
     def addWhitelist(self,User:str):
         """Adds a User to the Whitelist File *Supports UUID or IGN*"""
         self.Login()
-        print(User)
+        #print(User)
         parameters = {'UserOrUUID': User}
         result = self.CallAPI(f'{self.APIModule}/AddToWhitelist', parameters)
-        print(result)
+        #print(result)
         return result
 
     def getWhitelist(self):
@@ -91,7 +88,7 @@ class AMPMinecraft(AMP.AMPInstance):
         self.Login()
         parameters = {}
         result = self.CallAPI(f'{self.APIModule}/GetWhitelist',parameters)
-        print(result)
+        #print(result)
         return result['result']
 
     def removeWhitelist(self,User:str):
