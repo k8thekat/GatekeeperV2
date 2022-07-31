@@ -33,14 +33,6 @@ class Generic(commands.Cog):
         self.logger.info(f'User Update {self.name}: {user_before} into {user_after}')
         return user_before,user_after
 
-    #This is called when a message in any channel of the guild is edited. Returns <message> object.
-    @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self,message_before:discord.Message,message_after:discord.Message):
-        """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        self.logger.info(f'Edited Message Event for {self.name}')
-        return message_before,message_after
-
-
     @commands.Cog.listener('on_reaction_add')
     async def on_reaction_add(self,reaction:discord.Reaction,user:discord.User):
         """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
