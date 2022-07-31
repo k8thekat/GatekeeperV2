@@ -20,3 +20,4 @@ discordBot.db
 /dev/timehandler
 /dev/bot_test.py
 
+.vscode/launch.json
