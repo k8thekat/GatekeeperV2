@@ -517,3 +517,20 @@ class botUtils():
 
                 embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
             return embed
+
+        def user_info_embed(self,context:commands.Context,db_user:DB.DBUser,discord_user:discord.User):
+            #print(db_user.DiscordID,db_user.DiscordName,db_user.MC_IngameName,db_user.MC_UUID,db_user.SteamID,db_user.Donator)
+            embed=discord.Embed(title=f'{discord_user.name}',description=f'Discord ID: {discord_user.id}', color=0x00ff00)
+            embed.set_thumbnail(url= discord_user.avatar.url)
+            if db_user != None:
+                embed.add_field(name='In Database', value='True')
+                if db_user.Donator != None:
+                    embed.add_field(name='Donator', value=f'{bool(db_user.Donator)}')
+                if db_user.MC_IngameName != None:
+                    embed.add_field(name='Minecraft IGN', value=f'{db_user.MC_IngameName}',inline= False)
+                if db_user.MC_UUID != None:
+                    embed.add_field(name='Minecraft UUID', value=f'{db_user.MC_UUID}',inline= True)
+                if db_user.SteamID != None:
+                    embed.add_field(name='Steam ID', value=f'{db_user.SteamID}',inline=False)
+            return embed
+                
