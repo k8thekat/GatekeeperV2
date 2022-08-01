@@ -88,11 +88,13 @@ class Handler():
                                 continue
 
                             except Exception as e:
-                                self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{cog}** - {e}')
+                                if self.AMPHandler.args.dev:
+                                    self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{cog}** - {e}')
                                 continue
                         
                 except FileNotFoundError as e:
-                    self.logger.error(f'**ERROR** {self.name} Loading Module ** - File Not Found {e}')
+                    if self.AMPHandler.args.dev:
+                        self.logger.error(f'**ERROR** {self.name} Loading Module ** - File Not Found {e}')
 
                 #     # try:
                 #     #     await self._client.load_extension('modules.GenericModule.Generic')
@@ -119,11 +121,13 @@ class Handler():
                         continue
 
                     except Exception as e:
-                        self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
+                        if self.AMPHandler.args.dev:
+                            self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
                         continue
                 
         except FileNotFoundError as e:
-            self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
+            if self.AMPHandler.args.dev:
+                self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
 
                 
 

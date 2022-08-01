@@ -67,19 +67,23 @@ class AMP_Cog(commands.Cog):
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
 
         self.update_loop.start()
-        self.logger.info('AMP_Cog Update Loop Running:' + str(self.update_loop.is_running()))
+        if self.AMPHandler.args.dev:
+            self.logger.info('AMP_Cog Update Loop Running:' + str(self.update_loop.is_running()))
 
         self.amp_server_console_messages_send.start()
-        self.logger.info('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
+        if self.AMPHandler.args.dev:
+            self.logger.info('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
 
         self.amp_server_console_chat_messages_send.start()
-        self.logger.info('AMP_Cog Console Chat Message Handler Running:' + str(self.amp_server_console_chat_messages_send.is_running()))
+        if self.AMPHandler.args.dev:
+            self.logger.info('AMP_Cog Console Chat Message Handler Running:' + str(self.amp_server_console_chat_messages_send.is_running()))
 
     @tasks.loop(seconds=5)
     async def update_loop(self):
         #This is to keep everything up to date when we change the settings in the DB
         self.attr_update()
-        self.logger.info('Updating AMP_Cog Attributes!')
+        if self.AMPHandler.args.dev:
+            self.logger.info('Updating AMP_Cog Attributes!')
 
     def attr_update(self):
         self.Auto_WL = self.DBConfig.Auto_whitelist

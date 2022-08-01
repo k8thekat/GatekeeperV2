@@ -111,13 +111,18 @@ async def main_bot(context):
 @main_bot.command(name='setup')
 @commands.has_guild_permissions(administrator=True)
 async def bot_setup(context:commands.Context,staff_role):
-    guild_role = utils.botUtils.roleparse(staff_role,context,context.guild.id)
+    #print(context,context.guild.id)
+    logger.info(f'Bot Setup')
+    uBot = utils.botUtils(client)
+    guild_role = uBot.roleparse(parameter=staff_role,context=context,guild_id=context.guild.id)
     if guild_role == None:
         await context.send(f'Unable to find role {staff_role}, please try again.')
 
-    if main_DB_Config.Staff != None:
-        main_DB_Config.Staff = guild_role.id
-        await context.send(f'Set Staff Role to {guild_role.name}.')
+    if main_DB_Config.Staff_role_id != None:
+        main_DB_Config.Staff_role_id = guild_role.id
+        
+    await context.send(f'Set Staff Role to {guild_role.name}.')
+   
 
 
 @main_bot.command(name='test',description='Test Async Function...')
