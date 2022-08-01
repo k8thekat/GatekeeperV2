@@ -87,10 +87,12 @@ class AMPHandler():
     def setup_AMPInstances(self):
         """Intializes the connection to AMP and creates AMP_Instance objects."""
         self.AMP = AMPInstance(Handler = self)
+        #pprint(self.AMP.getAMPRolePermissions(self.AMP.AMP_BotRoleID))
         self.AMP_Instances = self.AMP.getInstances()
+        #pprint(self.AMP.getAMPRolePermissions(self.AMP.AMP_BotRoleID))
 
         #This removes Super Admins from the bot user! Controlled through parser args!
-        if self.args.super:
+        if self.args.super or not self.args.dev:
             self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID,self.AMP.super_AdminID,False) 
             self.logger.info(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
       
@@ -322,8 +324,9 @@ class AMPInstance:
         self.logger.info(f'Checking {self.APIModule} for proper permissions.')
         failed = False
         for perm in self.perms:
+            #Skip the perm check on ones we "shouldn't have!"
             if perm.startswith('-'):
-                perm = perm[1:]
+                continue
             check = self.CurrentSessionHasPermission(perm)
 
             if self.AMPHandler.args.dev:
@@ -834,7 +837,8 @@ class AMPInstance:
             'Enabled' : Enabled
         }
         result = self.CallAPI('Core/SetAMPRolePermission', parameters)
-        #pprint(result)
+        if not result['result']:
+            self.logger.error(f'Unable to Set permissions {result}')
         return result
 
     #These are GENERIC Methods below this point ---------------------------------------------------------------------------

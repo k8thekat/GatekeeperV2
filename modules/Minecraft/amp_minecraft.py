@@ -30,7 +30,7 @@ DisplayImageSources = ["internal:MinecraftJava"]
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
-        self.perms = [f'{instanceID}.Minecraft.InGameActions.*',f'{instanceID}.Minecraft.',f'-{instanceID}.Minecraft.PluginManagement.*']
+        self.perms = [f'Minecraft.*',f'Minecraft.InGameActions.*',f'-Minecraft.PluginManagement.*']
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
         
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
@@ -38,7 +38,7 @@ class AMPMinecraft(AMP.AMPInstance):
          
     def setup_AMPpermissions(self):
         """Sets the Permissions for Minecraft Modules"""
-        self.logger.info('Setting up Minecraft Module permissions.')
+        self.logger.info(f'Setting up {self.FriendlyName} Minecraft Module permissions.')
         for perm in self.perms:
             enabled = True
             if perm.startswith('-'):

@@ -53,8 +53,10 @@ async def setup_hook():
 async def on_ready():
     logger.info('Are you the Keymaster?...I am the Gatekeeper')
     if guild_id != None:
-        logger.info(f'Syncing Commands locally to guild: {client.get_guild(int(guild_id))}')
-        client.tree.copy_global_to(guild=client.get_guild(int(guild_id)))
+        guild = client.get_guild(int(guild_id))
+        logger.info(f'Syncing Commands locally to guild: {guild.name}')
+        client.tree.copy_global_to(guild=guild)
+        await client.tree.sync(guild=guild)
     return
 
 @client.event

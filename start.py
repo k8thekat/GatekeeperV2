@@ -35,8 +35,8 @@ class Setup:
         parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
         parser.add_argument('-discord', help='Disables Discord Intigration (Used for Testing)',required= False, action="store_false")
         parser.add_argument('guildID', help='Set to your Discord Server ID for local Sync', default=None) #Defaults to Kat's Paradise Guild ID
-        parser.add_argument('-super', help='This leaves AMP Super Admin role intact, use at your own risk.', required= False, action="store_false")
-        parser.add_argument('-setup', help='***NOT IN USE*** First time setup of AMP and DB', required= False, action="store_false")
+        parser.add_argument('-super', help='This leaves AMP Super Admin role intact, use at your own risk.', required= False, action="store_true")
+        #parser.add_argument('-setup', help='***NOT IN USE*** First time setup of AMP and DB', required= False, action="store_false")
         self.args = parser.parse_args()
 
         import logger
