@@ -280,6 +280,7 @@ class DB_Module(commands.Cog):
     @utils.role_check()
     async def db_bot_settings(self,context:commands.Context):
         """Displays currently set Bot settings"""
+        self.DBConfig = self.DB.GetConfig()
         dbsettings_list = self.DBConfig.GetSettingList()
         settings_list = []
         for setting in dbsettings_list:
