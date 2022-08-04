@@ -118,7 +118,7 @@ async def bot_setup(context:commands.Context,staff_role):
     if guild_role == None:
         await context.send(f'Unable to find role {staff_role}, please try again.')
 
-    if main_DB_Config.Staff_role_id != None:
+    if main_DB_Config.Staff_role_id == None:
         main_DB_Config.Staff_role_id = guild_role.id
         
     await context.send(f'Set Staff Role to {guild_role.name}.')
@@ -191,7 +191,7 @@ async def bot_restart(context):
 @utils.role_check()
 async def bot_status(context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
-    await context.send(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}\nAMP Connected: {AMP.SuccessfulConnection} // SQL Database: {DB.DBHandler.SuccessfulDatabase}')
+    await context.send(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}\nAMP Connected: {main_AMP.AMPHandler.SuccessfulConnection} // SQL Database: {main_DB.DBHandler.SuccessfulDatabase}')
 
 @main_bot.command(name='sync',description='Syncs Bot Commands to the current guild this command was used in.')
 @utils.role_check()

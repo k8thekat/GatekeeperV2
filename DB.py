@@ -47,7 +47,8 @@ class DBHandler():
 		self.DBConfig = self.DB.GetConfig()
 		self.SuccessfulDatabase = True
 
-		self.DBConfig.AddSetting('Staff_Role_ID', None)
+		if self.DBConfig.GetSetting('Staff_Role_ID') == None:
+			self.DBConfig.AddSetting('Staff_Role_ID', None)
 	
 	def dbWhitelistSetup(self):
 		"""This is set Default AMP Specific Whitelist Settings"""

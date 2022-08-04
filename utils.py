@@ -531,10 +531,22 @@ class botUtils():
             embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
             for value in settings:
                 key_value = list(value.values())[0]
+                key = list(value.keys())[0]
                 if key_value == '0' or key_value == '1':
                     key_value = bool(key_value)
+                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+                    continue
+                
+                if key == 'Staff_role_id':
+                    key_value = self.roleparse(key_value,context,context.guild.id)
+                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+                    continue
 
-                embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+                if key_value.isalnum() and len(key_value) > 10:
+                    key_value = self.channelparse(key_value,context,context.guild.id)
+                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'<#{key_value.id}>',inline=False)
+                    continue
+
             return embed
 
         def user_info_embed(self,context:commands.Context,db_user:DB.DBUser,discord_user:discord.User):
