@@ -123,7 +123,14 @@ class AMPMinecraft(AMP.AMPInstance):
     def send_message(self, message:discord.Message):
         """Sends a customized message via tellraw through the console."""
         self.Login()
-        self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"purple"}},{{"text":"<{message.author.name}>: {message.content}","color":"white"}}]')
+        # Colors:
+        # To write colors, you have to use the "color" variable. To write the command, use /tellraw (text){"color":(insert color)}Ex: /tellraw @p {"text":"hi","color":"red"}
+        # Here's a list of colors:Red, Green, Blue, White, Yellow, Dark_Red, Dark_Green, Dark_Blue, and Gold.
+        # Fancy Font:
+        # Writing font is fairly simple. Use the basic /tellraw command, and write {"(insert font)":true}. The fonts you can use are:italic, underlined, and bold.
+        # How To Use Both:
+        # To use both font and color, write a comma between the variables. Ex: /tellraw {"color":"green","bold":"true"}
+        self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"blue"}},{{"text":" <{message.author.name}>: {message.content}","color":"white"}}]')
 
     def discord_message(self,user):
         """Handles returning customized discord message data for Minecraft Servers only."""

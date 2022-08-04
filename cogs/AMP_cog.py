@@ -230,7 +230,7 @@ class AMP_Cog(commands.Cog):
                     webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Chat')
                 else:
                     for webhook in self.webhook_list:
-                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Console":
+                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Chat":
                             self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
                             webhook = webhook
 
@@ -242,19 +242,23 @@ class AMP_Cog(commands.Cog):
                         if author_db != None:
                             #This is a default method in each Server, returns False for no customization
                             if self.AMPServer.discord_message(author_db):
-                                name,avatar = self.AMPServer.discord_message(author_db)    
+                                self.logger.info('sending a message with Instance specific configuration')
+                                name,avatar = self.AMPServer.discord_message(author_db)   
                                 await webhook.send(message['Contents'], username = name, avatar_url= avatar)
+                                continue
                             else:    
                                 author = self._client.get_user(int(author_db.DiscordID)) 
 
 
                         #This will use discord Information for there Display name and Avatar if possible.
                         if author != None:
-                            self.logger.info('sending a message with discord information')
+                            if self.AMPHandler.args.dev:
+                                self.logger.info('sending a message with discord information')
                             await webhook.send(message['Contents'], username= author.name, avatar_url=author.avatar)
                             continue
                         else:
-                            self.logger.info('sending a message with default information')
+                            if self.AMPHandler.args.dev:
+                                self.logger.info('sending a message with default information')
                             await webhook.send(message['Contents'], username= message['Source'])
                             continue
                             

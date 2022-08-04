@@ -458,6 +458,9 @@ class AMPInstance:
 
         self.logger.debug(f'Post Request Prints: {post_req.json()}')
 
+        if post_req.json() == None:
+            return 
+
         #Permission errors will trigger this, unsure what else.
         if "result" in post_req.json():
 
@@ -967,23 +970,23 @@ class AMPConsole:
                     print('Name:',self.AMPInstance.FriendlyName,'DisplayImageSource:',self.AMPInstance.DisplayImageSource,'Console Entry:', entry)
                     print("Console Channel:",self.AMPInstance.Discord_Console_Channel,"Chat Channel:", self.AMPInstance.Discord_Chat_Channel)
 
-                #This will filter any messages such as errors or mods loading, etc..
-                #print('Console Filter')
-                if self.console_filter(entry):
-                    print(f"Filtered message {entry}")
+                #This should handle server events(such as join/leave/disconnects)
+                #print('Console Events')
+                if self.console_events(entry):
                     continue
-                
+
                 #This will vary depending on the server type. 
                 # I don't want to filter out the chat message here though. Just send it to two different places!
                 #print('Console Chat')
                 if self.console_chat(entry):
                     continue
                 
-                #This should handle server events(such as join/leave/disconnects)
-                #print('Console Events')
-                if self.console_events(entry):
+                #This will filter any messages such as errors or mods loading, etc..
+                #print('Console Filter')
+                if self.console_filter(entry):
+                    print(f"Filtered message {entry}")
                     continue
-
+                
                 if len(entry['Contents']) > 1500:
                     index_hunt = entry['Contents'].find(';')
                     if index_hunt == -1:
