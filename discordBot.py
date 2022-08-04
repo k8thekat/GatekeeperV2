@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-1.0.0'
+Version = 'beta-1.0.1'
 logger = logging.getLogger(__name__)
 
 #Discord Specific
