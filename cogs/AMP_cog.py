@@ -105,14 +105,16 @@ class AMP_Cog(commands.Cog):
                 await self.on_message_whitelist(message,context)
 
             if not self.webhook_verify(message):
-                for amp_server in self.AMPInstances:
-                    self.AMPServer = self.AMPInstances[amp_server]
 
-                    if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
-                        self.AMPServer.ConsoleMessage(message.content)
+                    for amp_server in self.AMPInstances:
+                        self.AMPServer = self.AMPInstances[amp_server]
 
-                    if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):
-                        self.AMPServer.send_message(message) #This calls the generic AMP Function; each server will handle this differently.
+                        if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
+                            if utils.async_rolecheck(context):
+                                self.AMPServer.ConsoleMessage(message.content)
+
+                        if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):
+                            self.AMPServer.send_message(message) #This calls the generic AMP Function; each server will handle this differently.
                         
             return message
     #This is called when a message in any channel of the guild is edited. Returns <message> object.
