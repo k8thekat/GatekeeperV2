@@ -184,23 +184,25 @@ class AMP_Cog(commands.Cog):
                 #This setup is for getting/used old webhooks and allowing custom avatar names per message.
                 self.webhook_list = await channel.webhooks()
                 self.logger.debug(f'webhooks {self.webhook_list}')
-                if len(self.webhook_list) == 0:
-                    self.logger.debug(f'creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
-                    webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Console')
-                else:
-                    for webhook in self.webhook_list:
-                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Console":
-                            self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
-                            webhook = webhook
+                console_webhook = None
+                for webhook in self.webhook_list:
+                    if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Console":
+                        self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
+                        console_webhook = webhook
+                        break
 
+                if console_webhook == None:
+                    self.logger.debug(f'creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
+                    console_webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Console')
+                    
                 if len(console_messages) != 0:
                     for message in console_messages:
                             if self.AMPServer.DisplayName != None: #Lets check for a Display name and use that instead.
                                 self.logger.debug('sending a message with displayname')
-                                await webhook.send(message, username= self.AMPInstances[amp_server].DisplayName,avatar_url=self._client.user.avatar)
+                                await console_webhook.send(message, username= self.AMPInstances[amp_server].DisplayName,avatar_url=self._client.user.avatar)
                             else:
                                 self.logger.debug('sending a message with friendlyname')
-                                await webhook.send(message, username= self.AMPInstances[amp_server].FriendlyName,avatar_url=self._client.user.avatar)
+                                await console_webhook.send(message, username= self.AMPInstances[amp_server].FriendlyName,avatar_url=self._client.user.avatar)
 
                     self.AMP_Server_Console.console_messages = []
 
@@ -227,14 +229,17 @@ class AMP_Cog(commands.Cog):
                 #This setup is for getting/used old webhooks and allowing custom avatar names per message.
                 self.webhook_list = await channel.webhooks()
                 self.logger.debug(f'webhooks {self.webhook_list}')
-                if len(self.webhook_list) == 0:
+                console_webhook = None
+                for webhook in self.webhook_list:
+                    if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Chat":
+                        self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
+                        chat_webhook = webhook
+                        break
+
+                if console_webhook == None:
                     self.logger.debug(f'creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
-                    webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Chat')
-                else:
-                    for webhook in self.webhook_list:
-                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Chat":
-                            self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
-                            webhook = webhook
+                    chat_webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Chat')
+                    
 
                 if len(chat_messages) != 0:
                     for message in chat_messages:
@@ -246,7 +251,7 @@ class AMP_Cog(commands.Cog):
                             if self.AMPServer.discord_message(author_db):
                                 self.logger.info('sending a message with Instance specific configuration')
                                 name,avatar = self.AMPServer.discord_message(author_db)   
-                                await webhook.send(message['Contents'], username = name, avatar_url= avatar)
+                                await chat_webhook.send(message['Contents'], username = name, avatar_url= avatar)
                                 continue
                             else:    
                                 author = self._client.get_user(int(author_db.DiscordID)) 
@@ -256,12 +261,12 @@ class AMP_Cog(commands.Cog):
                         if author != None:
                             if self.AMPHandler.args.dev:
                                 self.logger.info('sending a message with discord information')
-                            await webhook.send(message['Contents'], username= author.name, avatar_url=author.avatar)
+                            await chat_webhook.send(message['Contents'], username= author.name, avatar_url=author.avatar)
                             continue
                         else:
                             if self.AMPHandler.args.dev:
                                 self.logger.info('sending a message with default information')
-                            await webhook.send(message['Contents'], username= message['Source'])
+                            await chat_webhook.send(message['Contents'], username= message['Source'])
                             continue
                             
                     self.AMP_Server_Console.console_chat_messages = []
