@@ -229,14 +229,14 @@ class AMP_Cog(commands.Cog):
                 #This setup is for getting/used old webhooks and allowing custom avatar names per message.
                 self.webhook_list = await channel.webhooks()
                 self.logger.debug(f'webhooks {self.webhook_list}')
-                console_webhook = None
+                chat_webhook = None
                 for webhook in self.webhook_list:
                     if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Chat":
                         self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
                         chat_webhook = webhook
                         break
 
-                if console_webhook == None:
+                if chat_webhook == None:
                     self.logger.debug(f'creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
                     chat_webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Chat')
                     
@@ -255,7 +255,6 @@ class AMP_Cog(commands.Cog):
                                 continue
                             else:    
                                 author = self._client.get_user(int(author_db.DiscordID)) 
-
 
                         #This will use discord Information for there Display name and Avatar if possible.
                         if author != None:
