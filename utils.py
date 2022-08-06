@@ -453,16 +453,26 @@ class botUtils():
             embed_list = []
             for server in self.AMPInstances:
                 server = self.AMPInstances[server]
-                
-                db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-                if db_server != None:
-                    embed.set_thumbnail(url=context.guild.icon)
-                    embed.add_field(name='\u1CBC\u1CBC',value = f'========={server.DisplayName}=========',inline=False)
-                    embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
-                    embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
-                    embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
-                    embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
-                embed_fieldindex += 5
+    
+                if server.Running and server.ADS_Running:
+                    Users = server.getStatus(users_only= True)
+                    db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+                    if db_server != None:
+                        embed.set_thumbnail(url=context.guild.icon)
+
+                        server_name = server.FriendlyName
+                        if server.DisplayName != None:
+                            server_name = db_server.DisplayName
+
+                        nicknames = db_server.Nicknames
+                        if len(db_server.Nicknames) == 0:
+                            nicknames = None
+
+                        embed.add_field(name=f'**========={server_name}=========**',value = f'**Nicknames**: {nicknames}',inline=False)
+                        embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
+                        embed.add_field(name=f'__Online Users__', value= f'{Users[0]}/{Users[1]}',inline= False)
+                        embed.add_field(name='**Status**: Online', value= f'**Donator Only**: {str(bool(db_server.Donator))}  //  **Whitelist Open**: {str(bool(db_server.Whitelist))}',inline= False)
+                    embed_fieldindex += 5
                 
                 if embed_fieldindex == 25:
                     embed_list.append(embed)
@@ -476,7 +486,7 @@ class botUtils():
         def server_status_embed(self,context:commands.Context,server:AMP.AMPInstance,TPS=None,Users=None,CPU=None,Memory=None,Uptime=None,Users_Online=None) -> discord.Embed:
             """This is the Server Status Embed Message"""
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-            if server.Server_Running:
+            if server.ADS_Running:
                 server_status = 'Online'
             else:
                 server_status = 'Offline'
@@ -498,7 +508,7 @@ class botUtils():
             embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
             #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False) #This Generates a BLANK Field entirely.
 
-            if server.Server_Running:
+            if server.ADS_Running:
                 embed.add_field(name='TPS', value=TPS, inline=True)
                 embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
                 embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=False)

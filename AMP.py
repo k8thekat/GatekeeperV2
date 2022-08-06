@@ -165,7 +165,7 @@ class AMPHandler():
 
                         # self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
                         # self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
-                        
+                        #!TODO! This may change in the future. Depends on the table update.
                         for DIS in getattr(class_module,f'DisplayImageSources'):
                             self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
                             self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
@@ -202,7 +202,7 @@ class AMPInstance:
         self.serverdata = serverdata
         self.serverlist = {}
         self.InstanceID = instanceID
-        self.Server_Running = False #This is for the ADS (Dedicated Server) not the Instance!
+        self.ADS_Running = False #This is for the ADS (Dedicated Server) not the Instance!
 
         self.url = self.AMPHandler.tokens.AMPurl + '/API/' #base url for AMP console /API/
 
@@ -340,7 +340,7 @@ class AMPInstance:
                     self.logger.error(f'The Bot is missing the permission {perm} Please check under Configuration -> User Management for the Bot.')
                 else:
                     end_point = self.AMPHandler.tokens.AMPurl.find(":",5)
-                    self.logger.error(f'The Bot is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}{self.Port} under Configuration -> Role Management -> discord_bot')
+                    self.logger.error(f'The Bot is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> discord_bot')
                 failed = True
 
         if failed:
@@ -359,7 +359,7 @@ class AMPInstance:
         if self.Running:
             server_status = self.server_check() #Using this to see if the API fails to set the server status (offline/online) NOT THE INSTANCE STATUS! Thats self.Running!!
             self.logger.info(f'{self.FriendlyName} ADS Running: {server_status}')
-            self.Server_Running = server_status 
+            self.ADS_Running = server_status 
 
         self.DisplayName = self.DB_Server.DisplayName
         self.Description = self.DB_Server.Description
@@ -376,13 +376,13 @@ class AMPInstance:
     def server_check(self):
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
         Success = self.Login()
-        self.logger.debug('Server Check' + str(Success))
+        self.logger.debug('Server Check Login Sucess: ' + str(Success))
         if Success:
-            parameters = {}
-            self.CallAPI('Core/GetStatus', parameters)
-            return True
-        else:
-            return False
+            status = self.getStatus(True)
+            if status == True:
+                return True
+
+        return False
 
     def Login(self):
         if self.SessionID == 0:
@@ -476,12 +476,12 @@ class AMPInstance:
 
             if type(post_req.json()['result']) == bool and "Status" in post_req.json()['result'] and (post_req.json()['result']['Status'] == False):
                 self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
-                return
+                return False
 
         if "Title" in post_req.json():
             if type(post_req.json()['Title']) == str and post_req.json()['Title'] == 'Unauthorized Access':
-                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
-                return
+                self.logger.error(f'["Title"]: The API Call {APICall} failed because of {post_req.json()}')
+                return False
     
         return post_req.json()
 
@@ -544,7 +544,6 @@ class AMPInstance:
     def ConsoleMessage(self,msg:str):
         """Basic Console Message"""
         self.Login()
-        #msg = ' '.join(msg)
         parameters = {'message': msg}
         self.CallAPI('Core/SendConsoleMessage', parameters)
         return
@@ -577,13 +576,30 @@ class AMPInstance:
         self.CallAPI('Core/Kill', parameters)
         return
 
-    def getStatus(self)-> tuple:
+    def getStatus(self,running_check:bool=False,users_only:bool=False)-> tuple:
         """AMP Instance Metrics \n
         CPU is percentage based <tuple>
         """
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetStatus', parameters)
+
+        #This happens because CallAPI returns False when it fails permissions.
+        if result == False:
+            return False
+
+        #This works if I had permission and the server is online, but not actually running. So we check TPS to make sure the server is actually 'live' 
+        if running_check and result != False:
+            status = str(result['State'])
+            if status == '0':
+                return False
+            return True
+
+        #If we want to check ONLY online users!
+        if users_only:
+            Users = (str(result['Metrics']['Active Users']['RawValue']),str(result['Metrics']['Active Users']['MaxValue']))
+            return Users
+
         Uptime = str(result['Uptime'])
         tps = str(result['State'])
         Users = (str(result['Metrics']['Active Users']['RawValue']),str(result['Metrics']['Active Users']['MaxValue']))
@@ -760,7 +776,11 @@ class AMPInstance:
             'PermissionNode' : PermissionNode
         }
         result = self.CallAPI('Core/CurrentSessionHasPermission', parameters)
-        return result['result']
+
+        if result != False:
+            return result['result']
+
+        return result
 
     def getAMPRolePermissions(self,RoleID:str):
         """Gets full permission spec for Role (returns permission nodes)"""
@@ -916,7 +936,7 @@ class AMPConsole:
                 # self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
                 # self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
                 if self.AMPInstance.DisplayImageSource in self.AMPHandler.AMP_Console_Modules: #Should be AMP_Console_Modules: {Module_Name: 'Module_class_object'}
-                    if self.AMPInstance.Server_Running: #This is the Instance's ADS 
+                    if self.AMPInstance.ADS_Running: #This is the Instance's ADS 
                         self.logger.info(f'Loaded {self.AMPHandler.AMP_Console_Modules[self.AMPInstance.DisplayImageSource]} for {self.AMPInstance.FriendlyName}')
         
                         self.console_thread_running = True
@@ -933,7 +953,7 @@ class AMPConsole:
                         self.logger.info(f'**ERROR** Server: {self.AMPInstance.FriendlyName} Instance is not currently Running')
 
                 else: #If we can't find the proper module; lets load the Generic.
-                    if self.AMPInstance.Server_Running: #This is the Instance's ADS 
+                    if self.AMPInstance.ADS_Running: #This is the Instance's ADS 
                         self.logger.info(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generic"]} for {self.AMPInstance.FriendlyName}')
                         #server_console = self.AMP_Console_Modules['Generic']
                         self.console_thread_running = True

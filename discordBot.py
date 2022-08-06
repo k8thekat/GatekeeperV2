@@ -22,7 +22,7 @@
 import discord
 from discord.ext import commands
 import tokens
-import sys
+import sys,os
 import logging
 
 #Custom scripts
@@ -53,15 +53,16 @@ async def on_ready():
     if guild_id != None:
         local_guild = client.get_guild(int(guild_id))
         client.tree.copy_global_to(guild=local_guild)
-        logger.info(f'Syncing Commands locally to guild: {local_guild.name}')
+        logger.info(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
         await client.tree.sync(guild=local_guild)
 
 @client.event
 async def on_guild_join(guild:discord.Guild):
     DB.getDBHandler().DBConfig.SetSetting('Guild_ID',guild.id)
     client.tree.copy_global_to(guild=guild)
-    logger.info(f'Syncing Commands locally to guild: {guild.name}')
+    logger.info(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
     await client.tree.sync(guild=guild)
+
 
 @client.hybrid_group(name='bot')
 @utils.role_check()
@@ -156,6 +157,7 @@ async def bot_status(context:commands.Context):
 async def bot_sync(context:commands.Context):
     """Syncs Bot Commands to the current guild this command was used in."""
     perm_node = 'bot.sync'
+
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
     if guild_id == None or context.guild.id != int(guild_id):
         DB.getDBHandler().DBConfig.SetSetting('Guild_ID',context.guild.id)

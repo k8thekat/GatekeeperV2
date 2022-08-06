@@ -30,7 +30,7 @@ DisplayImageSources = ["internal:MinecraftJava"]
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
-        self.perms = [f'Minecraft.*',f'Minecraft.InGameActions.*',f'-Minecraft.PluginManagement.*']
+        self.perms = ['Minecraft.*','Minecraft.InGameActions.*','-Minecraft.PluginManagement.*']
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
         
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
@@ -171,8 +171,6 @@ class AMPMinecraftConsole(AMP.AMPConsole):
             else:
                 return True
     
-
-
     def console_events(self, message):
         """ALWAYS RETURN FALSE!"""
         if message['Contents'].endswith('has joined the game!'):

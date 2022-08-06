@@ -72,37 +72,15 @@ class Server(commands.Cog):
             await context.send('Please try your command again...')
        
 
-    @server.command(name='list',description='Retrieves a list of a Discord Servers AMP Instances')
+    @server.command(name='list',description='Retrieves a list of all AMP Instances')
     @utils.role_check()
     async def amp_server_list(self,context:commands.Context):
         self.logger.info('Server List...')
         perm_node = 'server.list'
 
-        #!TODO! Figure out a layout that is appealing and not too large.
-        embed=discord.Embed(title=f'{context.guild.name} Server List',color=0x808000)
-        embed.set_thumbnail(url=context.guild.icon)
-        for server in self.AMPInstances:
-            db_server = self.DB.GetServer(InstanceID = self.AMPInstances[server].InstanceID)
-            if db_server != None:
-                #Lets try to use our DisplayName!
-                print(db_server.DisplayName,db_server.IP,db_server.InstanceName,bool(db_server.Whitelist),bool(db_server.Donator))
-                if db_server.DisplayName != None and db_server.IP != None:
-                    self.logger.debug(f'Found a DisplayName and IP, using Display Name and IP for {db_server.InstanceName}')
-                    embed.add_field(name=f'{db_server.DisplayName}',value=f'{db_server.IP}',inline=True)
-
-                else: #Fallback to Instance Name, since this is always set!
-                    self.logger.debug(f'Unable to find DisplayName, using Instance Name for {db_server.InstanceName}')
-                    embed.add_field(name=f'{db_server.InstanceName}',value='0.0.0.0',inline=True)
-
-                if bool(db_server.Donator) == True:
-                    embed.add_field(name='Donator Only', value=str(bool(db_server.Donator)),inline=True)
-                else:
-                    embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=True)
-
-                embed.add_field(name='Whitelisting', value=str(bool(db_server.Whitelist)),inline=True)
-                #embed.add_field(name='\u1CBC\u1CBC',value=f'\u1CBC\u1CBC',inline=False)
-
-        await context.send(embed = embed)
+        embed_list = self.uBot.server_list_embed(context)
+        for embed in embed_list:
+            await context.send(embed = embed)
 
     @server.command(name='start',description='Starts the AMP Instance')
     @utils.role_check()

@@ -47,6 +47,13 @@ class Setup:
         self.logger.info(f'Current Startup Args:{self.args}')
         self.pip_install()
 
+        if self.args.dev:
+            self.logger.critical("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
+
+        if not self.args.discord:
+            self.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
+
+
         #This sets up our SQLite Database!
         import DB
         self.DBHandler = DB.getDBHandler()
@@ -77,12 +84,8 @@ class Setup:
 
 
 Start = Setup()
-if Start.args.dev:
-    Start.logger.critical("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
 
-if not Start.args.discord:
-    Start.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
-
+#This has to be called outside of the init; its blocking and will cause issues inside of the Setup.init()
 if Start.args.discord:
     import discordBot 
     discordBot.client_run()
