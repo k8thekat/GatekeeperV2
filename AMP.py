@@ -270,6 +270,7 @@ class AMPInstance:
                 #Bot role doesn't exists, but we have Super Admin!
                 if self.AMP_BotRoleID == None and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
                     self.logger.info(f'***ATTENTION*** We have `Super Admins`, setting up AMP Permissions and creating `discord_bot` role!')
+                    self.setup_AMPbotrole()
                     self.setup_AMPpermissions()
 
                 #Bot role doesn't exists and we do not have Super Admin! 
@@ -297,10 +298,9 @@ class AMPInstance:
                 if instanceID == 0:
                     sys.exit(1)
                 
-
-    def setup_AMPpermissions(self):
-        """Sets the Permissions for main AMP Module"""
-        self.logger.info('Setting AMP permissions')
+    def setup_AMPbotrole(self):
+        """Creates the `discord_bot` role."""
+        self.logger.info('Creating the AMP bot role.')
         self.createRole('discord_bot')
         self.getRoleIds(True)
         self.logger.info(f'Created `discord_bot` role. ID: {self.AMP_BotRoleID}')
@@ -308,6 +308,9 @@ class AMPInstance:
         self.setAMPUserRoleMembership(self.AMP_UserID,self.AMP_BotRoleID,True)
         self.logger.info(f'***ATTENTION*** Adding {self.AMPHandler.tokens.AMPUser} to `discord_bot` Role!')
 
+    def setup_AMPpermissions(self):
+        """Sets the Permissions for main AMP Module"""
+        self.logger.info('Setting AMP permissions')
         import amp_permissions as AMPPerms
         core = AMPPerms.perms_super()
         for perm in core:

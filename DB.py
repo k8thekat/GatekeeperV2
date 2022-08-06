@@ -46,6 +46,17 @@ class DBHandler():
 		self.DB = Database(Handler = self)
 		self.DBConfig = self.DB.GetConfig()
 		self.SuccessfulDatabase = True
+		self.DB_Version = '1.0.0'
+
+		if self.DBConfig.GetSetting('DB_Version') == None:
+			self.DBConfig.AddSetting('DB_Version')
+			self.DBConfig.SetSetting('DB_Version',self.DB_Version)
+		
+		if self.DB_Version != self.DBConfig.GetSetting('DB_Version'):
+			print('This will call the DB Update stuff...')
+
+		if self.DBConfig.GetSetting('Guild_ID') == None:
+			self.DBConfig.AddSetting('Guild_ID')
 
 		if self.DBConfig.GetSetting('Staff_Role_ID') == None:
 			self.DBConfig.AddSetting('Staff_Role_ID', None)

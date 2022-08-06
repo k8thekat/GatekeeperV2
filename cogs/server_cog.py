@@ -75,6 +75,9 @@ class Server(commands.Cog):
     @server.command(name='list',description='Retrieves a list of a Discord Servers AMP Instances')
     @utils.role_check()
     async def amp_server_list(self,context:commands.Context):
+        self.logger.info('Server List...')
+        perm_node = 'server.list'
+
         #!TODO! Figure out a layout that is appealing and not too large.
         embed=discord.Embed(title=f'{context.guild.name} Server List',color=0x808000)
         embed.set_thumbnail(url=context.guild.icon)
@@ -105,6 +108,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_start(self,context:commands.Context,server):
         self.logger.info('AMP Server Started...')
+        perm_node = 'server.start'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -119,6 +123,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_stop(self,context:commands.Context,server):
         self.logger.info('AMP Server Stopped...')
+        perm_node = 'server.stop'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -133,6 +138,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_restart(self,context:commands.Context,server):
         self.logger.info('AMP Server Restart...')
+        permn_node = 'server.restart'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -147,6 +153,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_kill(self,context:commands.Context,server):
         self.logger.info('AMP Server Kill...')
+        perm_node = 'server.kill'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -161,7 +168,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_message(self,context:commands.Context,server,message:str):
         self.logger.info('AMP Server Message...')
-       
+        perm_node = 'server.msg'
+
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -177,6 +185,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_backup(self,context:commands.Context,server):
         self.logger.info('AMP Server Backup...')
+        perm_node = 'server.backup'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -192,6 +201,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_status(self,context:commands.Context,server):
         self.logger.info('AMP Server Status...')
+        perm_node = 'server.status'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -221,6 +231,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_users_list(self,context:commands.Context,server):
         self.logger.info('AMP Server Connected Users...')
+        perm_node = 'server.users'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -244,6 +255,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def dbserver_whitelist_true(self,context:commands.Context,server):
         """Set Servers Whitelist Allowed to True"""
+        perm_node = 'server.whitelist.true'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -257,6 +269,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def dbserver_whitelist_false(self,context:commands.Context,server):
         """Set Servers Whitelist Allowed to False"""
+        perm_node = 'server.whitelist.false'
+
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -283,6 +297,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_whitelist_add(self,context:commands.Context,server,user):
         """Adds User to Servers Whitelist"""
+        perm_node = 'server.whitelist.add'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -297,6 +312,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_whitelist_remove(self,context:commands.Context,server,user):
         """Remove a User from the Servers Whitelist"""
+        perm_node = 'server.whitelist.remove'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -316,6 +332,7 @@ class Server(commands.Cog):
     async def db_server_displayname_set(self,context:commands.Context,server,name:str):
         """Sets the Display Name for the provided Server"""
         self.logger.info('DB Server Display Name')
+        perm_node = 'server.displayname'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -331,7 +348,7 @@ class Server(commands.Cog):
     async def db_server_description(self,context:commands.Context,server,desc:str):
         """Sets the Description for the provided Server"""
         self.logger.info('DB Server Description')
-
+        perm_node = 'server.description'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -346,6 +363,7 @@ class Server(commands.Cog):
     async def db_server_ip(self,context:commands.Context,server,ip:str):
         """Sets the IP for the provided Server"""
         self.logger.info('DB Server IP')
+        perm_node = 'server.ip'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -367,6 +385,7 @@ class Server(commands.Cog):
     async def db_server_donator_true(self,context:commands.Context,server):
         """Sets Donator Only to True for the provided Server"""
         self.logger.info('DB Server Donator Only True')
+        perm_node = 'server.donator.true'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -382,6 +401,7 @@ class Server(commands.Cog):
     async def db_server_donator_false(self,context:commands.Context,server):
         """Sets Donator Only to True for the provided Server"""
         self.logger.info('DB Server Donator Only False')
+        perm_node = 'server.donator.false'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -403,7 +423,7 @@ class Server(commands.Cog):
     async def db_server_console_on(self,context:commands.Context,server):
         """Turns the Console on for the provided Server"""
         self.logger.info('DB Server Console On...')
-
+        perm_node = 'server.console.on'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -424,6 +444,7 @@ class Server(commands.Cog):
     async def db_server_console_off(self,context:commands.Context,server):
         """Turns the Console on for the provided Server"""
         self.logger.info('DB Server Console On...')
+        perm_node = 'server.console.off'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -444,6 +465,7 @@ class Server(commands.Cog):
     async def db_server_console_channel_set(self,context:commands.Context,server,channel):
         """Sets the Console Channel for the provided Server"""
         self.logger.info('DB Server Console Channel')
+        perm_node = 'server.console.channel'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -467,6 +489,7 @@ class Server(commands.Cog):
     async def db_server_console_filter(self,context:commands.Context,server,flag:str):
         """Sets the Console Filter"""
         self.logger.info('DB Server Console Filtered True...')
+        perm_node = 'server.console.filter'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -498,6 +521,7 @@ class Server(commands.Cog):
     async def db_server_chat_channel_set(self,context:commands.Context,server,channel:str):
         """Sets the Chat Channel for the provided Server"""
         self.logger.info('DB Server Chat Channel')
+        perm_node = 'server.chat.channel'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -517,6 +541,7 @@ class Server(commands.Cog):
     async def db_server_discord_role_set(self,context:commands.Context,server,role:str):
         """Sets the Discord Role for the provided Server"""
         self.logger.info('DB Server Discord Role')
+        perm_node = 'server.role'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -531,6 +556,5 @@ class Server(commands.Cog):
             await context.send(f'Set {server.FriendlyName} Discord Role to {role.name}')
 
         
-
 async def setup(client):
     await client.add_cog(Server(client))
