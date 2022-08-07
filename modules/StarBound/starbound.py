@@ -30,7 +30,7 @@ import AMP as AMP
 import DB as DB
 
 
-class Factorio(commands.Cog):
+class Starbound(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
@@ -56,4 +56,4 @@ class Factorio(commands.Cog):
         self.logger.info(f'**SUCCESS** Loading Module **{self.name.capitalize()}**')
 
 async def setup(client):
-    await client.add_cog(Factorio(client))
+    await client.add_cog(Starbound(client))

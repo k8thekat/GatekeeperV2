@@ -38,7 +38,7 @@ class AMPMinecraft(AMP.AMPInstance):
          
     def setup_AMPpermissions(self):
         """Sets the Permissions for Minecraft Modules"""
-        self.logger.info(f'Setting up {self.FriendlyName} Minecraft Module permissions.')
+        self.logger.warning(f'Setting up {self.FriendlyName} Minecraft Module permissions...')
         for perm in self.perms:
             enabled = True
             if perm.startswith('-'):
@@ -46,7 +46,7 @@ class AMPMinecraft(AMP.AMPInstance):
                 perm = perm[1:]
             #print(self.AMP_BotRoleID)
             self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
-            self.logger.info(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
+            self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return True
 
     def name_Conversion(self,name): 

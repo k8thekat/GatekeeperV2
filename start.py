@@ -34,6 +34,7 @@ class Setup:
 
         # All the args below are used for development purpose.
         parser.add_argument('-dev', help='Enable development print statments.',required= False, action="store_true")
+        parser.add_argument('-command', help='Enable command usage print statements.', required= False, action="store_true")
         parser.add_argument('-discord', help='Disables Discord Intigration (used for testing)',required= False, action="store_false")
         parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
         #parser.add_argument('-setup', help='***NOT IN USE*** First time setup of AMP and DB', required= False, action="store_false")
@@ -44,11 +45,11 @@ class Setup:
         import logging 
         self.logger = logging.getLogger()
 
-        self.logger.info(f'Current Startup Args:{self.args}')
+        self.logger.dev(f'Current Startup Args:{self.args}')
         self.pip_install()
 
-        if self.args.dev:
-            self.logger.critical("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
+        
+        self.logger.dev("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
 
         if not self.args.discord:
             self.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")

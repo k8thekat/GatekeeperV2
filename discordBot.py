@@ -53,14 +53,14 @@ async def on_ready():
     if guild_id != None:
         local_guild = client.get_guild(int(guild_id))
         client.tree.copy_global_to(guild=local_guild)
-        logger.info(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
+        logger.dev(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
         await client.tree.sync(guild=local_guild)
 
 @client.event
 async def on_guild_join(guild:discord.Guild):
     DB.getDBHandler().DBConfig.SetSetting('Guild_ID',guild.id)
     client.tree.copy_global_to(guild=guild)
-    logger.info(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
+    logger.dev(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
     await client.tree.sync(guild=guild)
 
 
@@ -73,7 +73,7 @@ async def main_bot(context:commands.Context):
 @main_bot.command(name='setup')
 @commands.has_guild_permissions(administrator=True)
 async def bot_setup(context:commands.Context,staff_role:str):
-    logger.info(f'Bot Setup')
+    logger.command(f'Bot Setup')
     uBot = utils.botUtils(client)
     guild_role = uBot.roleparse(parameter=staff_role,context=context,guild_id=context.guild.id)
     if guild_role == None:
@@ -126,7 +126,7 @@ async def bot_cog_unloader(context:commands.Context,cog:str):
 @utils.role_check()
 async def bot_stop(context:commands.Context):
     """Closes the connection to Discord."""
-    logger.info('Bot Stop Called...')
+    logger.command('Bot Stop Called...')
     perm_node = 'bot.stop'
     await context.send('Disconnecting from the Server...')
     return await client.close()
@@ -136,7 +136,7 @@ async def bot_stop(context:commands.Context):
 async def bot_restart(context:commands.Context):
     """This is the discordBot restart function\n
     Requires the discordBot to be run in a Command/PowerShell Window ONLY!"""
-    logger.info('Bot Restart Called...')
+    logger.command('Bot Restart Called...')
     perm_node = 'bot.restart'
     import os
     import sys
@@ -148,7 +148,7 @@ async def bot_restart(context:commands.Context):
 @utils.role_check()
 async def bot_status(context:commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
-    logger.info('Bot Status Called...')
+    logger.command('Bot Status Called...')
     perm_node = 'bot.status'
     await context.send(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}\nAMP Connected: {main_AMP.AMPHandler.SuccessfulConnection} // SQL Database: {main_DB.DBHandler.SuccessfulDatabase}')
 
@@ -163,7 +163,7 @@ async def bot_sync(context:commands.Context):
         DB.getDBHandler().DBConfig.SetSetting('Guild_ID',context.guild.id)
 
     client.tree.copy_global_to(guild=context.guild)
-    logger.info(f'Bot Commands Sync: {await client.tree.sync(guild=context.guild)}')
+    logger.command(f'Bot Commands Sync: {await client.tree.sync(guild=context.guild)}')
     await context.send('Successfully Syncd Bot Commands')
     
 

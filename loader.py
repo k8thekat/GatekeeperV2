@@ -44,21 +44,21 @@ class Handler():
         self.name = os.path.basename(__file__)
 
         self.logger = logging.getLogger()
-        self.logger.info(f'{self.name.capitalize()} Initializing...')
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMP_Modules = self.AMPHandler.AMP_Modules
 
+        self.logger.info(f'**SUCCESS** Initializing... {self.name.capitalize()} ')
         #await self.cog_auto_loader()
         
     async def module_auto_loader(self):
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
 
         #Just to make it easier; always load the Generic Module as a base.
-        await self._client.load_extension('modules.Generic.Generic')
-        self.logger.info(f'**SUCCESS** {self.name} Loading Cog Module **modules.Generic.Generic**')
+        await self._client.load_extension('modules.Generic.generic')
+        self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **modules.Generic.generic**')
         loaded.append('Generic')
 
         for instance in self.AMPInstances:
@@ -84,18 +84,17 @@ class Handler():
                             try:
                                 await self._client.load_extension(cog) #We will load the scripts like a cog to access the commands and functions.
                                 loaded.append(module)
-                                self.logger.info(f'**SUCCESS** {self.name} Loading Cog Module **{cog}**')
+                                self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **{cog}**')
                                 continue
 
                             except Exception as e:
-                                if self.AMPHandler.args.dev:
-                                    self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{cog}** - {e}')
+                                
+                                self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{cog}** - {e}')
                                 continue
                         
                 except FileNotFoundError as e:
-                    if self.AMPHandler.args.dev:
-                        self.logger.error(f'**ERROR** {self.name} Loading Module ** - File Not Found {e}')
-
+                    self.logger.error(f'**ERROR** {self.name} Loading Module ** - File Not Found {e}')
+                    
                 #     # try:
                 #     #     await self._client.load_extension('modules.GenericModule.Generic')
                 #     #     loaded.append(module)
@@ -117,17 +116,16 @@ class Handler():
 
                     try:
                         await self._client.load_extension(cog) 
-                        self.logger.info(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
+                        self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
                         continue
 
                     except Exception as e:
-                        if self.AMPHandler.args.dev:
-                            self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
+                        self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
                         continue
                 
         except FileNotFoundError as e:
-            if self.AMPHandler.args.dev:
-                self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
+            self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
+            
 
                 
 

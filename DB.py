@@ -70,7 +70,7 @@ class DBHandler():
 			self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
 			self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
 		except:
-			self.logger.error('**ERROR** DBConfig Default Whitelist Settings have been set.')
+			self.logger.warning('**ATTENTION** DBConfig Default Whitelist Settings have been set.')
 
 	def dbServerConsoleSetup(self,server:AMPInstance):
 		"""This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
@@ -80,7 +80,7 @@ class DBHandler():
 			self.DB_Server.Console_Filtered = True
 			self.DB_Server.Discord_Console_Channel = None #Should be a str, can be an int. eg 289450670581350401
 		except:
-			self.logger.error(f'**ERROR** DBConfig Default Console Settings have been set for {server.FriendlyName}')
+			self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
 
 	def dbServerPopulate(self,server:AMPInstance):
 		"""This will grab all the DB Information on the specific server and return the information"""

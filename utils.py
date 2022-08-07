@@ -40,7 +40,7 @@ async def async_rolecheck(context:commands.Context):
     #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
     admin = context.author.guild_permissions.administrator
     if admin == True:
-        logger.info(f'Permission Check Okay on {context.author}')
+        logger.command(f'Permission Check Okay on {context.author}')
         return True
     
     if DBConfig.Staff == None:
@@ -66,11 +66,11 @@ async def async_rolecheck(context:commands.Context):
             staff_role = i
             
     if author_top_role > staff_role:
-        logger.info(f'Permission Check Okay on {author}')
+        logger.command(f'Permission Check Okay on {author}')
         return True
         
     else:
-        logger.info(f'Permission Check Failed on {author}')
+        logger.command(f'Permission Check Failed on {author}')
         await context.send('You do not have permission to use that command...')
         return False
 
@@ -148,7 +148,7 @@ class discordBot():
         Requires a `<user`> and `<role>` discord object.\n
         Supports `reason`(Optional)"""
         
-        self.botLogger.info('Add Users Discord Role Called...')
+        self.botLogger.dev('Add Users Discord Role Called...')
         await user.add_roles(role,reason)
 
     async def userRemoveRole(self, user: discord.user, role: discord.role, reason:str=None):
@@ -156,7 +156,7 @@ class discordBot():
         Requires a `<user>` and `<role>` discord object.\n
         Supports `reason`(Optional)"""
 
-        self.botLogger.info('Remove Users Discord Role Called...')
+        self.botLogger.dev('Remove Users Discord Role Called...')
         print(type(user),type(role))
         await user.remove_roles(role,reason)
 
@@ -165,7 +165,7 @@ class discordBot():
         Your own messages could be deleted without any proper permissions. However to delete other people's messages, you need the `manage_messages` permission.\n
         Supports `delay[float]`(Optional)"""
 
-        self.botLogger.info('Delete Discord Message Called...')
+        self.botLogger.dev('Delete Discord Message Called...')
         await message.delete(delay=delay)
 
     async def channelHistory(self,channel:discord.TextChannel,limit:int=10,before:datetime=None,after:datetime=None,around:datetime=None,oldest_first:bool=False):
@@ -180,7 +180,7 @@ class discordBot():
         The content must be able to be transformed into a string via `str(content)`.\n
         Supports `delete_after[float]`(Optional)"""
 
-        self.botLogger.info('Edit Discord Message Called...')
+        self.botLogger.dev('Edit Discord Message Called...')
         await message.edit(content,delete_after)
 
     async def sendMessage(self, parameter:object, content:str,*, tts:bool=False,embed=None, file:discord.file=None, files:list=None, delete_after:float=None, nonce= None, allowed_mentions=None, reference:object=None):
@@ -193,7 +193,7 @@ class discordBot():
                 await channel.send(file=discord.File(fp, 'new_filename.png')) 
         `NOTE:` Using `files` - my_files = [discord.File('result.zip'), discord.File('teaser_graph.png')] await channel.send(files=my_files)"""
 
-        self.botLogger.info('Member Send Message Called...')
+        self.botLogger.dev('Member Send Message Called...')
         await parameter.send(content, tts=tts, embed=embed, file=file, files=files, delete_after=delete_after, nonce=nonce, allowed_mentions=allowed_mentions, reference=reference)
 
     async def messageAddReaction(self,message: discord.message, reaction_id:str):
@@ -201,7 +201,7 @@ class discordBot():
             For example, sending the message '\:python3:' with the client will result in '<:python3:232720527448342530>'.
             `NOTE` Can only use Emoji's the bot has access too"""
 
-        self.botLogger.info('Message Add Reaction Called...')
+        self.botLogger.dev('Message Add Reaction Called...')
         if reaction_id.isnumeric():
             emoji = self._client.get_emoji(int(reaction_id))
 
@@ -267,7 +267,7 @@ class botUtils():
             They can contain single quotes, double quotes and underscores. (" ",' ',_)\n
             returns `<role>` object if True, else returns `None`
             **Note** Use context.guild.id"""
-            self.logger.info('Role Parse Called...')
+            self.logger.dev('Role Parse Called...')
             #print(dir(self._client),self._client.get_guild(guild_id),guild_id)
             guild = self._client.get_guild(guild_id)
             role_list = guild.roles
@@ -303,7 +303,7 @@ class botUtils():
             It handles finding the specificed Discord `<channel>` in multiple different formats, either numeric or alphanumeric.\n
             returns `<channel>` object if True, else returns `None`
             **Note** Use context.guild.id"""
-            self.logger.info('Channel Parse Called...')
+            self.logger.dev('Channel Parse Called...')
 
             if guild_id == None:
                 channel = self._client.get_channel(int(parameter))
@@ -332,7 +332,7 @@ class botUtils():
             It also supports '@', '#0000' and partial display name searching for user indentification (eg. k8thekat#1357)\n
             returns `<user>` object if True, else returns `None`
             **Note** Use context.guild.id"""
-            self.logger.info('User Parse Called...')
+            self.logger.dev('User Parse Called...')
 
             #Without a guild_ID its harder to parse members.
             if guild_id == None:
@@ -372,7 +372,7 @@ class botUtils():
                 for member in guild.members:
                     if member.display_name.lower().startswith(parameter.lower()) or (member.display_name.lower().find(parameter.lower()) != -1):
                         if cur_member != None:
-                            self.logger.error(f'Found multiple Discord Members: {parameter}, Returning None')
+                            self.logger.error(f'**ERROR** Found multiple Discord Members: {parameter}, Returning None')
                             #await context.reply('Found multiple Discord Members matching that name, please be more specific.')
                             return None
 
@@ -384,7 +384,7 @@ class botUtils():
             """This is the botUtils Server Parse function.
             **Note** Use context.guild.id \n
             Returns `AMPInstance[server] <object>`"""
-            self.logger.info('Bot Utility Server Parse')
+            self.logger.dev('Bot Utility Server Parse')
             cur_server = None
 
             #This is to handle Instance Names or Display Names with spaces, also removes quotes.
@@ -407,7 +407,7 @@ class botUtils():
 
                 if var != -1: #When its FOUND an entry
                     if cur_server != None:
-                        self.logger.error(f'Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
+                        self.logger.error(f'**ERROR** Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
                         #await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
                         return None
 
@@ -419,7 +419,7 @@ class botUtils():
         def sub_command_handler(self,command:str,sub_command):
             """This will get the `Parent` command and then add a `Sub` command to said `Parent` command."""
             parent_command = self._client.get_command(command)
-            self.logger.info(f'Loading Parent Command: {parent_command}')
+            self.logger.dev(f'Loading Parent Command: {parent_command}')
             parent_command.add_command(sub_command)
         
         def default_embedmsg(self,title,context,description=None,field=None,field_value=None):
