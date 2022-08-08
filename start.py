@@ -39,16 +39,18 @@ class Setup:
         parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
         #parser.add_argument('-setup', help='***NOT IN USE*** First time setup of AMP and DB', required= False, action="store_false")
         self.args = parser.parse_args()
-
-        import logger
-        logger.init(self.args)
         import logging 
         self.logger = logging.getLogger()
 
-        self.logger.dev(f'Current Startup Args:{self.args}')
         self.pip_install()
 
-        
+        #Custom Logger functionality.
+        import logger
+        logger.init(self.args)
+        self.logger = logging.getLogger()
+
+        self.logger.dev(f'Current Startup Args:{self.args}')
+
         self.logger.dev("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
 
         if not self.args.discord:
