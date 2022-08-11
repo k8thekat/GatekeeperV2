@@ -20,6 +20,7 @@
 
 '''
 import discord
+from discord import app_commands
 from discord.ext import commands
 import tokens
 import sys,os
@@ -70,25 +71,46 @@ async def main_bot(context:commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...')
 
-@main_bot.command(name='setup')
-@commands.has_guild_permissions(administrator=True)
-async def bot_setup(context:commands.Context,staff_role:str):
-    logger.command(f'Bot Setup')
-    uBot = utils.botUtils(client)
-    guild_role = uBot.roleparse(parameter=staff_role,context=context,guild_id=context.guild.id)
-    if guild_role == None:
-        await context.send(f'Unable to find role {staff_role}, please try again.')
-
-    if main_DB_Config.Staff_role_id == None:
-        main_DB_Config.Staff_role_id = guild_role.id
-        
-    await context.send(f'Set Staff Role to {guild_role.name}.')
+# @main_bot.command(name='setup')
+# @commands.has_guild_permissions(administrator=True)
+# async def bot_setup(context:commands.Context,):
+#     """Set the Discord Role for Bot Moderation"""
+#     logger.command(f'Bot Setup')
    
+#     await context.send(f'Setup Complete')
+
+@main_bot.command(name='moderator')
+@commands.has_guild_permissions(administrator=True)
+async def bot_moderator(context:commands.Context,role:str):
+    """Set the Discord Role for Bot Moderation"""
+    logger.command(f'Bot Moderator')
+    uBot = utils.botUtils(client)
+    guild_role = uBot.roleparse(parameter=role,context=context,guild_id=context.guild.id)
+    if guild_role == None:
+        await context.send(f'Unable to find role {role}, please try again.')
+
+    if main_DB_Config.Moderator_role_id == None:
+        main_DB_Config.Moderator_role_id = guild_role.id
+        
+    await context.send(f'Set Moderator Role to {guild_role.name}.')
+
+@main_bot.command(name='permissions')
+@app_commands.autocomplete(permission=utils.permissions_autocomplete)
+async def bot_permissions(context:commands.Context,permission:str):
+    """Set the Bot to use Default Permissions or Custom"""
+    if permission == 'custom':
+        await context.send(f'You have selected Custom Permissions, please make sure bot_perms.py is setup correctly!')
+        await context.send(f'Visit https://github.com/k8thekat/GatekeeperV2/blob/main/PERMISSIONS.md')
+
+    main_DB_Config.Permissions = permission
+    print(permission)
+    await context.send(f'Set Bot Permissions to {permission}!')
 
 @main_bot.command(name='test',description='Test Async Function...')
 @utils.role_check()
 async def bot_test(context:commands.Context):
     """Test Async Function...**DO NOT USE**"""
+    perm_node = 'bot.test'
     await context.send('Test Function Used')
 
 @main_bot.command(name='ping',description='Pong...')
@@ -102,7 +124,7 @@ async def bot_ping(context:commands.Context):
 @utils.role_check()
 async def bot_cog_loader(context:commands.Context,cog:str):
     """Use this function for loading a cog manually."""
-    perm_node = 'bot.cogload'
+    perm_node = 'bot.load'
     try:
         client.load_extension(name= cog)
     except Exception as e:
@@ -114,7 +136,7 @@ async def bot_cog_loader(context:commands.Context,cog:str):
 @utils.role_check()
 async def bot_cog_unloader(context:commands.Context,cog:str):
     """Use this function to un-load a cog manually."""
-    perm_node = 'bot.cogunload'
+    perm_node = 'bot.unload'
     try:
         client.unload_extension(name= cog)
     except Exception as e:
@@ -127,7 +149,7 @@ async def bot_cog_unloader(context:commands.Context,cog:str):
 async def bot_stop(context:commands.Context):
     """Closes the connection to Discord."""
     logger.command('Bot Stop Called...')
-    perm_node = 'bot.stop'
+    perm_node = 'bot.disconnect'
     await context.send('Disconnecting from the Server...')
     return await client.close()
 

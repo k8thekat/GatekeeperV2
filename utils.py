@@ -25,6 +25,7 @@ import json
 import requests
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button,View
 import asyncio
@@ -36,6 +37,17 @@ async def async_rolecheck(context:commands.Context):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
+    print(context.author.roles)
+    #print(dir(context))
+    print(DBConfig.GetSetting('Permission'))
+    if DBConfig.GetSetting('Permission') == 'Custom':
+        perm_node = str(context.command).replace(" ",".")
+        print(perm_node)
+        perm_node_check(perm_node,context)
+        if perm_node_check == False:
+            return False
+        else:
+            return True
 
     #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
     admin = context.author.guild_permissions.administrator
@@ -76,7 +88,71 @@ async def async_rolecheck(context:commands.Context):
 
 def role_check():
     """Use this before any Commands that require a Staff/Mod level permission Role, this will also check for Administrator"""
+    #return commands.check(async_rolecheck(permission_node=perm))
     return commands.check(async_rolecheck)
+
+
+def perm_node_check(permission_node:str,context:commands.Context):
+    """Checks a Users for a DB Role then checks for that Role inside of bot_perms.py, then checks that Role for the proper permission node."""
+    #!TODO# Finish my permissions node setup!
+    import bot_perms
+    roles = bot_perms.Roles
+    DBHandler = DB.getDBHandler()
+    main_DB = DBHandler.DB
+    DBConfig = DBHandler.DBConfig
+    #Lets get our DB user and check if they exist.
+    DB_user = main_DB.GetUser(str(context.author.id))
+    if DB_user == None:
+        return False
+    #Lets also check for their DB Role
+    user_role = DB_user.Role 
+    if user_role == None:
+        return False
+    command_perm_node = permission_node
+    user_discord_role_id = context.author.roles
+    command_super_node = command_perm_node.split(".")[0] + '.*'
+    for role in roles:
+        if user_role in role['name']:
+            print('Found Role in permissions list',user_role,role['name'])
+            if command_super_node in role['permissions']:
+                print('Found Super perm node',command_super_node)
+                command_perm_node_false_check = '-' + command_perm_node
+                if command_perm_node_false_check in role['permissions']:
+                    if command_perm_node_false_check[1:] == command_perm_node:
+                        print('This perm node has been denied even though you have global permissions.',command_perm_node_false_check,command_perm_node)
+                        return
+
+            for perm in role['permissions']:
+                if command_perm_node == perm:
+                    print('Found command perm node in Roles Permissions list.',command_perm_node,perm)
+                    return
+                else:
+                    print('No permission node found',perm)
+                    continue
+
+        if user_discord_role_id == role['discord_role_id']:
+            print('User has the discord role ID for a permissions role',user_discord_role_id,role['discord_role_id'],role['name'])
+            if command_super_node in role['permissions']:
+                print('Found Super perm node')
+            for perm in role['permissions']:
+                if command_perm_node == perm:
+                    print('Found command perm node in Roles Permissions list.',command_perm_node,perm)
+                    return
+                else:
+                    print('No permission node found',perm)
+                    continue
+
+async def permissions_autocomplete(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    types = ['Default', 'Custom']
+    return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
+
+async def bool_autocomplete(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    booleans = ['True', 'False']
+    return [app_commands.Choice(name=bool, value=bool) for bool in booleans if current.lower() in bool.lower()]
+
+async def autocomplete_template(interactio:discord.Interaction,current:str,choice_list:list) -> list[app_commands.Choice[str]]:
+    """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
+    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
 class CustomButton(Button):
     """ utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)"""
@@ -547,7 +623,7 @@ class botUtils():
                     embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
                     continue
                 
-                if key == 'Staff_role_id':
+                if key == 'Moderator_role_id':
                     key_value = self.roleparse(key_value,context,context.guild.id)
                     embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
                     continue

@@ -135,7 +135,7 @@ class DB_Module(commands.Cog):
 
     @user.command(name='add')
     @utils.role_check()
-    async def user_add(self,context:commands.Context,discord_name:str,discord_id:str=None,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=False):
+    async def user_add(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=False):
         """Adds the Discord Users information to the Database"""
         self.logger.command(f'{context.author.name} used User Add Function')
         perm_node = 'user.add'
@@ -143,18 +143,17 @@ class DB_Module(commands.Cog):
         if mc_ign != None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
 
-        if discord_id == None:
-            discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
-            if discord_user != None:
-                self.DB.AddUser(DiscordID=discord_user.id,DiscordName=discord_user.name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid,Donator=donator)
+        discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
+        if discord_user != None:
+            self.DB.AddUser(DiscordID=discord_user.id,DiscordName=discord_user.name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid,Donator=donator)
+            await context.send(f'Added {discord_user.name} to the Database!')
         else:
-            self.DB.AddUser(DiscordID=discord_id,DiscordName=discord_name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid,Donator=donator)
-        await context.send(f'Added {discord_user.name} to the Database!')
+            await context.send(f'Unable to find the {discord_name} you provided, please try again.')
             
 
     @user.command(name='update')
     @utils.role_check()
-    async def user_update(self,context:commands.Context,discord_name:str,discord_id:str=None,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=None):
+    async def user_update(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=None):
         """Updated a Discord Users information in the Database"""
         self.logger.command(f'{context.author.name} used User Update Function')
         perm_node = 'user.update'
@@ -163,7 +162,6 @@ class DB_Module(commands.Cog):
         db_user = None
         params = locals()
         db_params = {'discord_name': 'DiscordName',
-                    'discord_id': 'DiscordID',
                     'mc_ign' : 'MC_IngameName',
                     'mc_uuid' : 'MC_UUID',
                     'steamid' : 'SteamID',
@@ -173,10 +171,8 @@ class DB_Module(commands.Cog):
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
             params['mc_uuid'] = mc_uuid
 
-        if discord_id == None:
-            discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
-        else:
-            discord_user = self._client.get_user(int(discord_id))
+
+        discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
 
         if discord_user != None:
             db_user = self.DB.GetUser(discord_user.id)

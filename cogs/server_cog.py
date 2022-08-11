@@ -21,7 +21,7 @@
 '''
 import os
 import logging
-from datetime import datetime
+from datetime import datetime,timezone
 import re
 
 import discord
@@ -171,7 +171,7 @@ class Server(commands.Cog):
 
         if server != None and server.Running:
             title = f'%s generated backup',context.author.display_name
-            description = f'Created at %s by %s',datetime.datetime.now(),context.author.display_name
+            description = f'Created at %s by %s',datetime.now(tz= timezone.utc),context.author.display_name
             server.takeBackup(title=title,description=description)
             await context.send(f'{server.FriendlyName} Backup' + description)
         
@@ -366,9 +366,11 @@ class Server(commands.Cog):
     @db_server_donator.command(name='true')
     @utils.role_check()
     async def db_server_donator_true(self,context:commands.Context,server):
-        """Sets Donator Only to True for the provided Server"""
+        """Sets Donator Only to True for the provided Server 
+        
+        `perm_node = 'server.donator.true`'"""
         self.logger.command(f'{context.author.name} used Database Server Donator Only True')
-        perm_node = 'server.donator.true'
+        
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:

@@ -57,8 +57,11 @@ class DBHandler():
 		if self.DBConfig.GetSetting('Guild_ID') == None:
 			self.DBConfig.AddSetting('Guild_ID', None)
 
-		if self.DBConfig.GetSetting('Staff_Role_ID') == None:
-			self.DBConfig.AddSetting('Staff_Role_ID', None)
+		if self.DBConfig.GetSetting('Moderator_role_id') == None:
+			self.DBConfig.AddSetting('Moderator_role_id', None)
+
+		if self.DBConfig.GetSetting('Permissions') == None:
+			self.DBConfig.AddSetting('Permissions', 'Default')
 	
 	def dbWhitelistSetup(self):
 		"""This is set Default AMP Specific Whitelist Settings"""
