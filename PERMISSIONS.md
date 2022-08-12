@@ -18,7 +18,7 @@ ___
 
 ### Adding Permissions:
 - Simply place the permission node inside the Roles permissions list.
-    - **REMINDER**: You want to place the permission node inside the `opening "[" and closing "]"`, each entry needs `quotes('single' or "double")` and between each entry needs to be a `comma(,)`. *(eg `'-bot.status', '-bot.
+    - **REMINDER**: You want to place the permission node inside the `opening "[" and closing "]"`, each entry needs `quotes('single' or "double")` and between each entry needs to be a `comma(,)`. *(eg `'-bot.status', '-bot.)*
     ```python
     {'name': 'Admin',
     'discord_role_id': None,
