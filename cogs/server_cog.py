@@ -56,7 +56,7 @@ class Server(commands.Cog):
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
-        self.logger.info(f'Member Leave {self.name}: {member.name} {member}')
+        self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
 
         db_user = self.DB.GetUser(str(member.id))
         if db_user != None and db_user.InGameName != None:
@@ -72,39 +72,21 @@ class Server(commands.Cog):
             await context.send('Please try your command again...')
        
 
-    @server.command(name='list',description='Retrieves a list of a Discord Servers AMP Instances')
+    @server.command(name='list',description='Retrieves a list of all AMP Instances')
     @utils.role_check()
     async def amp_server_list(self,context:commands.Context):
-        #!TODO! Figure out a layout that is appealing and not too large.
-        embed=discord.Embed(title=f'{context.guild.name} Server List',color=0x808000)
-        embed.set_thumbnail(url=context.guild.icon)
-        for server in self.AMPInstances:
-            db_server = self.DB.GetServer(InstanceID = self.AMPInstances[server].InstanceID)
-            if db_server != None:
-                #Lets try to use our DisplayName!
-                print(db_server.DisplayName,db_server.IP,db_server.InstanceName,bool(db_server.Whitelist),bool(db_server.Donator))
-                if db_server.DisplayName != None and db_server.IP != None:
-                    self.logger.debug(f'Found a DisplayName and IP, using Display Name and IP for {db_server.InstanceName}')
-                    embed.add_field(name=f'{db_server.DisplayName}',value=f'{db_server.IP}',inline=True)
+        self.logger.command(f'{context.author.name} used Server List...')
+        perm_node = 'server.list'
 
-                else: #Fallback to Instance Name, since this is always set!
-                    self.logger.debug(f'Unable to find DisplayName, using Instance Name for {db_server.InstanceName}')
-                    embed.add_field(name=f'{db_server.InstanceName}',value='0.0.0.0',inline=True)
-
-                if bool(db_server.Donator) == True:
-                    embed.add_field(name='Donator Only', value=str(bool(db_server.Donator)),inline=True)
-                else:
-                    embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=True)
-
-                embed.add_field(name='Whitelisting', value=str(bool(db_server.Whitelist)),inline=True)
-                #embed.add_field(name='\u1CBC\u1CBC',value=f'\u1CBC\u1CBC',inline=False)
-
-        await context.send(embed = embed)
+        embed_list = self.uBot.server_list_embed(context)
+        for embed in embed_list:
+            await context.send(embed = embed)
 
     @server.command(name='start',description='Starts the AMP Instance')
     @utils.role_check()
     async def amp_server_start(self,context:commands.Context,server):
-        self.logger.info('AMP Server Started...')
+        self.logger.command(f'{context.author.name} used AMP Server Started...')
+        perm_node = 'server.start'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -118,7 +100,8 @@ class Server(commands.Cog):
     @server.command(name='stop',description='Stops the AMP Instance')
     @utils.role_check()
     async def amp_server_stop(self,context:commands.Context,server):
-        self.logger.info('AMP Server Stopped...')
+        self.logger.command(f'{context.author.name} used AMP Server Stopped...')
+        perm_node = 'server.stop'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -132,7 +115,8 @@ class Server(commands.Cog):
     @server.command(name='restart',description='Restarts the AMP Instance')
     @utils.role_check()
     async def amp_server_restart(self,context:commands.Context,server):
-        self.logger.info('AMP Server Restart...')
+        self.logger.command(f'{context.author.name} used AMP Server Restart...')
+        permn_node = 'server.restart'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -146,7 +130,8 @@ class Server(commands.Cog):
     @server.command(name='kill',description='Kills the AMP Instance')
     @utils.role_check()
     async def amp_server_kill(self,context:commands.Context,server):
-        self.logger.info('AMP Server Kill...')
+        self.logger.command(f'{context.author.name} used AMP Server Kill...')
+        perm_node = 'server.kill'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -160,8 +145,9 @@ class Server(commands.Cog):
     @server.command(name='msg',description='AMP Console Message/Commands')
     @utils.role_check()
     async def amp_server_message(self,context:commands.Context,server,message:str):
-        self.logger.info('AMP Server Message...')
-       
+        self.logger.command(f'{context.author.name} used AMP Server Message...')
+        perm_node = 'server.msg'
+
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -176,7 +162,8 @@ class Server(commands.Cog):
     @server.command(name='backup',description='AMP Console Message/Commands')
     @utils.role_check()
     async def amp_server_backup(self,context:commands.Context,server):
-        self.logger.info('AMP Server Backup...')
+        self.logger.command(f'{context.author.name} used AMP Server Backup...')
+        perm_node = 'server.backup'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -191,7 +178,8 @@ class Server(commands.Cog):
     @server.command(name='status',description='AMP Instance Status(TPS, Player Count, CPU Usage, Memory Usage and Online Players)')
     @utils.role_check()
     async def amp_server_status(self,context:commands.Context,server):
-        self.logger.info('AMP Server Status...')
+        self.logger.command(f'{context.author.name} used AMP Server Status...')
+        perm_node = 'server.status'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -220,7 +208,8 @@ class Server(commands.Cog):
     @server.command(name='users',description='AMP Instance User List(Display Names)')
     @utils.role_check()
     async def amp_server_users_list(self,context:commands.Context,server):
-        self.logger.info('AMP Server Connected Users...')
+        self.logger.command(f'{context.author.name} used AMP Server Connected Users...')
+        perm_node = 'server.users'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -244,6 +233,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def dbserver_whitelist_true(self,context:commands.Context,server):
         """Set Servers Whitelist Allowed to True"""
+        self.logger.command(f'{context.author.name} used Database Server Whitelist True...')
+        perm_node = 'server.whitelist.true'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -257,6 +248,9 @@ class Server(commands.Cog):
     @utils.role_check()
     async def dbserver_whitelist_false(self,context:commands.Context,server):
         """Set Servers Whitelist Allowed to False"""
+        self.logger.command(f'{context.author.name} used Database Server Whitelist False...')
+        perm_node = 'server.whitelist.false'
+
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -269,6 +263,7 @@ class Server(commands.Cog):
     @utils.role_check()
     async def dbserver_whitelist_test(self,context:commands.Context,server=None,user=None):
         """Server Whitelist Test function."""
+        self.logger.command(f'{context.author.name} used Database Server Whitelist Test...')
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -283,6 +278,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_whitelist_add(self,context:commands.Context,server,user):
         """Adds User to Servers Whitelist"""
+        self.logger.command(f'{context.author.name} used AMP Server Whitelist Add...')
+        perm_node = 'server.whitelist.add'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -297,6 +294,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def amp_server_whitelist_remove(self,context:commands.Context,server,user):
         """Remove a User from the Servers Whitelist"""
+        self.logger.command(f'{context.author.name} used AMP Server Whitelist Remove...')
+        perm_node = 'server.whitelist.remove'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -315,7 +314,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_displayname_set(self,context:commands.Context,server,name:str):
         """Sets the Display Name for the provided Server"""
-        self.logger.info('DB Server Display Name')
+        self.logger.command(f'{context.author.name} used Database Server Display Name')
+        perm_node = 'server.displayname'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -330,8 +330,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_description(self,context:commands.Context,server,desc:str):
         """Sets the Description for the provided Server"""
-        self.logger.info('DB Server Description')
-
+        self.logger.command(f'{context.author.name} used Database Server Description')
+        perm_node = 'server.description'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -345,7 +345,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_ip(self,context:commands.Context,server,ip:str):
         """Sets the IP for the provided Server"""
-        self.logger.info('DB Server IP')
+        self.logger.command(f'{context.author.name} used Database Server IP')
+        perm_node = 'server.ip'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -366,7 +367,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_donator_true(self,context:commands.Context,server):
         """Sets Donator Only to True for the provided Server"""
-        self.logger.info('DB Server Donator Only True')
+        self.logger.command(f'{context.author.name} used Database Server Donator Only True')
+        perm_node = 'server.donator.true'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -381,7 +383,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_donator_false(self,context:commands.Context,server):
         """Sets Donator Only to True for the provided Server"""
-        self.logger.info('DB Server Donator Only False')
+        self.logger.command(f'{context.author.name} used Database Server Donator Only False')
+        perm_node = 'server.donator.false'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -402,8 +405,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_console_on(self,context:commands.Context,server):
         """Turns the Console on for the provided Server"""
-        self.logger.info('DB Server Console On...')
-
+        self.logger.command(f'{context.author.name} used Database Server Console On...')
+        perm_node = 'server.console.on'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -422,8 +425,9 @@ class Server(commands.Cog):
     @db_server_console.command(name='off')      
     @utils.role_check()
     async def db_server_console_off(self,context:commands.Context,server):
-        """Turns the Console on for the provided Server"""
-        self.logger.info('DB Server Console On...')
+        """Turns the Console off for the provided Server"""
+        self.logger.command(f'{context.author.name} used Database Server Console Off...')
+        perm_node = 'server.console.off'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -443,22 +447,19 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_console_channel_set(self,context:commands.Context,server,channel):
         """Sets the Console Channel for the provided Server"""
-        self.logger.info('DB Server Console Channel')
+        self.logger.command(f'{context.author.name} used Database Server Console Channel')
+        perm_node = 'server.console.channel'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         channel = self.uBot.channelparse(channel,context,context.guild.id)
-        print(channel)
         if channel == None:
             return await context.send(f'Unable to find the provided channel, please try again.')
         
         if server != None and channel != None:
-            print(self.DB.GetServer(InstanceID= server.InstanceID).Discord_Console_Channel)
             self.DB.GetServer(InstanceID= server.InstanceID).Discord_Console_Channel = str(channel.id)
-            print(self.DB.GetServer(InstanceID= server.InstanceID).Discord_Console_Channel)
-
             server.attr_update() #This will update the AMPConsole Attribute
             await context.send(f'Set {server.FriendlyName} Console channel to {channel.name}')
     
@@ -466,7 +467,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_console_filter(self,context:commands.Context,server,flag:str):
         """Sets the Console Filter"""
-        self.logger.info('DB Server Console Filtered True...')
+        self.logger.command(f'{context.author.name} used Database Server Console Filtered True...')
+        perm_node = 'server.console.filter'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -481,6 +483,7 @@ class Server(commands.Cog):
                 self.DB.GetServer(InstanceID= server.InstanceID).Console_Filtered = True
                 server.attr_update() #This will update the AMPConsole Attributes
                 return await context.send(f'Filtering the Console for {server.FriendlyName}')
+
             if flag_reg.group() == 'false':
                 self.DB.GetServer(InstanceID= server.InstanceID).Console_Filtered = False
                 server.attr_update() #This will update the AMPConsole Attributes
@@ -497,7 +500,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_chat_channel_set(self,context:commands.Context,server,channel:str):
         """Sets the Chat Channel for the provided Server"""
-        self.logger.info('DB Server Chat Channel')
+        self.logger.command(f'{context.author.name} used Database Server Chat Channel')
+        perm_node = 'server.chat.channel'
 
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
@@ -516,7 +520,8 @@ class Server(commands.Cog):
     @utils.role_check()
     async def db_server_discord_role_set(self,context:commands.Context,server,role:str):
         """Sets the Discord Role for the provided Server"""
-        self.logger.info('DB Server Discord Role')
+        self.logger.command(f'{context.author.name} used Database Server Discord Role')
+        perm_node = 'server.role'
         server = self.uBot.serverparse(server,context,context.guild.id)
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
@@ -531,6 +536,5 @@ class Server(commands.Cog):
             await context.send(f'Set {server.FriendlyName} Discord Role to {role.name}')
 
         
-
 async def setup(client):
     await client.add_cog(Server(client))

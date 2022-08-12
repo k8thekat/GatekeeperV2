@@ -30,7 +30,7 @@ DisplayImageSources = ["internal:MinecraftJava"]
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
-        self.perms = [f'Minecraft.*',f'Minecraft.InGameActions.*',f'-Minecraft.PluginManagement.*']
+        self.perms = ['Minecraft.*','Minecraft.InGameActions.*','-Minecraft.PluginManagement.*']
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
         
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
@@ -38,7 +38,7 @@ class AMPMinecraft(AMP.AMPInstance):
          
     def setup_AMPpermissions(self):
         """Sets the Permissions for Minecraft Modules"""
-        self.logger.info(f'Setting up {self.FriendlyName} Minecraft Module permissions.')
+        self.logger.warning(f'Setting up {self.FriendlyName} Minecraft Module permissions...')
         for perm in self.perms:
             enabled = True
             if perm.startswith('-'):
@@ -46,7 +46,7 @@ class AMPMinecraft(AMP.AMPInstance):
                 perm = perm[1:]
             #print(self.AMP_BotRoleID)
             self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
-            self.logger.info(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
+            self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return True
 
     def name_Conversion(self,name): 
@@ -171,8 +171,6 @@ class AMPMinecraftConsole(AMP.AMPConsole):
             else:
                 return True
     
-
-
     def console_events(self, message):
         """ALWAYS RETURN FALSE!"""
         if message['Contents'].endswith('has joined the game!'):

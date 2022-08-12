@@ -26,7 +26,7 @@ class Parser():
     def __init__(self):
         import logging
         self.logger = logging.getLogger()
-        self.logger.info('Setting Up the Parser')
+        self.logger.info('Setting Up the Parser...')
 
         #We can swap these out to allow people to set them via the DB for more in-depth filtering
         #self.symbol_reg = "[,./':;&\.\-\?()]"

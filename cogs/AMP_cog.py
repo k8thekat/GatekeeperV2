@@ -67,23 +67,21 @@ class AMP_Cog(commands.Cog):
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
 
         self.update_loop.start()
-        if self.AMPHandler.args.dev:
-            self.logger.info('AMP_Cog Update Loop Running:' + str(self.update_loop.is_running()))
-
+        self.logger.dev('AMP_Cog Update Loop Running:' + str(self.update_loop.is_running()))
+        
         self.amp_server_console_messages_send.start()
-        if self.AMPHandler.args.dev:
-            self.logger.info('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
-
+        self.logger.dev('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
+       
         self.amp_server_console_chat_messages_send.start()
-        if self.AMPHandler.args.dev:
-            self.logger.info('AMP_Cog Console Chat Message Handler Running:' + str(self.amp_server_console_chat_messages_send.is_running()))
+        self.logger.dev('AMP_Cog Console Chat Message Handler Running:' + str(self.amp_server_console_chat_messages_send.is_running()))
+        
 
     @tasks.loop(seconds=5)
     async def update_loop(self):
         #This is to keep everything up to date when we change the settings in the DB
         self.attr_update()
-        if self.AMPHandler.args.dev:
-            self.logger.info('Updating AMP_Cog Attributes!')
+        self.logger.dev('Updating AMP_Cog Attributes!')
+        
 
     def attr_update(self):
         self.Auto_WL = self.DBConfig.Auto_whitelist
@@ -100,7 +98,7 @@ class AMP_Cog(commands.Cog):
         if message.content.startswith(self._client.command_prefix):
             return message
         if message.author != self._client.user:
-            self.logger.info(f'On Message Event for {self.name}')
+            self.logger.dev(f'On Message Event for {self.name}')
             if message.channel.id == int(self.WL_channel): #This is AMP Specific; for handling whitelist requests to any server.
                 await self.on_message_whitelist(message,context)
 
@@ -127,13 +125,13 @@ class AMP_Cog(commands.Cog):
                 context = await self._client.get_context(message_before)
                 await self.on_message_whitelist(message_after,context)
 
-            self.logger.info(f'Edited Message Event for {self.name}')
+            self.logger.dev(f'Edited Message Event for {self.name}')
             return message_before,message_after
 
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
-        self.logger.info(f'Member Leave {self.name}: {member.name} {member}')
+        self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
         for index in len(0,self.WL_wait_list):
             if member.name == self.WL_wait_list[index]['author']:
                 self.WL_wait_list.pop(index)
@@ -143,13 +141,13 @@ class AMP_Cog(commands.Cog):
     @commands.Cog.listener('on_reaction_add')
     async def on_reaction_add(self,reaction:discord.Reaction,user:discord.User):
         """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
-        self.logger.info(f'Reaction Add {self.name}: {user} Reaction: {reaction}')
+        self.logger.dev(f'Reaction Add {self.name}: {user} Reaction: {reaction}')
         return reaction,user
 
     @commands.Cog.listener('on_reaction_remove')
     async def on_reaction_remove(self,reaction:discord.Reaction,user:discord.User):
         """Called when a message has a reaction removed from it. Similar to on_message_edit, if the message is not found in the internal message cache, then this event will not be called."""
-        self.logger.info(f'Reaction Remove {self.name}: {user} Reaction: {reaction}')
+        self.logger.dev(f'Reaction Remove {self.name}: {user} Reaction: {reaction}')
         return reaction,user
 
     def webhook_verify(self,message:discord.Message):
@@ -183,25 +181,25 @@ class AMP_Cog(commands.Cog):
 
                 #This setup is for getting/used old webhooks and allowing custom avatar names per message.
                 self.webhook_list = await channel.webhooks()
-                self.logger.debug(f'webhooks {self.webhook_list}')
+                self.logger.debug(f'*AMP Console Message* webhooks {self.webhook_list}')
                 console_webhook = None
                 for webhook in self.webhook_list:
                     if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Console":
-                        self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
+                        self.logger.debug(f'*AMP Console Message* found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
                         console_webhook = webhook
                         break
 
                 if console_webhook == None:
-                    self.logger.debug(f'creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
+                    self.logger.dev(f'*AMP Console Message* creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
                     console_webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Console')
                     
                 if len(console_messages) != 0:
                     for message in console_messages:
                             if self.AMPServer.DisplayName != None: #Lets check for a Display name and use that instead.
-                                self.logger.debug('sending a message with displayname')
+                                self.logger.dev('*AMP Console Message* sending a message with displayname')
                                 await console_webhook.send(message, username= self.AMPInstances[amp_server].DisplayName,avatar_url=self._client.user.avatar)
                             else:
-                                self.logger.debug('sending a message with friendlyname')
+                                self.logger.dev('*AMP Console Message* sending a message with friendlyname')
                                 await console_webhook.send(message, username= self.AMPInstances[amp_server].FriendlyName,avatar_url=self._client.user.avatar)
 
                     self.AMP_Server_Console.console_messages = []
@@ -228,16 +226,16 @@ class AMP_Cog(commands.Cog):
 
                 #This setup is for getting/used old webhooks and allowing custom avatar names per message.
                 self.webhook_list = await channel.webhooks()
-                self.logger.debug(f'webhooks {self.webhook_list}')
-                console_webhook = None
+                self.logger.debug(f'*AMP Chat Message* webhooks {self.webhook_list}')
+                chat_webhook = None
                 for webhook in self.webhook_list:
                     if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Chat":
-                        self.logger.debug(f'found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
+                        self.logger.debug(f'*AMP Chat Message* found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
                         chat_webhook = webhook
                         break
 
-                if console_webhook == None:
-                    self.logger.debug(f'creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
+                if chat_webhook == None:
+                    self.logger.dev(f'*AMP Chat Message* creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
                     chat_webhook = await channel.create_webhook(name= f'{self.AMPInstances[amp_server].FriendlyName} Chat')
                     
 
@@ -249,23 +247,21 @@ class AMP_Cog(commands.Cog):
                         if author_db != None:
                             #This is a default method in each Server, returns False for no customization
                             if self.AMPServer.discord_message(author_db):
-                                self.logger.info('sending a message with Instance specific configuration')
+                                self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration')
                                 name,avatar = self.AMPServer.discord_message(author_db)   
                                 await chat_webhook.send(message['Contents'], username = name, avatar_url= avatar)
                                 continue
                             else:    
                                 author = self._client.get_user(int(author_db.DiscordID)) 
 
-
                         #This will use discord Information for there Display name and Avatar if possible.
                         if author != None:
-                            if self.AMPHandler.args.dev:
-                                self.logger.info('sending a message with discord information')
+                            self.logger.dev('*AMP Chat Message* sending a message with discord information')
                             await chat_webhook.send(message['Contents'], username= author.name, avatar_url=author.avatar)
                             continue
                         else:
-                            if self.AMPHandler.args.dev:
-                                self.logger.info('sending a message with default information')
+                            self.logger.dev('*AMP Chat Message* sending a message with default information')
+                            
                             await chat_webhook.send(message['Contents'], username= message['Source'])
                             continue
                             
@@ -275,7 +271,7 @@ class AMP_Cog(commands.Cog):
     async def on_message_whitelist(self,message:discord.Message,context:commands.context):
         """This handles on_message whitelist requests."""
         user_ign,user_servers = self.Parser.ParseIGNServer(message.content)
-        print('ign:',user_ign,'servers:',user_servers)
+        self.logger.command(f'Whitelist Request: ign: {user_ign} servers: {user_servers}')
         amp_servers = []
 
         if user_ign == None or len(user_servers) == 0:
@@ -310,7 +306,7 @@ class AMP_Cog(commands.Cog):
 
         db_user = self.DB.GetUser(message.author.name)
         if db_user == None:
-            print('Steam id Parser:', self.Parser.isSteam)
+            self.logger.dev(f'Steam id Parser: {self.Parser.isSteam}')
             if self.Parser.isSteam:
                 db_user = self.DB.AddUser(DiscordID= message.author.id, DiscordName= message.author.name, MC_IngameName= user_ign, SteamID= user_UUID)
             else:
@@ -349,7 +345,7 @@ class AMP_Cog(commands.Cog):
             if self.WL_Pending_Emoji != None:
                 await self.dBot.messageAddReaction(message,self.WL_Pending_Emoji)
                 
-            self.logger.info(f'Added {message.author} to Whitelist Wait List.')
+            self.logger.command(f'Added {message.author} to Whitelist Wait List.')
             emoji = self._client.get_emoji(self.WL_Pending_Emoji)
             if emoji != None:
                 await message.add_reaction(emoji) #This should point to bot_config Emoji
@@ -362,13 +358,13 @@ class AMP_Cog(commands.Cog):
         if amp_server.Running and db_server.Whitelist == True:
             amp_server.addWhitelist(db_user.MC_IngameName)
             await message.reply(embed = self.uBot.server_whitelist_embed(message,amp_server))
-            self.logger.info(f'Whitelisting {message.author.name} on {amp_server.FriendlyName}')
+            self.logger.command(f'Whitelisting {message.author.name} on {amp_server.FriendlyName}')
             return
 
     @tasks.loop(seconds = 60)
     async def whitelist_waitlist_handler(self):
         """This is the Whitelist Wait list handler, every 60 seconds it will check the list and whitelist them after the alotted wait time."""
-        self.logger.info(f'Checking the Whitelist Wait List.')
+        self.logger.command(f'Checking the Whitelist Wait List...')
         if len(self.WL_wait_list) == 0:
             self.whitelist_waitlist_handler.stop()
 
@@ -385,7 +381,7 @@ class AMP_Cog(commands.Cog):
             if cur_message['msg'].created_at + wait_time <= cur_time: 
                 cur_message['ampserver'].addWhitelist(cur_message['dbuser'].MC_IngameName)
                 await cur_message['msg'].reply(embed = self.uBot.server_whitelist_embed(cur_message['context'],cur_message['ampserver']))
-                self.logger.info(f'Whitelisting {cur_message["author"]} on {cur_message["ampserver"].FriendlyName}')
+                self.logger.command(f'Whitelisting {cur_message["author"]} on {cur_message["ampserver"].FriendlyName}')
 
     
 async def setup(client:commands.Bot):

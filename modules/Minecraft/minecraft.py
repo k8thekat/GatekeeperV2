@@ -53,13 +53,13 @@ class Minecraft(commands.Cog):
     @commands.Cog.listener('on_user_update')
     async def on_user_update(self,user_before,user_after:discord.User):
         """Called when a User updates any part of their Discord Profile; this provides access to the `user_before` and `user_after` <discord.Member> objects."""
-        self.logger.info(f'User Update {self.name}: {user_before} into {user_after}')
+        self.logger.dev(f'User Update {self.name}: {user_before} into {user_after}')
         return user_before,user_after
 
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
-        self.logger.info(f'Member Leave {self.name}: {member.name} {member}')
+        self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
 
         db_user = self.DB.GetUser(str(member.id))
         if db_user != None and db_user.InGameName != None:

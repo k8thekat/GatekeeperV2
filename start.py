@@ -24,28 +24,37 @@ import subprocess
 import re
 import argparse
 
-from numpy import require
-
 class Setup:
     def __init__(self):
         #Use action="store_true", then check the arg via "args.name" eg. "args.dev"
         parser = argparse.ArgumentParser(description='AMP Discord Bot')
         parser.add_argument('-token', help='Bypasse tokens validation check.',required= False, action="store_true")
-        parser.add_argument('-dev', help='Enable development print statments.',required= False, action="store_true")
-        parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
-        parser.add_argument('-discord', help='Disables Discord Intigration (Used for Testing)',required= False, action="store_false")
-        parser.add_argument('guildID', help='Set to your Discord Server ID for local Sync', default=None) #Defaults to Kat's Paradise Guild ID
         parser.add_argument('-super', help='This leaves AMP Super Admin role intact, use at your own risk.', required= False, action="store_true")
+        #parser.add_argument('guildID', help='Set to your Discord Server ID for local Sync', nargs='?', default=None)
+
+        # All the args below are used for development purpose.
+        parser.add_argument('-dev', help='Enable development print statments.',required= False, action="store_true")
+        parser.add_argument('-command', help='Enable command usage print statements.', required= False, action="store_true")
+        parser.add_argument('-discord', help='Disables Discord Intigration (used for testing)',required= False, action="store_false")
+        parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
         #parser.add_argument('-setup', help='***NOT IN USE*** First time setup of AMP and DB', required= False, action="store_false")
         self.args = parser.parse_args()
-
-        import logger
-        logger.init(self.args)
         import logging 
         self.logger = logging.getLogger()
 
-        self.logger.info(f'Current Startup Args:{self.args}')
         self.pip_install()
+
+        #Custom Logger functionality.
+        import logger
+        logger.init(self.args)
+        self.logger = logging.getLogger()
+
+        self.logger.dev(f'Current Startup Args:{self.args}')
+
+        self.logger.dev("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
+
+        if not self.args.discord:
+            self.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
 
 
         #This sets up our SQLite Database!
@@ -78,13 +87,9 @@ class Setup:
 
 
 Start = Setup()
-if Start.args.dev:
-    Start.logger.critical("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
 
-if not Start.args.discord:
-    Start.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
-
+#This has to be called outside of the init; its blocking and will cause issues inside of the Setup.init()
 if Start.args.discord:
     import discordBot 
-    discordBot.client_run(args= Start.args)
+    discordBot.client_run()
     
