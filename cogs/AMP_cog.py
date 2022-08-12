@@ -101,8 +101,9 @@ class AMP_Cog(commands.Cog):
             return message
         if message.author != self._client.user:
             self.logger.dev(f'On Message Event for {self.name}')
-            if message.channel.id == int(self.WL_channel): #This is AMP Specific; for handling whitelist requests to any server.
-                await self.on_message_whitelist(message,context)
+            if self.WL_channel != None:
+                if message.channel.id == int(self.WL_channel): #This is AMP Specific; for handling whitelist requests to any server.
+                    await self.on_message_whitelist(message,context)
 
             if not self.webhook_verify(message):
 
