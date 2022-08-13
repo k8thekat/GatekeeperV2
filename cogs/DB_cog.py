@@ -184,7 +184,7 @@ class DB_Module(commands.Cog):
 
                 await context.send(f'We Updated the user {db_user.DiscordName}')
             else:
-                await context.send(f'Looks like this user is not in the Database, please use `/user add`')
+                await context.send('Looks like this user is not in the Database, please use `/user add`')
         else:
             await context.send(f'Hey I was unable to find the User: {discord_name}')
 
@@ -237,7 +237,7 @@ class DB_Module(commands.Cog):
             self.DBConfig.Whitelist_wait_time = time
             await context.send(f'Whitelist wait time has been set to {time} minutes.')
         else:
-            await context.send(f'Please use only numbers when setting the wait time. All values are in minutes!')
+            await context.send('Please use only numbers when setting the wait time. All values are in minutes!')
 
     @db_bot_whitelist.command(name='auto')
     @utils.role_check()
@@ -248,13 +248,13 @@ class DB_Module(commands.Cog):
 
         flag_reg = re.search("(true|false)", flag.lower())
         if flag_reg is None:
-            return await context.send(f'Please use `true` or `false` for your flag.')
+            return await context.send('Please use `true` or `false` for your flag.')
         if flag_reg.group() == 'true':
             self.DBConfig.Auto_whitelist = True
-            return await context.send(f'Enabling Auto-Whitelist.')
+            return await context.send('Enabling Auto-Whitelist.')
         if flag_reg.group() == 'false':
             self.DBConfig.Auto_whitelist = False
-            return await context.send(f'Disabling Auto-Whitelist')
+            return await context.send('Disabling Auto-Whitelist')
 
     @db_bot_whitelist.command(name='pending_emoji')
     @utils.role_check()
@@ -264,7 +264,7 @@ class DB_Module(commands.Cog):
         perm_node = 'bot.whitelist.pendingemoji'
 
         flag = 'pending Whitelist requests!'
-        await context.send(f'Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!')
+        await context.send('Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!')
         channel = self._client.get_channel(context.channel.id)
         messages = [message async for message in channel.history(limit=5)]
         for message in messages:
@@ -281,7 +281,7 @@ class DB_Module(commands.Cog):
         perm_node = 'bot.whitelist.doneemoji'
 
         flag = 'completed Whitelist requests!'
-        await context.send(f'Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!')
+        await context.send('Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!')
         channel = self._client.get_channel(context.channel.id)
         messages = [message async for message in channel.history(limit=5)]
         for message in messages:

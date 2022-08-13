@@ -77,7 +77,7 @@ async def main_bot(context: commands.Context):
 @main_bot.command(name='setup')
 @commands.has_guild_permissions(administrator=True)
 async def bot_setup(context: commands.Context, staff_role: str):
-    logger.command(f'Bot Setup')
+    logger.command('Bot Setup')
     uBot = utils.botUtils(client)
     guild_role = uBot.roleparse(parameter=staff_role, context=context, guild_id=context.guild.id)
     if guild_role is None:
@@ -149,7 +149,7 @@ async def bot_restart(context: commands.Context):
     perm_node = 'bot.restart'
     import os
     import sys
-    await context.send(f'**Currently Restarting the Bot, please wait...**')
+    await context.send('**Currently Restarting the Bot, please wait...**')
     sys.stdout.flush()
     os.execv(sys.executable, ['python3'] + sys.argv)
 

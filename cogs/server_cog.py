@@ -87,7 +87,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             server.StartInstance()
@@ -102,7 +102,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and server.Running:
             server.StopInstance()
@@ -117,7 +117,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and server.Running:
             server.RestartInstance()
@@ -132,7 +132,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and server.Running:
             server.KillInstance()
@@ -147,7 +147,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and server.Running:
             console_reply = server.ConsoleMessage(message)
@@ -164,11 +164,11 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and server.Running:
-            title = f'%s generated backup', context.author.display_name
-            description = f'Created at %s by %s', datetime.datetime.now(), context.author.display_name
+            title = f'{context.author.display_name} generated backup',
+            description = f'Created at {datetime.datetime.now()} by {context.author.display_name}'
             server.takeBackup(title=title, description=description)
             await context.send(f'{server.FriendlyName} Backup' + description)
 
@@ -180,7 +180,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
         if server is not None and server.Running == False:
             view = utils.StatusView()
             utils.StartButton(server, view, server.StartInstance)
@@ -209,7 +209,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and server.Running:
             cur_users = server.getUserList()
@@ -233,7 +233,7 @@ class Server(commands.Cog):
         perm_node = 'server.whitelist.true'
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Whitelist = True
@@ -249,7 +249,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Whitelist = False
             server.attr_update()  # This will update the AMPInstance Attributes
@@ -262,7 +262,7 @@ class Server(commands.Cog):
         self.logger.command(f'{context.author.name} used Database Server Whitelist Test...')
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             user = server.name_Conversion(context, user)
@@ -278,7 +278,7 @@ class Server(commands.Cog):
         perm_node = 'server.whitelist.add'
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             user = server.name_Conversion(context, user)
@@ -315,7 +315,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).DisplayName = name
@@ -330,7 +330,7 @@ class Server(commands.Cog):
         perm_node = 'server.description'
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Description = desc
@@ -346,7 +346,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).IP = ip
@@ -368,7 +368,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Donator = True
@@ -384,7 +384,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Donator = False
@@ -405,7 +405,7 @@ class Server(commands.Cog):
         perm_node = 'server.console.on'
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Console_Flag = True
@@ -426,7 +426,7 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Console_Flag = False
@@ -447,11 +447,11 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         channel = self.uBot.channelparse(channel, context, context.guild.id)
         if channel is None:
-            return await context.send(f'Unable to find the provided channel, please try again.')
+            return await context.send('Unable to find the provided channel, please try again.')
 
         if server is not None and channel is not None:
             self.DB.GetServer(InstanceID=server.InstanceID).Discord_Console_Channel = str(channel.id)
@@ -467,12 +467,12 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and flag is not None:
             flag_reg = re.search("(true|false)", flag.lower())
             if flag_reg is None:
-                return await context.send(f'Please use `true` or `false` for your flag.')
+                return await context.send('Please use `true` or `false` for your flag.')
 
             if flag_reg.group() == 'true':
                 self.DB.GetServer(InstanceID=server.InstanceID).Console_Filtered = True
@@ -499,11 +499,11 @@ class Server(commands.Cog):
 
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         channel = self.uBot.channelparse(channel, context, context.guild.id)
         if channel is None:
-            return await context.send(f'Unable to find the provided channel, please try again.')
+            return await context.send('Unable to find the provided channel, please try again.')
 
         if server is not None and channel is not None:
             self.DB.GetServer(server.InstanceID).Discord_Chat_Channel = channel.id
@@ -518,11 +518,11 @@ class Server(commands.Cog):
         perm_node = 'server.role'
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+            return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         role = self.uBot.roleparse(role, context, context.guild.id)
         if role is None:
-            return await context.send(f'Unable to find the provided role, please try again.')
+            return await context.send('Unable to find the provided role, please try again.')
 
         if server is not None and role is not None:
             self.DB.GetServer(server.InstanceID).Discord_Role = role.id

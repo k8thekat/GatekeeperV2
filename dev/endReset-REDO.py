@@ -35,9 +35,9 @@ def init(AMPservers, curserver):
     global FILENAME, OSPLAT
     OSPLAT = platform.system()
     if OSPLAT.lower() == 'windows':
-        FILENAME = f'world\level.dat'
+        FILENAME = 'world\level.dat'
     if OSPLAT.lower() == 'linux':  # Flip the slash to accomadate Linux users <3
-        FILENAME = f'world/level.dat'
+        FILENAME = 'world/level.dat'
     leveldat = AMPservers[curserver].getFileChunk(FILENAME, 0, 33554432)
     newlevel = dragonReset(base64.b64decode(leveldat['result']['Base64Data']))
     newdata = base64.b64encode(newlevel).decode('utf-8')
@@ -76,9 +76,9 @@ def worldremove(AMPservers, curserver):
         # print(worlddir)
     else:
         if OSPLAT.lower() == 'windows':
-            trashdir = f'world\DIM1'
+            trashdir = 'world\DIM1'
         if OSPLAT.lower() == 'linux':  # Flip the slash to accomadate Linux users <3
-            trashdir = f'world/DIM1'
+            trashdir = 'world/DIM1'
         worlddir = AMPservers[curserver].TrashDirectory(trashdir)
         # print(worlddir)
     return

@@ -326,15 +326,15 @@ class Database:
 
         # we need to look for a server where the friendly name or nickname matches the provided name
         if InstanceID:
-            (row, cur) = self._fetchone(f"select ID from Servers where InstanceID=?", (InstanceID,))
+            (row, cur) = self._fetchone("select ID from Servers where InstanceID=?", (InstanceID,))
         else:
-            (row, cur) = self._fetchone(f"select ID from Servers where InstanceName=? or DisplayName=?", (Name, Name))
+            (row, cur) = self._fetchone("select ID from Servers where InstanceName=? or DisplayName=?", (Name, Name))
 
         # if no rows then try nicknames
         if not row:
             if Name:
                 cur.close()
-                (row, cur) = self._fetchone(f"select ServerID as ID from ServerNicknames where Nickname=?", (Name,))
+                (row, cur) = self._fetchone("select ServerID as ID from ServerNicknames where Nickname=?", (Name,))
 
             if not row:
                 cur.close()
@@ -361,7 +361,7 @@ class Database:
 
     def GetUser(self, value: str):
         # find the user
-        (row, cur) = self._fetchone(f"select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?", (value, value, value, value, value))
+        (row, cur) = self._fetchone("select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?", (value, value, value, value, value))
         if not row:
             cur.close()
             return None

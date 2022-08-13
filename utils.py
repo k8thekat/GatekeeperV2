@@ -45,8 +45,8 @@ async def async_rolecheck(context: commands.Context):
         return True
 
     if DBConfig.Staff is None:
-        await context.send(f'Please have an Adminstrator run `/bot setup (admin role)`.')
-        logger.error(f'DBConfig Staff role has not been set yet!')
+        await context.send('Please have an Adminstrator run `/bot setup (admin role)`.')
+        logger.error('DBConfig Staff role has not been set yet!')
         return False
 
     staff_role, author_top_role = 0, 0
@@ -151,7 +151,7 @@ class discordBot():
     def __init__(self, client: discord.Client):
         self.botLogger = logging.getLogger(__name__)
         self._client = client
-        self.botLogger.debug(f'Utils Discord Loaded')
+        self.botLogger.debug('Utils Discord Loaded')
 
     async def userAddRole(self, user: discord.user, role: discord.role, reason: str = None):
         """Adds a Role to a User.\n
@@ -448,7 +448,7 @@ class botUtils():
             embed.add_field(name='\u1CBC\u1CBC', value=f'========={server.DisplayName}=========', inline=False)
 
             if db_server.IP is not None:
-                embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
+                embed.add_field(name='Server IP: ', value=db_server.IP, inline=False)
 
             embed.add_field(name='Nicknames:', value=db_server.Nicknames, inline=False)
             embed.add_field(name='Donator Only:', value=str(bool(db_server.Donator)), inline=True)
@@ -480,7 +480,7 @@ class botUtils():
 
                     embed.add_field(name=f'**========={server_name}=========**', value=f'**Nicknames**: {nicknames}', inline=False)
                     embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
-                    embed.add_field(name=f'__Online Users__', value=f'{Users[0]}/{Users[1]}', inline=False)
+                    embed.add_field(name='__Online Users__', value=f'{Users[0]}/{Users[1]}', inline=False)
                     embed.add_field(name='**Status**: Online', value=f'**Donator Only**: {str(bool(db_server.Donator))}  //  **Whitelist Open**: {str(bool(db_server.Whitelist))}', inline=False)
                 embed_fieldindex += 5
 
@@ -508,7 +508,7 @@ class botUtils():
 
         embed.set_thumbnail(url=context.guild.icon)
         if db_server.IP is not None:
-            embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
+            embed.add_field(name='Server IP: ', value=db_server.IP, inline=False)
 
         if len(db_server.Nicknames) != 0:
             embed.add_field(name='Nicknames:', value=db_server.Nicknames, inline=False)
@@ -543,7 +543,7 @@ class botUtils():
 
     def bot_settings_embed(self, context: commands.Context, settings: list) -> discord.Embed:
         """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
-        embed = discord.Embed(title=f'**Bot Settings**', color=0x00ff00)
+        embed = discord.Embed(title='**Bot Settings**', color=0x00ff00)
         embed.set_thumbnail(url=context.guild.icon)
         embed.add_field(name='\u1CBC\u1CBC', value='\u1CBC\u1CBC', inline=False)
         for value in settings:
