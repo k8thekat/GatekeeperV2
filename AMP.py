@@ -207,10 +207,10 @@ class AMPInstance:
 
         self.url = self.AMPHandler.tokens.AMPurl + '/API/'  # base url for AMP console /API/
 
-        if hasattr(self, "perms") == False:
+        if not hasattr(self, "perms"):
             self.perms = ['Core.*', 'Core.RoleManagement.*', 'Core.UserManagement.*', 'Instances.*', 'ADS.*',
                           'Settings.*', 'ADS.InstanceManagement.*', 'FileManager.*', 'LocalFileBackup.*', 'Core.AppManagement.*']
-        if hasattr(self, 'APIModule') == False:
+        if not hasattr(self, 'APIModule'):
             self.APIModule = 'AMP'
 
         self.super_AdminID = None
@@ -332,11 +332,11 @@ class AMPInstance:
             # Skip the perm check on ones we "shouldn't have!"
             if perm.startswith('-'):
                 continue
-            check = self.CurrentSessionHasPermission(perm)
+            has_permission = self.CurrentSessionHasPermission(perm)
 
-            self.logger.dev(f'Permission check on __{perm}__ is: {check}')
+            self.logger.dev(f'Permission check on __{perm}__ is: {has_permission}')
 
-            if check != True:
+            if not has_permission:
                 if self.APIModule == 'AMP':
                     self.logger.warning(f'The Bot is missing the permission {perm} Please check under Configuration -> User Management for the Bot.')
                 else:
@@ -440,7 +440,7 @@ class AMPInstance:
                 time.sleep(5)
 
             except Exception:
-                if self.AMPHandler.SuccessfulConnection == False:
+                if not self.AMPHandler.SuccessfulConnection:
                     self.logger.critical('Unable to connect to URL; please check Tokens.py -> AMPURL')
                     sys.exit(-1)
                 self.logger.warning('AMP API was unable to connect; sleeping for 30 seconds...')
@@ -462,14 +462,14 @@ class AMPInstance:
         # Permission errors will trigger this, unsure what else.
         if "result" in post_req_json:
 
-            if type(post_req_json['result']) == bool and post_req_json['result'] == True:
+            if type(post_req_json['result']) == bool and post_req_json['result']:
                 return post_req_json
 
-            if type(post_req_json['result']) == bool and post_req_json['result'] != True:
+            if type(post_req_json['result']) == bool and not post_req_json['result']:
                 self.logger.error(f'The API Call {APICall} failed because of {post_req_json}')
                 return post_req_json
 
-            if type(post_req_json['result']) == bool and "Status" in post_req_json['result'] and (post_req_json['result']['Status'] == False):
+            if type(post_req_json['result']) == bool and "Status" in post_req_json['result'] and not post_req_json['result']['Status']:
                 self.logger.error(f'The API Call {APICall} failed because of {post_req_json}')
                 return False
 
@@ -579,15 +579,13 @@ class AMPInstance:
         result = self.CallAPI('Core/GetStatus', parameters)
 
         # This happens because CallAPI returns False when it fails permissions.
-        if result == False:
+        if not result:
             return False
 
         # This works if I had permission and the server is online, but not actually running. So we check TPS to make sure the server is actually 'live'
-        if running_check and result != False:
+        if running_check and result:
             status = str(result['State'])
-            if status == '0':
-                return False
-            return True
+            return status != '0'
 
         # If we want to check ONLY online users!
         if users_only:
@@ -623,7 +621,7 @@ class AMPInstance:
         `This requires the instance to be Offline!`"""
         self.Login()
         parameters = {
-            'InstanceId':  self.InstanceID,
+            'InstanceId': self.InstanceID,
             'FriendlyName': name,
             'Description': description,
             'StartOnBoot': self.DaemonAutostart,
@@ -632,7 +630,8 @@ class AMPInstance:
             'RunInContainer': self.IsContainerInstance,
             'ContainerMemory': self.ContainerMemoryMB,
             'MemoryPolicy': self.ContainerMemoryPolicy,
-            'ContainerMaxCPU': self.ContainerCPUs}
+            'ContainerMaxCPU': self.ContainerCPUs
+        }
         response = f'{self.FriendlyName} is about to be changed to {name}; this will restart the instance.'
         self.CallAPI('ADSModule/UpdateInstanceInfo', parameters)
         return response
@@ -771,7 +770,7 @@ class AMPInstance:
         }
         result = self.CallAPI('Core/CurrentSessionHasPermission', parameters)
 
-        if result != False:
+        if result:
             return result['result']
 
         return result

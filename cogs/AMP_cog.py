@@ -311,14 +311,13 @@ class AMP_Cog(commands.Cog):
             self.logger.error('Hey a Whitelist request came in, but Auto-Whitelisting is currently disabled!')
             return
 
-        user_check = amp_server.check_Whitelist(user_UUID)
-        if user_check == True:
+        if amp_server.check_Whitelist(user_UUID):
             await message.reply(f'You are already Whitelisted on {amp_server.FriendlyName}. If this is an error contact Staff, otherwise have fun! <3')
             self.logger.error(f'Discord User: {message.author.name} is already Whitelisted on {amp_server.FriendlyName}')
             return
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
-        if db_server.Whitelist == False:
+        if not db_server.Whitelist:
             if db_server.DisplayName is not None:
                 server_name = db_server.DisplayName
             else:
@@ -327,7 +326,7 @@ class AMP_Cog(commands.Cog):
             await message.reply(f'Ooops, it appears that the server {server_name} has their Whitelisting Closed. If this is an error please contact a Staff Member.')
             return
 
-        if db_server.Donator == True and db_user.Donator != True:
+        if db_server.Donator and not db_user.Donator:
             await message.reply('*Waves* Hey this server is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')
             return
 
@@ -348,7 +347,7 @@ class AMP_Cog(commands.Cog):
                 self.whitelist_waitlist_handler.start()
             return
 
-        if amp_server.Running and db_server.Whitelist == True:
+        if amp_server.Running and db_server.Whitelist:
             amp_server.addWhitelist(db_user.MC_IngameName)
             await message.reply(embed=self.uBot.server_whitelist_embed(message, amp_server))
             self.logger.command(f'Whitelisting {message.author.name} on {amp_server.FriendlyName}')

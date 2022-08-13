@@ -492,7 +492,7 @@ class Server(commands.Cog):
             self.DB.GetServer(InstanceID=server.InstanceID).Console_Flag = True
             server.attr_update()  # This will update the AMPConsole Attributes
 
-            if self.AMPThreads[server.InstanceID].console_thread_running != True:
+            if not self.AMPThreads[server.InstanceID].console_thread_running:
                 self.AMPThreads[server.InstanceID].console_thread.start()
                 await context.send(f"Starting {server.FriendlyName} Console Thread.")
 
@@ -513,7 +513,7 @@ class Server(commands.Cog):
             self.DB.GetServer(InstanceID=server.InstanceID).Console_Flag = False
             server.attr_update()  # This will update the AMPConsole Attributes
 
-            if self.AMPThreads[server.InstanceID].console_thread_running == True:
+            if self.AMPThreads[server.InstanceID].console_thread_running:
                 self.AMPThreads[server.InstanceID].console_thread_running = False
                 await context.send(f"Stopping {server.FriendlyName} Console Thread.")
 
