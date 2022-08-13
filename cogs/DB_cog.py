@@ -199,9 +199,11 @@ class DB_Module(commands.Cog):
 
     @user.command(name='test')
     @utils.role_check()
-    async def user_test(self,context:commands.Context,user:str=None):
+    async def user_test(self,context:commands.Context,user:str):
         """DB User Test Function"""
         cur_user = self.uBot.userparse(context = context,guild_id=context.guild.id,parameter = user)
+        DB_user = self.DB.GetUser(cur_user.id)
+        print('DB User Role', DB_user.Role)
         self.logger.command(f'{context.author.name} used User Test Function')
         await context.send(cur_user)
 
