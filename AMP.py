@@ -34,7 +34,6 @@ from datetime import datetime, timezone
 import logging
 import threading
 import importlib.util
-import traceback
 import os
 import discord
 import re

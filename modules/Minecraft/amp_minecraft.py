@@ -22,7 +22,6 @@ import AMP
 import requests
 import json
 import discord
-import os
 
 
 DisplayImageSources = ["internal:MinecraftJava"]
