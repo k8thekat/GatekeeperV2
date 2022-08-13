@@ -16,21 +16,23 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA. 
+   02110-1301, USA.
 
 '''
 import AMP as AMP
 
 DisplayImageSources = ['steam:730']
+
+
 class AMPCsgo(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
+    def __init__(self, instanceID=0, serverdata={}, Index=0, Handler=None):
         self.perms = []
         self.APIModule = 'Counterstrike_GO'
-        
-        super().__init__(instanceID,serverdata,Index,Handler=Handler)
-        self.Console = AMPCsgoConsole(AMPInstance = self)
+
+        super().__init__(instanceID, serverdata, Index, Handler=Handler)
+        self.Console = AMPCsgoConsole(AMPInstance=self)
 
 
 class AMPCsgoConsole(AMP.AMPConsole):
-    def __init__(self, AMPInstance = AMPCsgo):
+    def __init__(self, AMPInstance=AMPCsgo):
         super().__init__(AMPInstance)

@@ -16,7 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA. 
+   02110-1301, USA.
 '''
 # Gatekeeper - The Level.dat End Reset Script
 import nbtlib
@@ -30,19 +30,21 @@ import logging
 FILENAME = ''
 OSPLAT = ''
 
-def init(AMPservers,curserver):
+
+def init(AMPservers, curserver):
     global FILENAME, OSPLAT
     OSPLAT = platform.system()
     if OSPLAT.lower() == 'windows':
         FILENAME = f'world\level.dat'
-    if OSPLAT.lower() == 'linux': #Flip the slash to accomadate Linux users <3
+    if OSPLAT.lower() == 'linux':  # Flip the slash to accomadate Linux users <3
         FILENAME = f'world/level.dat'
-    leveldat = AMPservers[curserver].getFileChunk(FILENAME,0,33554432)
+    leveldat = AMPservers[curserver].getFileChunk(FILENAME, 0, 33554432)
     newlevel = dragonReset(base64.b64decode(leveldat['result']['Base64Data']))
     newdata = base64.b64encode(newlevel).decode('utf-8')
-    AMPservers[curserver].writeFileChunk(FILENAME,0,newdata)
-    worldremove(AMPservers,curserver)
+    AMPservers[curserver].writeFileChunk(FILENAME, 0, newdata)
+    worldremove(AMPservers, curserver)
     return True
+
 
 def dragonReset(leveldat):
     logging.info('Attempting to reset the Dragon Fight in level.dat...')
@@ -50,7 +52,7 @@ def dragonReset(leveldat):
     fakefile.write(leveldat)
     fakefile.seek(0)
     if leveldat[0:2] == b"\x1f\x8b":
-       fakefile = gzip.GzipFile(fileobj=fakefile)
+        fakefile = gzip.GzipFile(fileobj=fakefile)
     nbtdata = nbtlib.File.from_fileobj(fakefile, "big")
     dragon_path = nbtdata['']['Data']['DragonFight']
     del_list = []
@@ -65,17 +67,18 @@ def dragonReset(leveldat):
     newdata = fakefile.read()
     return newdata
 
-def worldremove(AMPservers,curserver):
+
+def worldremove(AMPservers, curserver):
     logging.info('Removing the End World file...')
     global OSPLAT
     if bot_config.Multiverse_Core:
         worlddir = AMPservers[curserver].TrashDirectory('world_the_end')
-        #print(worlddir)
+        # print(worlddir)
     else:
         if OSPLAT.lower() == 'windows':
             trashdir = f'world\DIM1'
-        if OSPLAT.lower() == 'linux': #Flip the slash to accomadate Linux users <3
+        if OSPLAT.lower() == 'linux':  # Flip the slash to accomadate Linux users <3
             trashdir = f'world/DIM1'
         worlddir = AMPservers[curserver].TrashDirectory(trashdir)
-        #print(worlddir)
+        # print(worlddir)
     return
