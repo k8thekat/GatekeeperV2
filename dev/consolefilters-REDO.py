@@ -24,43 +24,45 @@ import config
 import logging
 
 
-def filters(entry):
+def filters(entry: dict):
     if type(entry) == dict:
+        contents = entry.get('Contents', '')
+        source = entry.get('Source', '')
         if config.CommandBlocks:
-            if entry['Contents'].startswith('CommandBlock at'):
+            if contents.startswith('CommandBlock at'):
                 return True
 
         if config.WorldEdit:
-            if entry['Contents'].find('issued server command: //') != -1:
+            if contents.find('issued server command: //') != -1:
                 return True
         if config.Modpack:
-            if entry['Contents'].lower().startswith('OpenComputers-Computer-1'):
+            if contents.lower().startswith('OpenComputers-Computer-1'):
                 return True
-            if entry['Source'].lower() != 'server thread/info':
+            if source.lower() != 'server thread/info':
                 return True
         if config.Default:
             filter_source_table = {'installer', 'server thread/warn', 'server thread/error', 'server thread/fatal', 'main/error', 'main/info', 'main/warn'}
-            if entry['Contents'].startswith('Current Memory Usage:') and entry['Contents'].endswith('mb)'):
+            if contents.startswith('Current Memory Usage:') and contents.endswith('mb)'):
                 return True
-            if entry['Source'].lower() in filter_source_table:
+            if source.lower() in filter_source_table:
                 return True
             if entry['Type'].lower() == 'action':  # Filters enchantment Actions afaik
                 return True
-            if entry['Source'].lower().startswith('netty server io'):
+            if source.lower().startswith('netty server io'):
                 return True
         if config.DiscordBot:
             # This may be specific to a MC chat bot; but it causes errors.
-            if entry['Source'].lower().startswith('ml'):
+            if source.lower().startswith('ml'):
                 return True
-            if entry['Source'].lower().startswith('d4j'):
+            if source.lower().startswith('d4j'):
                 return True
         if config.Debugging:
-            # if entry['Source'].lower() == 'server thread/info':
+            # if source.lower() == 'server thread/info':
             # return True
             # TODO - Needs to be Adressed; find out console filter solutions for mod loading.
             filtertable = ['\tat', 'java.lang', 'java.io', 'com.google']
             for filter in filtertable:
-                if entry['Contents'].lower().startswith(filter):
+                if contents.lower().startswith(filter):
                     return True
         return entry
     else:
@@ -69,16 +71,17 @@ def filters(entry):
 # Removed the odd character for color idicators on text
 
 
-def colorstrip(entry):
+def colorstrip(entry: dict):
     char = '�'
-    if entry['Contents'].find(char) != -1:
+    contents = entry.get('Contents', '')
+    if contents.find(char) != -1:
         logging.info('Color strip triggered...')
         index = 0
         while 1:
-            index = entry['Contents'].find(char, index)
+            index = contents.find(char, index)
             if index == -1:
                 break
-            newchar = entry['Contents'][index:index+2]
-            entry['Contents'] = entry['Contents'].replace(newchar, '')
+            newchar = contents[index:index + 2]
+            entry['Contents'] = contents.replace(newchar, '')
         return entry
     return entry
