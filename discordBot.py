@@ -54,7 +54,7 @@ async def setup_hook():
 async def on_ready():
     logger.info('Are you the Keymaster?...I am the Gatekeeper')
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
-    if guild_id != None:
+    if guild_id is not None:
         local_guild = client.get_guild(int(guild_id))
         client.tree.copy_global_to(guild=local_guild)
         logger.info(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
@@ -177,7 +177,7 @@ async def bot_status(context: commands.Context):
 async def bot_sync(context: commands.Context):
     """Syncs Bot Commands to the current guild this command was used in."""
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
-    if guild_id == None or context.guild.id != int(guild_id):
+    if guild_id is None or context.guild.id != int(guild_id):
         DB.getDBHandler().DBConfig.SetSetting('Guild_ID', context.guild.id)
 
     client.tree.copy_global_to(guild=context.guild)

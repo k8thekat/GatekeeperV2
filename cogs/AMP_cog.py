@@ -93,13 +93,13 @@ class AMP_Cog(commands.Cog):
     @commands.Cog.listener('on_message')
     async def on_message(self, message: discord.Message):
         context = await self._client.get_context(message)
-        if message.webhook_id != None:
+        if message.webhook_id is not None:
             return message
         if message.content.startswith(self._client.command_prefix):
             return message
         if message.author != self._client.user:
             self.logger.dev(f'On Message Event for {self.name}')
-            if self.WL_channel != None:
+            if self.WL_channel is not None:
                 if message.channel.id == int(self.WL_channel):  # This is AMP Specific; for handling whitelist requests to any server.
                     await self.on_message_whitelist(message, context)
 
@@ -169,11 +169,11 @@ class AMP_Cog(commands.Cog):
                 self.AMPServer = self.AMPInstances[amp_server]
                 self.AMP_Server_Console = self.AMPServer.Console
 
-                if self.AMPServer.Discord_Console_Channel == None:
+                if self.AMPServer.Discord_Console_Channel is None:
                     continue
 
                 channel = self._client.get_channel(int(self.AMPServer.Discord_Console_Channel))
-                if channel == None:
+                if channel is None:
                     continue
 
                 self.AMP_Server_Console.console_message_lock.acquire()
@@ -191,13 +191,13 @@ class AMP_Cog(commands.Cog):
                         console_webhook = webhook
                         break
 
-                if console_webhook == None:
+                if console_webhook is None:
                     self.logger.dev(f'*AMP Console Message* creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
                     console_webhook = await channel.create_webhook(name=f'{self.AMPInstances[amp_server].FriendlyName} Console')
 
                 if len(console_messages) != 0:
                     for message in console_messages:
-                        if self.AMPServer.DisplayName != None:  # Lets check for a Display name and use that instead.
+                        if self.AMPServer.DisplayName is not None:  # Lets check for a Display name and use that instead.
                             self.logger.dev('*AMP Console Message* sending a message with displayname')
                             await console_webhook.send(message, username=self.AMPInstances[amp_server].DisplayName, avatar_url=self._client.user.avatar)
                         else:
@@ -213,11 +213,11 @@ class AMP_Cog(commands.Cog):
                 self.AMPServer = self.AMPInstances[amp_server]
                 self.AMP_Server_Console = self.AMPServer.Console
 
-                if self.AMPServer.Discord_Chat_Channel == None:
+                if self.AMPServer.Discord_Chat_Channel is None:
                     continue
 
                 channel = self._client.get_channel(int(self.AMPServer.Discord_Chat_Channel))
-                if channel == None:
+                if channel is None:
                     continue
 
                 self.AMP_Server_Console.console_chat_message_lock.acquire()
@@ -235,7 +235,7 @@ class AMP_Cog(commands.Cog):
                         chat_webhook = webhook
                         break
 
-                if chat_webhook == None:
+                if chat_webhook is None:
                     self.logger.dev(f'*AMP Chat Message* creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
                     chat_webhook = await channel.create_webhook(name=f'{self.AMPInstances[amp_server].FriendlyName} Chat')
 
@@ -244,7 +244,7 @@ class AMP_Cog(commands.Cog):
                         author = None
                         author_db = self.DB.GetUser(message['Source'])
 
-                        if author_db != None:
+                        if author_db is not None:
                             # This is a default method in each Server, returns False for no customization
                             if self.AMPServer.discord_message(author_db):
                                 self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration')
@@ -255,7 +255,7 @@ class AMP_Cog(commands.Cog):
                                 author = self._client.get_user(int(author_db.DiscordID))
 
                         # This will use discord Information for there Display name and Avatar if possible.
-                        if author != None:
+                        if author is not None:
                             self.logger.dev('*AMP Chat Message* sending a message with discord information')
                             await chat_webhook.send(message['Contents'], username=author.name, avatar_url=author.avatar)
                             continue
@@ -273,7 +273,7 @@ class AMP_Cog(commands.Cog):
         self.logger.command(f'Whitelist Request: ign: {user_ign} servers: {user_servers}')
         amp_servers = []
 
-        if user_ign == None or len(user_servers) == 0:
+        if user_ign is None or len(user_servers) == 0:
             await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with the updated information!')
             self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
             self.failed_whitelist.append(message)
@@ -282,7 +282,7 @@ class AMP_Cog(commands.Cog):
         for server in user_servers:
             index = 0
             amp_server = self.uBot.serverparse(server, message, message.guild.id)
-            if amp_server == None:
+            if amp_server is None:
                 index+1
                 if len(user_servers)-1 == index:
                     await message.reply(f'Hey! I was unable to Whitelist you on the servers you requested, please edit your previous message or send another message with the updated information!')
@@ -292,19 +292,19 @@ class AMP_Cog(commands.Cog):
                 else:
                     continue
 
-            if amp_server != None:
+            if amp_server is not None:
                 # user_servers.pop(server) #Lets pop off the server we FOUND and replace it with the AMP Server object!
                 amp_servers.append(amp_server)
 
             user_UUID = amp_server.name_Conversion(user_ign)  # Returns None if Multiple or incorrect.
-            if user_UUID == None:
+            if user_UUID is None:
                 await message.reply(f'Hey! I am having trouble finding your IGN, please edit your previous message or send another message with the correct information!')
                 self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
                 self.failed_whitelist.append(message)
                 return
 
         db_user = self.DB.GetUser(message.author.name)
-        if db_user == None:
+        if db_user is None:
             self.logger.dev(f'Steam id Parser: {self.Parser.isSteam}')
             if self.Parser.isSteam:
                 db_user = self.DB.AddUser(DiscordID=message.author.id, DiscordName=message.author.name, MC_IngameName=user_ign, SteamID=user_UUID)
@@ -323,7 +323,7 @@ class AMP_Cog(commands.Cog):
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
         if db_server.Whitelist == False:
-            if db_server.DisplayName != None:
+            if db_server.DisplayName is not None:
                 server_name = db_server.DisplayName
             else:
                 server_name = db_server.InstanceName
@@ -339,12 +339,12 @@ class AMP_Cog(commands.Cog):
         if self.WL_delay != 0:
             self.WL_wait_list.append({'author': message.author.name, 'msg': message, 'ampserver': amp_server, 'dbuser': db_user, 'context': context})
 
-            if self.WL_Pending_Emoji != None:
+            if self.WL_Pending_Emoji is not None:
                 await self.dBot.messageAddReaction(message, self.WL_Pending_Emoji)
 
             self.logger.command(f'Added {message.author} to Whitelist Wait List.')
             emoji = self._client.get_emoji(self.WL_Pending_Emoji)
-            if emoji != None:
+            if emoji is not None:
                 await message.add_reaction(emoji)  # This should point to bot_config Emoji
 
             # Checks if the Tasks is running, if not starts the task.

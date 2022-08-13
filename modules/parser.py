@@ -61,7 +61,7 @@ class Parser():
             flag_ign = re.search(self.ign_reg, entry.lower())
             flag_steam = re.search(self.steam_reg, entry.lower())
             flag_whitelist = re.search("(whitelist)", entry.lower())
-            if flag_server != None:
+            if flag_server is not None:
 
                 if len(msg_split) > pos+1:
 
@@ -76,11 +76,11 @@ class Parser():
                             servers.append(possible_server)
 
                     flag_str_filter = re.search(self.str_filter_exact, msg_split[pos+1])
-                    if flag_str_filter != None and len(msg_split) > pos+2:
+                    if flag_str_filter is not None and len(msg_split) > pos+2:
                         possible_server = msg_split[pos+2][0:len(msg_split[pos+2])]
                         possible_server = re.sub(self.symbol_reg, "", possible_server)
 
-                        if flag_str_filter == None:
+                        if flag_str_filter is None:
                             self.logger.debug(f'possible server after filter: {possible_server}')
                             servers.append(possible_server)
 
@@ -90,12 +90,12 @@ class Parser():
                         self.logger.debug(f'possible server: {possible_server}')
 
                         server = self.uBot.serverparse(possible_server)  # We will attempt to look up the server here.
-                        if server != None:
+                        if server is not None:
                             servers.append(possible_server)
 
                         # This would be checked using utils server parse and if it fails then maybe we have an IGN?
                         # Could also check the discord user if they have an ign already.
-                        if server == None:
+                        if server is None:
                             possible_name = msg_split[pos+1][0:len(msg_split[pos+1])]
                             possible_name = re.sub(self.symbol_reg, "", possible_name)
                             self.logger.debug(f'possible name after server: {possible_name}')
@@ -103,18 +103,18 @@ class Parser():
 
                 if len(msg_split) > pos+3:
                     flag_symbols = re.search(self.symbol_reg, msg_split[pos+2])
-                    if flag_symbols == None:
+                    if flag_symbols is None:
                         next_possible_server = msg_split[pos+2][0:len(msg_split[pos+2])]
                         flag_str_filter = re.search(self.str_filter_exact, next_possible_server)
-                        if flag_str_filter == None:
+                        if flag_str_filter is None:
                             self.logger.debug(f'next_possible_server: {next_possible_server}')  # We will attempt to look this server up too!
                             servers.append(next_possible_server)
 
-            if flag_ign != None or flag_steam != None:
+            if flag_ign is not None or flag_steam is not None:
                 name_found = False
 
                 self.isSteam = False
-                if flag_steam != None:
+                if flag_steam is not None:
                     self.isSteam = True
 
                 # Need to find ign and see if the name is attached to the same entry.
@@ -129,7 +129,7 @@ class Parser():
                         name = possible_name
 
                     flag_str_filter = re.search(self.str_filter_exact, msg_split[pos+1].lower())  # Need to make it so that str has to be "alone" not inside of a name/server etc..
-                    if flag_str_filter != None and len(msg_split) > pos+2:
+                    if flag_str_filter is not None and len(msg_split) > pos+2:
                         possible_name = msg_split[pos+2][0:len(msg_split[pos+2])]
                         possible_name = re.sub(self.symbol_reg, "", possible_name)
                         self.logger.debug(f'possible name after str filter: {possible_name}')
@@ -150,7 +150,7 @@ class Parser():
 
                 if len(msg_split) > pos+2:
                     flag_search = re.search(f"{self.server_reg}|{self.ign_reg}", msg_split[pos+2].lower())
-                    if flag_search == None and len(msg_split[pos+2]) > 1:
+                    if flag_search is None and len(msg_split[pos+2]) > 1:
 
                         # This makes sure the next entry ISNT the same as the IGN
                         if possible_name != msg_split[pos+2]:
@@ -159,17 +159,17 @@ class Parser():
                             self.logger.debug(f'possible server after IGN: {possible_server_afterIGN}')
                             servers.append(possible_server_afterIGN)
 
-            if flag_whitelist != None:
+            if flag_whitelist is not None:
                 if len(msg_split) > pos+1:
 
                     # Check next entry if its apart of the str_filter if not then use it; else go one entry further.
                     flag_str_filter = re.search(self.str_filter_exact, msg_split[pos+1])
-                    if flag_str_filter != None and len(msg_split) > pos+2:
+                    if flag_str_filter is not None and len(msg_split) > pos+2:
                         possible_server_afterwhitelist = msg_split[pos+2][0:len(msg_split[pos+2])]
                         possible_server_afterwhitelist = re.sub(self.symbol_reg, "", possible_server_afterwhitelist)
 
                         flag_str_filter = re.search(self.str_filter_exact, msg_split[pos+2])
-                        if flag_str_filter == None:
+                        if flag_str_filter is None:
                             self.logger.debug(f'possible server after whitelist: {possible_server_afterwhitelist}')
                             servers.append(possible_server_afterwhitelist)
 
@@ -178,7 +178,7 @@ class Parser():
             flag_server = re.search(self.server_reg, messages.lower())
             flag_ign = re.search(self.ign_reg, messages.lower())
             flag_whitelist = re.search(self.whitelist_reg, messages.lower())
-            if flag_ign == None and flag_server == None and flag_whitelist == None:
+            if flag_ign is None and flag_server is None and flag_whitelist is None:
 
                 msg_split = messages.split(' ')
 

@@ -77,7 +77,7 @@ class Setup:
             import discord
             ver = discord.__version__
             flag = re.search("(2.0)", ver.lower())
-            if flag == None:
+            if flag is None:
                 self.logger.error('Please visit: https://github.com/Rapptz/discord.py to install discord.py development version!')
                 sys.exit(1)
 

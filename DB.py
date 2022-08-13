@@ -94,7 +94,7 @@ class DBHandler():
 			
 def getDBHandler() -> DBHandler:
     global Handler
-    if Handler == None:
+    if Handler is None:
         Handler = DBHandler()
     return Handler
 
@@ -312,8 +312,8 @@ class Database:
 
     def GetConfig(self):
         #global main_Database_Config
-        # if self.DBHandler.DBConfig == None:
-        # if main_Database_Config == None:
+        # if self.DBHandler.DBConfig is None:
+        # if main_Database_Config is None:
         #main_Database_Config = DBConfig(self)
         self.DBHandler.DBConfig = DBConfig(self)
         # return main_Database_Config
@@ -465,7 +465,7 @@ class DBUser:
             SQLVars = []
 
             for entry in DBFields:
-                if DBFields[entry] != None:
+                if DBFields[entry] is not None:
                     SQL += entry + ","
                     SQLVars.append(DBFields[entry])
 
@@ -492,7 +492,7 @@ class DBUser:
             return
         # elif name == "GlobalBanExpiration":
         # 	#make sure proper value
-        # 	if (type(value) != datetime.datetime) and (type(value) != None):
+        # 	if (type(value) != datetime.datetime) and (type(value) is not None):
         # 		raise Exception("Invalid type")
         elif name in ["Donator"]:
             # conver to bool
@@ -519,11 +519,11 @@ class DBServer:
         for entry in Params:
             super().__setattr__(entry, Params[entry])
 
-        if(self.ID != None):
+        if(self.ID is not None):
             super().__setattr__("ID", int(self.ID))
-        if(self.Discord_Console_Channel != None):
+        if(self.Discord_Console_Channel is not None):
             super().__setattr__("Discord_Console_Channel", int(self.Discord_Console_Channel))
-        if(self.Discord_Chat_Channel != None):
+        if(self.Discord_Chat_Channel is not None):
             super().__setattr__("Discord_Chat_Channel", int(self.Discord_Chat_Channel))
 
         # if given a database and ID then look up our values
@@ -552,7 +552,7 @@ class DBServer:
             SQLVars = []
 
             for entry in DBFields:
-                if DBFields[entry] != None:
+                if DBFields[entry] is not None:
                     SQL += entry + ","
                     SQLVars.append(DBFields[entry])
 
@@ -587,7 +587,7 @@ class DBServer:
         # elif name in ["UserLimit"]:
         # 	value = int(value)
         elif name in ["Discord_Console_Channel", "Discord_Chat_Channel"]:
-            if value != None:
+            if value is not None:
                 value = int(value)
 
         # set value and update the user
