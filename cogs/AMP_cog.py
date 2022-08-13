@@ -59,7 +59,7 @@ class AMP_Cog(commands.Cog):
         try:
             self.attr_update()
 
-        except:
+        except Exception:
             self.DBHandler.dbWhitelistSetup()
             self.attr_update()
 
@@ -368,7 +368,7 @@ class AMP_Cog(commands.Cog):
         cur_time = datetime.now(timezone.utc)
         try:
             wait_time = timedelta(minutes=self.WL_delay)  # This may error if someone changes the wait time to 0 inbetween a loop..
-        except:
+        except Exception:
             wait_time = timedelta(minutes=1)  # Fallback to 1 min delay if somehow the value fails to get parsed.
 
         for index in range(0, len(self.WL_wait_list)):

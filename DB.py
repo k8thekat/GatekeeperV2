@@ -88,7 +88,7 @@ class DBHandler():
             self.DB_Server.Console_Flag = True
             self.DB_Server.Console_Filtered = True
             self.DB_Server.Discord_Console_Channel = None  # Should be a str, can be an int. eg 289450670581350401
-        except:
+        except Exception:
             self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
 
 			
@@ -609,7 +609,7 @@ class DBServer:
             self._db._execute("Insert into ServerNicknames (ServerID, Nickname) values(?,?)", (self.ID, Nickname))
             jdata = dump_to_json({"Type": "AddServerNickname", "ServerID": self.ID, "Nickname": Nickname})
             self._db._logdata(jdata)
-        except:
+        except Exception:
             return False
         return True
 

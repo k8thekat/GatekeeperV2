@@ -81,7 +81,7 @@ class Setup:
                 self.logger.error('Please visit: https://github.com/Rapptz/discord.py to install discord.py development version!')
                 sys.exit(1)
 
-        except:
+        except Exception:
             self.logger.error('Please visit: https://github.com/Rapptz/discord.py to install discord.py development version!')
             sys.exit(1)
 
