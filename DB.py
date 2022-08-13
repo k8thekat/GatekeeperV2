@@ -492,7 +492,7 @@ class Database:
             Count = len(NeededUsers)
             if len(NeededUsers) > 50:
                 Count = 50
-            qentries = ("?,"*Count)[:-1]
+            qentries = ",".join(["?"] * Count)
             Params = tuple(NeededUsers[0:Count])
             NeededUsers = NeededUsers[Count:]
             (rows, cur) = self._fetchall(f"Select ID, DiscordID, DiscordName, IngameName, UUID from Users where ID in ({qentries})", tuple(Params))
@@ -506,7 +506,7 @@ class Database:
             Count = len(NeededServers)
             if len(NeededServers) > 50:
                 Count = 50
-            qentries = ("?,"*Count)[:-1]
+            qentries = ",".join(["?"] * Count)
             Params = tuple(NeededServers[0:Count])
             NeededServers = NeededServers[Count:]
             (rows, cur) = self._fetchall(f"Select ID, InstanceName from Servers where ID in ({qentries})", tuple(Params))
@@ -577,7 +577,7 @@ class DBUser:
                     SQL += entry + ","
                     SQLVars.append(DBFields[entry])
 
-            SQL = SQL[:-1] + ") values (" + ("?,"*len(SQLVars))[:-1] + ")"
+            SQL = f'{SQL[:-1]}) values ({",".join(["?"] * len(SQLVars))})'
             # create the tuple needed
             SQLTuple = tuple(SQLVars)
 
@@ -722,7 +722,7 @@ class DBServer:
                     SQL += entry + ","
                     SQLVars.append(DBFields[entry])
 
-            SQL = SQL[:-1] + ") values (" + ("?,"*len(SQLVars))[:-1] + ")"
+            SQL = f'{SQL[:-1]}) values ({",".join(["?"] * len(SQLVars))})'
             # create the tuple needed
             SQLTuple = tuple(SQLVars)
 
