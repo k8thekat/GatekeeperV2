@@ -181,7 +181,7 @@ class Server(commands.Cog):
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
             return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
-        if server is not None and server.Running == False:
+        if server is not None and not server.Running:
             view = utils.StatusView()
             utils.StartButton(server, view, server.StartInstance)
             utils.StopButton(server, view, server.StopInstance).disabled = True
@@ -411,7 +411,7 @@ class Server(commands.Cog):
             self.DB.GetServer(InstanceID=server.InstanceID).Console_Flag = True
             server.attr_update()  # This will update the AMPConsole Attributes
 
-            if self.AMPThreads[server.InstanceID].console_thread_running != True:
+            if not self.AMPThreads[server.InstanceID].console_thread_running:
                 self.AMPThreads[server.InstanceID].console_thread.start()
                 await context.send(f"Starting {server.FriendlyName} Console Thread.")
 
@@ -432,7 +432,7 @@ class Server(commands.Cog):
             self.DB.GetServer(InstanceID=server.InstanceID).Console_Flag = False
             server.attr_update()  # This will update the AMPConsole Attributes
 
-            if self.AMPThreads[server.InstanceID].console_thread_running == True:
+            if self.AMPThreads[server.InstanceID].console_thread_running:
                 self.AMPThreads[server.InstanceID].console_thread_running = False
                 await context.send(f"Stopping {server.FriendlyName} Console Thread.")
 

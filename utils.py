@@ -39,8 +39,7 @@ async def async_rolecheck(context: commands.Context):
     logger = logging.getLogger(__name__)
 
     # This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
-    admin = context.author.guild_permissions.administrator
-    if admin == True:
+    if context.author.guild_permissions.administrator:
         logger.command(f'Permission Check Okay on {context.author}')
         return True
 
