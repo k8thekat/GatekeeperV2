@@ -29,7 +29,7 @@ import AMP as AMP
 import DB as DB
 
 
-
+DisplayImageSources = ["internal:MinecraftJava"]
 class Minecraft(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client

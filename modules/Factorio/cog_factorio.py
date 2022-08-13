@@ -19,32 +19,41 @@
    02110-1301, USA. 
 
 '''
+import discord
+from discord import app_commands
 from discord.ext import commands
 import os
 import logging
 
 import utils
-import AMP
-import DB
+import AMP as AMP
+import DB as DB
 
-class Terraria(commands.Cog):
-    def __init__ (self,client):
+DisplayImageSources = ['steam:427520']
+class Factorio(commands.Cog):
+    def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
+
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
-        self.AMPInstances = self.AMPHandler.AMP_Instances
+        self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
+        #use DBHandler for all DB related needs.
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
-        self.DBConfig = self.DBHandler.DBConfig
+        self.DBCOnfig = self.DB.GetConfig()
 
+        #utils.botUtils provide access to utility functions such as serverparse,roleparse,channelparse,userparse.
         self.uBot = utils.botUtils(client)
+        #utils.discordBot provides access to utility functions such as sending/deleting messages, kicking/ban users.
         self.dBot = utils.discordBot(client)
-        #self.uBot.sub_command_handler(self,'user',self.info)
-        self.logger.info(f'**SUCCESS** Initializing Module **{self.name.capitalize()}**')
+
+        #Leave this commented out unless you need to create a sub-command.
+        #self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
+        self.logger.info(f'**SUCCESS** Loading Module **{self.name.capitalize()}**')
 
 async def setup(client):
-    await client.add_cog(Terraria(client))
+    await client.add_cog(Factorio(client))

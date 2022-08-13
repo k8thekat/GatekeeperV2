@@ -29,8 +29,8 @@ import utils
 import AMP as AMP
 import DB as DB
 
-
-class Starbound(commands.Cog):
+DisplayImageSources = ['steam:892970']
+class Valheim(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
@@ -54,6 +54,6 @@ class Starbound(commands.Cog):
         #Leave this commented out unless you need to create a sub-command.
         #self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
         self.logger.info(f'**SUCCESS** Loading Module **{self.name.capitalize()}**')
-
+        
 async def setup(client):
-    await client.add_cog(Starbound(client))
+    await client.add_cog(Valheim(client))
