@@ -78,12 +78,6 @@ class AMPHandler():
         self.val_settings()
         self.moduleHandler()
 
-        #self.instanceCheck()
-
-    # def set_discord_client(self,client):
-    #     """Passes the Discord Bot Client object to AMP_Handler for functionality inside of AMP_Console"""
-    #     self.__client = client
-
     def setup_AMPInstances(self):
         """Intializes the connection to AMP and creates AMP_Instance objects."""
         self.AMP = AMPInstance(Handler = self)
@@ -96,26 +90,19 @@ class AMPHandler():
             self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID,self.AMP.super_AdminID,False) 
             self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
       
-
-    #!TODO This needs to be finished
-    def instanceCheck(self):
-        """Checks for any new Instances since after startup. `(Advise using this in some sort of loop every so often)`\n
+    def AMP_instanceCheck(self):
+        """Checks for any new Instances since after startup. \n
         This keeps the AMP_Instance Dictionary Current
         This also adds any new Instances to the Database"""
         self.logger.dev('AMP Instance Update in progress...')
         AMP_instance_check = self.AMP.getInstances()
         for instance in AMP_instance_check:
             if instance not in self.AMP_Instances:
-                self.AMP_Instances[AMP_instance_check[instance]]
-                #!TODO! DB_Update(instance) #This adds the new Instance to the database.
-
-    #!TODO! Need to check on startup and every so often for new instances and add them to the DB
-    def add_Server_toDB(self,instance):
-        """Adds the server to the DB if its not already there."""
-        if self._cwd.joinpath('discordBot.db').exists():
-            instance_check = self.DB.GetServer(instance)
-            if instance_check == None:
-                self.DB.AddServer(InstanceID=self.AMP_Instances[instance].InstanceID,InstanceName =self.AMP_Instances[instance].FriendlyName)
+                new_server = AMP_instance_check[instance]
+                self.AMP_Instances[AMP_instance_check[instance]] #Add the new instance to the original server list.
+                if self.DB.GetServer(new_server.InstanceID) == None:
+                    self.logger.warn(f'Found a new Instance during Runtime - Adding {new_server.FriendlyName} to our Instance List and Database.')
+                    self.DB.AddServer(InstanceID= new_server.InstanceID,InstanceName= new_server.FriendlyName)
     
     #Checks for Errors in Config
     def val_settings(self):
@@ -182,7 +169,7 @@ class AMPHandler():
 def getAMPHandler(client:discord.Client = None,args:bool=False)-> AMPHandler:
     global Handler
     if Handler == None:
-        Handler = AMPHandler(client= client,args=args)
+        Handler = AMPHandler(client=client, args=args)
     return Handler
 
 class AMPInstance:
@@ -1049,22 +1036,6 @@ class AMPConsole:
 
     def console_filter(self,message):
         """This will filter depending on the console_filter setting and handle what to send to Discord."""
-        #print("Filtered Console?", self.AMPInstance.Console_Filtered)
-        #Removed the odd character for color idicators on text
-        #!TODO Needs to be implemented
-        # char =  '�'
-        # if entry['Contents'].find(char) != -1:
-        #     logging.info('Color strip triggered...')
-        #     index = 0
-        #     while 1:
-        #         index = entry['Contents'].find(char,index)
-        #         if index == -1:
-        #             break
-        #         newchar = entry['Contents'][index:index+2]
-        #         entry['Contents'] = entry['Contents'].replace(newchar,'')
-        #     return entry
-        # return entry
-
         return False
 
     def console_chat(self,message):
@@ -1075,6 +1046,10 @@ class AMPConsole:
         #Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
             print('Found a Chat message')
+
+            #Removed the odd character for color idicators on text
+            message = message.replace('�','')
+
             self.console_chat_message_lock.acquire()
             self.console_chat_messages.append(message)
             self.console_chat_message_lock.release()
