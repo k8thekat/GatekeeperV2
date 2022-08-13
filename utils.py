@@ -44,7 +44,7 @@ async def async_rolecheck(context: commands.Context):
         logger.command(f'Permission Check Okay on {context.author}')
         return True
 
-    if DBConfig.Staff == None:
+    if DBConfig.Staff is None:
         await context.send(f'Please have an Adminstrator run `/bot setup (admin role)`.')
         logger.error(f'DBConfig Staff role has not been set yet!')
         return False
@@ -315,7 +315,7 @@ class botUtils():
         **Note** Use context.guild.id"""
         self.logger.dev('Channel Parse Called...')
 
-        if guild_id == None:
+        if guild_id is None:
             channel = self._client.get_channel(int(parameter))
             self.logger.debug(f'Found the Discord Channel {channel}')
             return channel
@@ -345,7 +345,7 @@ class botUtils():
         self.logger.dev('User Parse Called...')
 
         # Without a guild_ID its harder to parse members.
-        if guild_id == None:
+        if guild_id is None:
             cur_member = self._client.get_user(int(parameter))
             self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
             return cur_member
@@ -372,7 +372,7 @@ class botUtils():
 
         # DiscordName/IGN Catch(DB Get user can look this up)
         cur_member = guild.get_member_named(parameter)
-        if cur_member != None:
+        if cur_member is not None:
             self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
             return cur_member
 
@@ -381,7 +381,7 @@ class botUtils():
             cur_member = None
             for member in guild.members:
                 if member.display_name.lower().startswith(parameter.lower()) or (member.display_name.lower().find(parameter.lower()) != -1):
-                    if cur_member != None:
+                    if cur_member is not None:
                         self.logger.error(f'**ERROR** Found multiple Discord Members: {parameter}, Returning None')
                         # await context.reply('Found multiple Discord Members matching that name, please be more specific.')
                         return None
@@ -404,7 +404,7 @@ class botUtils():
 
         # Lets check the DB First, this checks Nicknames and Display names.
         cur_server = self.DB.GetServer(Name=parameter)
-        if cur_server != None:
+        if cur_server is not None:
             self.logger.debug(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
             # This converts the DB_Server object into our AMPInstance Object
             cur_server = self.AMPInstances[cur_server.InstanceID]
@@ -416,7 +416,7 @@ class botUtils():
             self.logger.debug(f'{var}{self.AMPInstances[server].FriendlyName}')
 
             if var != -1:  # When its FOUND an entry
-                if cur_server != None:
+                if cur_server is not None:
                     self.logger.error(f'**ERROR** Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
                     # await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
                     return None
@@ -443,11 +443,11 @@ class botUtils():
         """For Individual Server info embed replies"""
         embed = discord.Embed(title=f'Server Info for {server.DisplayName}', color=0x00ff00, description=server.Description)
         db_server = self.DB.GetServer(InstanceID=server.InstanceID)
-        if db_server != None:
+        if db_server is not None:
             embed.set_thumbnail(url=context.guild.icon)
             embed.add_field(name='\u1CBC\u1CBC', value=f'========={server.DisplayName}=========', inline=False)
 
-            if db_server.IP != None:
+            if db_server.IP is not None:
                 embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
 
             embed.add_field(name='Nicknames:', value=db_server.Nicknames, inline=False)
@@ -467,11 +467,11 @@ class botUtils():
             if server.Running and server.ADS_Running:
                 Users = server.getStatus(users_only=True)
                 db_server = self.DB.GetServer(InstanceID=server.InstanceID)
-                if db_server != None:
+                if db_server is not None:
                     embed.set_thumbnail(url=context.guild.icon)
 
                     server_name = server.FriendlyName
-                    if server.DisplayName != None:
+                    if server.DisplayName is not None:
                         server_name = db_server.DisplayName
 
                     nicknames = db_server.Nicknames
@@ -501,13 +501,13 @@ class botUtils():
         else:
             server_status = 'Offline'
 
-        if db_server.DisplayName == None:
+        if db_server.DisplayName is None:
             embed = discord.Embed(title=f'{db_server.InstanceName}', description=f'Dedicated Server Status: **{server_status}**', color=0x00ff40)
         else:
             embed = discord.Embed(title=f'{db_server.DisplayName}', description=f'Dedicated Server Status: **{server_status}**', color=0x00ff40)
 
         embed.set_thumbnail(url=context.guild.icon)
-        if db_server.IP != None:
+        if db_server.IP is not None:
             embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
 
         if len(db_server.Nicknames) != 0:
@@ -534,9 +534,9 @@ class botUtils():
         users_online = server.getUserList()
 
         embed = discord.Embed(title=f'{server.FriendlyName}', color=0x00ff00)
-        if db_server != None:
+        if db_server is not None:
             embed.set_thumbnail(url=context.guild.icon)
-            if db_server.IP != None:
+            if db_server.IP is not None:
                 embed.add_field(name='IP: ', value=db_server.IP, inline=False)
             embed.add_field(name='Users Online:', value=users_online, inline=False)
         return embed
@@ -570,14 +570,14 @@ class botUtils():
         # print(db_user.DiscordID,db_user.DiscordName,db_user.MC_IngameName,db_user.MC_UUID,db_user.SteamID,db_user.Donator)
         embed = discord.Embed(title=f'{discord_user.name}', description=f'Discord ID: {discord_user.id}', color=0x00ff00)
         embed.set_thumbnail(url=discord_user.avatar.url)
-        if db_user != None:
+        if db_user is not None:
             embed.add_field(name='In Database', value='True')
-            if db_user.Donator != None:
+            if db_user.Donator is not None:
                 embed.add_field(name='Donator', value=f'{bool(db_user.Donator)}')
-            if db_user.MC_IngameName != None:
+            if db_user.MC_IngameName is not None:
                 embed.add_field(name='Minecraft IGN', value=f'{db_user.MC_IngameName}', inline=False)
-            if db_user.MC_UUID != None:
+            if db_user.MC_UUID is not None:
                 embed.add_field(name='Minecraft UUID', value=f'{db_user.MC_UUID}', inline=True)
-            if db_user.SteamID != None:
+            if db_user.SteamID is not None:
                 embed.add_field(name='Steam ID', value=f'{db_user.SteamID}', inline=False)
         return embed

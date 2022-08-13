@@ -59,14 +59,14 @@ class DB_Module(commands.Cog):
 
     @commands.Cog.listener('on_message')
     async def on_message(self, message: discord.Message):
-        if message.webhook_id != None:
+        if message.webhook_id is not None:
             return message
         if message.content.startswith(self._client.command_prefix):
             return message
 
         # This is purely for testing!
         if message.content.startswith('test_emoji') and message.author.id == 144462063920611328:  # This is my Discord ID
-            if self.DBConfig.Whitelist_emoji_pending != None:
+            if self.DBConfig.Whitelist_emoji_pending is not None:
                 emoji = self._client.get_emoji(int(self.DBConfig.Whitelist_emoji_pending))
                 await message.add_reaction(emoji)
 
@@ -81,7 +81,7 @@ class DB_Module(commands.Cog):
             # Lets look up the previous ID to gaurentee a proper search, could use the newer user ID; both in theory should be the same.
             db_user = self.DB.GetUser(user_before.id)
             # If we found the DB User
-            if db_user != None:
+            if db_user is not None:
                 db_user.DiscordName = user_after.name
             else:  # Lets Add them with the info we have!
                 self.DB.AddUser(DiscordID=user_before.id, DiscordName=user_after.name)
@@ -126,9 +126,9 @@ class DB_Module(commands.Cog):
         perm_node = 'user.info'
 
         discord_user = self.uBot.userparse(user, context, context.guild.id)
-        if discord_user != None:
+        if discord_user is not None:
             db_user = self.DB.GetUser(str(discord_user.id))
-            if db_user != None:
+            if db_user is not None:
                 await context.send(embed=self.uBot.user_info_embed(context, db_user, discord_user))
 
     @user.command(name='add')
@@ -138,12 +138,12 @@ class DB_Module(commands.Cog):
         self.logger.command(f'{context.author.name} used User Add Function')
         perm_node = 'user.add'
 
-        if mc_ign != None:
+        if mc_ign is not None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
 
-        if discord_id == None:
+        if discord_id is None:
             discord_user = self.uBot.userparse(discord_name, context, context.guild.id)
-            if discord_user != None:
+            if discord_user is not None:
                 self.DB.AddUser(DiscordID=discord_user.id, DiscordName=discord_user.name, MC_IngameName=mc_ign, MC_UUID=mc_uuid, SteamID=steamid, Donator=donator)
         else:
             self.DB.AddUser(DiscordID=discord_id, DiscordName=discord_name, MC_IngameName=mc_ign, MC_UUID=mc_uuid, SteamID=steamid, Donator=donator)
@@ -166,20 +166,20 @@ class DB_Module(commands.Cog):
                      'steamid': 'SteamID',
                      'donator': 'Donator'}
 
-        if mc_ign != None:
+        if mc_ign is not None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
             params['mc_uuid'] = mc_uuid
 
-        if discord_id == None:
+        if discord_id is None:
             discord_user = self.uBot.userparse(discord_name, context, context.guild.id)
         else:
             discord_user = self._client.get_user(int(discord_id))
 
-        if discord_user != None:
+        if discord_user is not None:
             db_user = self.DB.GetUser(discord_user.id)
-            if db_user != None:
+            if db_user is not None:
                 for entry in db_params:
-                    if params[entry] != None:
+                    if params[entry] is not None:
                         setattr(db_user, db_params[entry], params[entry])
 
                 await context.send(f'We Updated the user {db_user.DiscordName}')
@@ -220,7 +220,7 @@ class DB_Module(commands.Cog):
         perm_node = 'bot.whitelist.channel'
 
         channel = self.uBot.channelparse(id, context, context.guild.id)
-        if channel == None:
+        if channel is None:
             return await context.reply(f'Unable to find the Discord Channel: {id}')
         else:
             self.DBConfig.SetSetting('Whitelist_channel', channel.id)
@@ -247,7 +247,7 @@ class DB_Module(commands.Cog):
         perm_node = 'bot.whitelist.auto'
 
         flag_reg = re.search("(true|false)", flag.lower())
-        if flag_reg == None:
+        if flag_reg is None:
             return await context.send(f'Please use `true` or `false` for your flag.')
         if flag_reg.group() == 'true':
             self.DBConfig.Auto_whitelist = True

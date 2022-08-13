@@ -135,7 +135,7 @@ class AMPMinecraft(AMP.AMPInstance):
 
     def discord_message(self, user):
         """Handles returning customized discord message data for Minecraft Servers only."""
-        if user.MC_IngameName != None and user.MC_UUID != None:
+        if user.MC_IngameName is not None and user.MC_UUID is not None:
             return user.MC_IngameName, self.getHeadbyUUID(user.MC_UUID)
 
 

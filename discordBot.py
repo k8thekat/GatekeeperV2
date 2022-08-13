@@ -53,7 +53,7 @@ async def setup_hook():
 async def on_ready():
     logger.info('Are you the Keymaster?...I am the Gatekeeper')
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
-    if guild_id != None:
+    if guild_id is not None:
         local_guild = client.get_guild(int(guild_id))
         client.tree.copy_global_to(guild=local_guild)
         logger.dev(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
@@ -81,10 +81,10 @@ async def bot_setup(context: commands.Context, staff_role: str):
     logger.command(f'Bot Setup')
     uBot = utils.botUtils(client)
     guild_role = uBot.roleparse(parameter=staff_role, context=context, guild_id=context.guild.id)
-    if guild_role == None:
+    if guild_role is None:
         await context.send(f'Unable to find role {staff_role}, please try again.')
 
-    if main_DB_Config.Staff_role_id == None:
+    if main_DB_Config.Staff_role_id is None:
         main_DB_Config.Staff_role_id = guild_role.id
 
     await context.send(f'Set Staff Role to {guild_role.name}.')
@@ -171,7 +171,7 @@ async def bot_sync(context: commands.Context):
     perm_node = 'bot.sync'
 
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
-    if guild_id == None or context.guild.id != int(guild_id):
+    if guild_id is None or context.guild.id != int(guild_id):
         DB.getDBHandler().DBConfig.SetSetting('Guild_ID', context.guild.id)
 
     client.tree.copy_global_to(guild=context.guild)

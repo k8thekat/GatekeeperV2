@@ -113,7 +113,7 @@ class AMPHandler():
         """Adds the server to the DB if its not already there."""
         if self._cwd.joinpath('discordBot.db').exists():
             instance_check = self.DB.GetServer(instance)
-            if instance_check == None:
+            if instance_check is None:
                 self.DB.AddServer(InstanceID=self.AMP_Instances[instance].InstanceID, InstanceName=self.AMP_Instances[instance].FriendlyName)
 
     # Checks for Errors in Config
@@ -181,7 +181,7 @@ class AMPHandler():
 
 def getAMPHandler(client: discord.Client = None, args: bool = False) -> AMPHandler:
     global Handler
-    if Handler == None:
+    if Handler is None:
         Handler = AMPHandler(client=client, args=args)
     return Handler
 
@@ -193,7 +193,7 @@ class AMPInstance:
         self.logger = logging.getLogger()
 
         self.AMPHandler = Handler
-        if self.AMPHandler == None:
+        if self.AMPHandler is None:
             self.AMPHandler = getAMPHandler()
 
         self.DBHandler = DB.getDBHandler()
@@ -246,7 +246,7 @@ class AMPInstance:
             # This gets me the DB_Server object if it's not there; it adds the server.
             self.DB_Server = self.DB.GetServer(InstanceID=self.InstanceID)
             # Possible DB_Server Attributes = InstanceID, InstanceName, DisplayName, Description, IP, Whitelist, Donator, Console_Flag, Console_Filtered, Discord_Console_Channel, Discord_Chat_Channel, Discord_Role
-            if self.DB_Server == None:
+            if self.DB_Server is None:
                 self.DB_Server = self.DB.AddServer(InstanceID=self.InstanceID, InstanceName=self.FriendlyName)
                 self.logger.info(f'*SUCCESS** Added {self.FriendlyName} to the Database.')
             else:
@@ -269,29 +269,29 @@ class AMPInstance:
                 # print('InstanceID:', instanceID)
 
                 # Bot role doesn't exists, but we have Super Admin!
-                if self.AMP_BotRoleID == None and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
+                if self.AMP_BotRoleID is None and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
                     self.logger.warning(f'***ATTENTION*** We have `Super Admins`, setting up AMP Permissions and creating `discord_bot` role!')
                     self.setup_AMPbotrole()
                     self.setup_AMPpermissions()
 
                 # Bot role doesn't exists and we do not have Super Admin!
-                if self.AMP_BotRoleID == None and self.super_AdminID not in self.AMP_userinfo['result']['Roles']:
+                if self.AMP_BotRoleID is None and self.super_AdminID not in self.AMP_userinfo['result']['Roles']:
                     self.logger.critical(
                         '***ATTENTION*** AMP is missing the role `discourd_bot`, Please create a role under "Configuration -> Role Management" called `discord_bot` or give the bot user `Super Admins`, then restart the bot.')
 
                 # Bot role exists but we do not have discord_bot role and we do not have Super Admin!
-                if self.AMP_BotRoleID != None and self.AMP_BotRoleID not in self.AMP_userinfo['result']['Roles'] and self.super_AdminID not in self.AMP_userinfo['result']['Roles']:
+                if self.AMP_BotRoleID is not None and self.AMP_BotRoleID not in self.AMP_userinfo['result']['Roles'] and self.super_AdminID not in self.AMP_userinfo['result']['Roles']:
                     self.logger.critical(
                         f'***ATTENTION*** {self.AMPHandler.tokens.AMPUser}is missing the role `discourd_bot`, Please set the role under "Configuration -> Role Management", then restart the bot.')
 
                 # Bot role exists but we do not have discord_bot role and we have Super Admin!
                 # Give myself the role here
-                if self.AMP_BotRoleID != None and self.AMP_BotRoleID not in self.AMP_userinfo['result']['Roles'] and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
+                if self.AMP_BotRoleID is not None and self.AMP_BotRoleID not in self.AMP_userinfo['result']['Roles'] and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
                     self.logger.warning(f'***ATTENTION*** Adding `discord_bot` to our roles!')
                     self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
 
                 # Not the main AMP Instance and the Bot Role Exists and we have the discord_bot role and we have super also!
-                if instanceID != 0 and self.AMP_BotRoleID != None and self.AMP_BotRoleID in self.AMP_userinfo['result']['Roles'] and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
+                if instanceID != 0 and self.AMP_BotRoleID is not None and self.AMP_BotRoleID in self.AMP_userinfo['result']['Roles'] and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
                     self.logger.warning(f'***ATTENTION*** `discord_bot` role exists and we have `Super Admins` - Setting up Instance permissions for {self.FriendlyName}')
                     self.setup_AMPpermissions()
 
@@ -380,10 +380,8 @@ class AMPInstance:
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
         Success = self.Login()
         self.logger.dev('Server Check Login Sucess: ' + str(Success))
-        if Success:
-            status = self.getStatus(True)
-            if status == True:
-                return True
+        if Success and self.getStatus(True):
+            return True
 
         return False
 
@@ -396,7 +394,7 @@ class AMPInstance:
 
             self.logger.dev(f'AMPInstance Logging in {self.InstanceID}')
 
-            if self.AMP2Factor != None:
+            if self.AMP2Factor is not None:
                 token = self.AMP2Factor.now()
 
             else:
@@ -452,13 +450,13 @@ class AMPInstance:
         self.AMPHandler.SuccessfulConnection = True
 
         # Error catcher for API calls
-        if type(post_req.json()) == None:
+        if type(post_req.json()) is None:
             self.logger.error(f"AMP_API CallAPI ret is 0: status_code {post_req.status_code}")
             self.logger.error(post_req.raw)
 
         self.logger.debug(f'Post Request Prints: {post_req.json()}')
 
-        if post_req.json() == None:
+        if post_req.json() is None:
             return
 
         # Permission errors will trigger this, unsure what else.
@@ -498,7 +496,7 @@ class AMPInstance:
 
                 # This exempts the AMPTemplate Gatekeeper *hopefully*
                 flag_reg = re.search("(gatekeeper)", instance['FriendlyName'].lower())
-                if flag_reg != None:
+                if flag_reg is not None:
                     if flag_reg.group():
                         continue
 
@@ -811,10 +809,10 @@ class AMPInstance:
                     self.super_AdminID = role
                     #print('Super Admin',self.super_AdminID,role)
 
-            if self.AMP_BotRoleID == None:
+            if self.AMP_BotRoleID is None:
                 return False
 
-            if self.AMP_BotRoleID != None and self.super_AdminID != None:
+            if self.AMP_BotRoleID is not None and self.super_AdminID is not None:
                 return True
 
         return result['result']
