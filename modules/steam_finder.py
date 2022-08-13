@@ -42,6 +42,6 @@ def steam_id(steamname):
     title_end, end = title.span()
     # turns into  " STEAM_0:0:2806383 "
     # This should work regardless of the Steam ID length; since we came from the end of the second title backwards.
-    steam_id = r.text[title_start+9:title_end-20].strip()
+    steam_id = r.text[title_start + 9:title_end - 20].strip()
     logger.dev(f'Found Steam ID {steam_id}')
     return steam_id

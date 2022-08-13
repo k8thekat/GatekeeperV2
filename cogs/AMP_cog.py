@@ -279,8 +279,9 @@ class AMP_Cog(commands.Cog):
             index = 0
             amp_server = self.uBot.serverparse(server, message, message.guild.id)
             if amp_server is None:
-                index+1
-                if len(user_servers)-1 == index:
+                #!TODO! "index + 1" has no effect - possible bug? Maybe "index += 1"?
+                index + 1
+                if len(user_servers) - 1 == index:
                     await message.reply('Hey! I was unable to Whitelist you on the servers you requested, please edit your previous message or send another message with the updated information!')
                     self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
                     self.failed_whitelist.append(message)
