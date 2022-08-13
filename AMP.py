@@ -427,7 +427,7 @@ class AMPInstance:
 
         while(True):
             try:
-                post_req = requests.post(self.url+APICall, headers=self.AMPheader, data=jsonhandler)
+                post_req = requests.post(self.url + APICall, headers=self.AMPheader, data=jsonhandler)
 
                 if len(post_req.content) > 0:
                     break
@@ -971,7 +971,7 @@ class AMPConsole:
 
             for entry in console['ConsoleEntries']:
                 # This prevents old messages from getting handled again and spamming on restart.
-                entry_time = datetime.fromtimestamp(float(entry['Timestamp'][6:-2])/1000, tz=timezone.utc)
+                entry_time = datetime.fromtimestamp(float(entry['Timestamp'][6:-2]) / 1000, tz=timezone.utc)
                 if last_entry_time == 0:
                     last_entry_time = entry_time
                     break
@@ -1014,7 +1014,7 @@ class AMPConsole:
                         if msg_len_index < 1500:
                             newmsg = entry['Contents'][0:msg_len_index]
                             self.console_message_list.append(newmsg.lstrip())
-                            entry['Contents'] = entry['Contents'][msg_len_index+1:len(entry['Contents'])]
+                            entry['Contents'] = entry['Contents'][msg_len_index + 1:len(entry['Contents'])]
                             msg_len_index = len(entry['Contents'])
                             continue
                 else:
