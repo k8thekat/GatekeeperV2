@@ -16,17 +16,18 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA. 
+   02110-1301, USA.
 
 '''
 import discord
 from discord import app_commands
 from discord.ext import commands
 import tokens
-import sys,os
+import sys
+import os
 import logging
 
-#Custom scripts
+# Custom scripts
 import logger
 import utils
 import AMP
@@ -36,17 +37,19 @@ Version = 'beta-2.0.0'
 logger = logging.getLogger(__name__)
 #logger.info(f'{user} Added the Reaction {os.path.basename(__file__)}: {reaction}')
 
-#Discord Specific
+# Discord Specific
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 prefix = '$'
-client = commands.Bot(command_prefix= prefix, intents = intents)
+client = commands.Bot(command_prefix=prefix, intents=intents)
+
 
 @client.event
 async def setup_hook():
     await initbot()
-    
+
+
 @client.event
 async def on_ready():
     logger.info('Are you the Keymaster?...I am the Gatekeeper')
@@ -57,9 +60,10 @@ async def on_ready():
         logger.info(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
         await client.tree.sync(guild=local_guild)
 
+
 @client.event
-async def on_guild_join(guild:discord.Guild):
-    DB.getDBHandler().DBConfig.SetSetting('Guild_ID',guild.id)
+async def on_guild_join(guild: discord.Guild):
+    DB.getDBHandler().DBConfig.SetSetting('Guild_ID', guild.id)
     client.tree.copy_global_to(guild=guild)
     logger.info(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
     await client.tree.sync(guild=guild)
@@ -67,13 +71,13 @@ async def on_guild_join(guild:discord.Guild):
 
 @client.hybrid_group(name='bot')
 @utils.role_check()
-async def main_bot(context:commands.Context):
+async def main_bot(context: commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...')
 
 @main_bot.command(name='moderator')
 @commands.has_guild_permissions(administrator=True)
-async def bot_moderator(context:commands.Context,role:str):
+async def bot_moderator(context: commands.Context, role: str):
     """Set the Discord Role for Bot Moderation"""
     logger.command(f'Bot Moderator')
     uBot = utils.botUtils(client)
@@ -100,7 +104,7 @@ async def bot_permissions(context:commands.Context,permission:str):
 
 @main_bot.command(name='test')
 @utils.role_check()
-async def bot_test(context:commands.Context):
+async def bot_test(context: commands.Context):
     """Test Async Function...**DO NOT USE**"""
  
     await context.send('Test Function Used')
@@ -114,11 +118,11 @@ async def bot_ping(context:commands.Context):
 
 @main_bot.command(name='load')
 @utils.role_check()
-async def bot_cog_loader(context:commands.Context,cog:str):
+async def bot_cog_loader(context: commands.Context, cog: str):
     """Use this function for loading a cog manually."""
 
     try:
-        client.load_extension(name= cog)
+        client.load_extension(name=cog)
     except Exception as e:
         await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}')
     else:
@@ -126,11 +130,11 @@ async def bot_cog_loader(context:commands.Context,cog:str):
 
 @main_bot.command(name='unload')
 @utils.role_check()
-async def bot_cog_unloader(context:commands.Context,cog:str):
+async def bot_cog_unloader(context: commands.Context, cog: str):
     """Use this function to un-load a cog manually."""
 
     try:
-        client.unload_extension(name= cog)
+        client.unload_extension(name=cog)
     except Exception as e:
         await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}')
     else:
@@ -138,7 +142,7 @@ async def bot_cog_unloader(context:commands.Context,cog:str):
 
 @main_bot.command(name='disconnect')
 @utils.role_check()
-async def bot_stop(context:commands.Context):
+async def bot_stop(context: commands.Context):
     """Closes the connection to Discord."""
     logger.command('Bot Stop Called...')
   
@@ -147,7 +151,7 @@ async def bot_stop(context:commands.Context):
 
 @main_bot.command(name='restart')
 @utils.role_check()
-async def bot_restart(context:commands.Context):
+async def bot_restart(context: commands.Context):
     """This is the discordBot restart function\n
     Requires the discordBot to be run in a Command/PowerShell Window ONLY!"""
     logger.command('Bot Restart Called...')
@@ -160,7 +164,7 @@ async def bot_restart(context:commands.Context):
 
 @main_bot.command(name='status')
 @utils.role_check()
-async def bot_status(context:commands.Context):
+async def bot_status(context: commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
     logger.command('Bot Status Called...')
  
@@ -170,23 +174,23 @@ async def bot_status(context:commands.Context):
 
 @main_bot.command(name='sync')
 @utils.role_check()
-async def bot_sync(context:commands.Context):
+async def bot_sync(context: commands.Context):
     """Syncs Bot Commands to the current guild this command was used in."""
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
     if guild_id == None or context.guild.id != int(guild_id):
-        DB.getDBHandler().DBConfig.SetSetting('Guild_ID',context.guild.id)
+        DB.getDBHandler().DBConfig.SetSetting('Guild_ID', context.guild.id)
 
     client.tree.copy_global_to(guild=context.guild)
     logger.command(f'Bot Commands Sync: {await client.tree.sync(guild=context.guild)}')
     await context.send('Successfully Syncd Bot Commands')
-    
+
 
 async def initbot():
     """This is the main startup function..."""
-    global main_AMP,main_DB,main_DB_Config
+    global main_AMP, main_DB, main_DB_Config
     main_DB = DB.getDBHandler().DB
-    main_DB_Config = main_DB.GetConfig() #Can point to here or main_DBHandler.DBConfig
-   
+    main_DB_Config = main_DB.GetConfig()  # Can point to here or main_DBHandler.DBConfig
+
     main_AMPHandler = AMP.getAMPHandler(client)
     main_AMP = main_AMPHandler.AMP
     
@@ -202,6 +206,7 @@ async def initbot():
     Handler = loader.Handler(client)
     await Handler.module_auto_loader()
     await Handler.cog_auto_loader()
+
 
 def client_run():
     logger.info('Bot Intializing...')

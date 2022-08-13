@@ -16,7 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA. 
+   02110-1301, USA.
 
 '''
 import os
@@ -29,17 +29,17 @@ import importlib.util
 from discord.ext import commands
 import discord
 
-#custom scripts
+# custom scripts
 import AMP
 
 loop = asyncio.new_event_loop()
 loaded = []
 
 
-
 class Handler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
-    def __init__(self,client:commands.Bot):
+
+    def __init__(self, client: commands.Bot):
         self._client = client
 
         self._cwd = pathlib.Path.cwd()
@@ -58,7 +58,7 @@ class Handler():
         
     async def module_auto_loader(self):
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
-        #Just to make it easier; always load the Generic Module as a base.
+        # Just to make it easier; always load the Generic Module as a base.
         await self._client.load_extension('modules.Generic.generic')
         self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **modules.Generic.generic**')
         loaded.append('Generic')
@@ -102,15 +102,15 @@ class Handler():
 
     async def cog_auto_loader(self):
         """This will load all Cogs inside of the cogs folder needed for interaction with DB and AMP"""
-        path = f'cogs' #This gets us to the folder for the module specific scripts to load via the cog.
+        path = f'cogs'  # This gets us to the folder for the module specific scripts to load via the cog.
         try:
-            cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
+            cog_file_list = pathlib.Path.joinpath(self._cwd, 'cogs').iterdir()
             for script in cog_file_list:
                 if script.name.endswith('.py'):
                     cog = f'{path}.{script.name[:-3]}'
 
                     try:
-                        await self._client.load_extension(cog) 
+                        await self._client.load_extension(cog)
                         self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
                         continue
 
@@ -120,7 +120,7 @@ class Handler():
                     except Exception as e:
                         self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
                         continue
-                
+
         except FileNotFoundError as e:
             self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
             

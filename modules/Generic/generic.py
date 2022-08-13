@@ -16,7 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA. 
+   02110-1301, USA.
 
 '''
 import discord
@@ -34,14 +34,14 @@ class Minecraft(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
-        self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
+        self.logger = logging.getLogger(__name__)  # Point all print/logging statments here!
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
         self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB #Main Database object
+        self.DB = self.DBHandler.DB  # Main Database object
         self.DBConfig = self.DBHandler.DBConfig
 
         self.uBot = utils.botUtils(client) #Utilities Class for Embed's and other functionality.

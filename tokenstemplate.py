@@ -1,8 +1,8 @@
-#Discord Server Connection OAuth Token aka 'Client Secret'
+# Discord Server Connection OAuth Token aka 'Client Secret'
 token = 'IGNORE THIS FIELD IF TESTING AMP/DB'
 
-#2Factor AUTH Code for AMP Console Login
-#Leave blank if you are not using 2FA.
+# 2Factor AUTH Code for AMP Console Login
+# Leave blank if you are not using 2FA.
 AMPAuth = ''
 
 #Login creds - ## DO NOT SHARE! ##
