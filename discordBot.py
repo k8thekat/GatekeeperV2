@@ -157,7 +157,7 @@ async def bot_restart(context: commands.Context):
  
     import os
     import sys
-    await context.send(f'**Currently Restarting the Bot, please wait...**')
+    await context.send('**Currently Restarting the Bot, please wait...**')
     sys.stdout.flush()
     os.execv(sys.executable, ['python3'] + sys.argv)
 

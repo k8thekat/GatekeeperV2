@@ -270,7 +270,7 @@ class AMP_Cog(commands.Cog):
         amp_servers = []
 
         if user_ign is None or len(user_servers) == 0:
-            await message.reply(f'Hey! I was unable to understand your request, please edit your previous message or send another message with the updated information!')
+            await message.reply('Hey! I was unable to understand your request, please edit your previous message or send another message with the updated information!')
             self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
             self.failed_whitelist.append(message)
             return
@@ -281,7 +281,7 @@ class AMP_Cog(commands.Cog):
             if amp_server is None:
                 index+1
                 if len(user_servers)-1 == index:
-                    await message.reply(f'Hey! I was unable to Whitelist you on the servers you requested, please edit your previous message or send another message with the updated information!')
+                    await message.reply('Hey! I was unable to Whitelist you on the servers you requested, please edit your previous message or send another message with the updated information!')
                     self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
                     self.failed_whitelist.append(message)
                     return
@@ -294,7 +294,7 @@ class AMP_Cog(commands.Cog):
 
             user_UUID = amp_server.name_Conversion(user_ign)  # Returns None if Multiple or incorrect.
             if user_UUID is None:
-                await message.reply(f'Hey! I am having trouble finding your IGN, please edit your previous message or send another message with the correct information!')
+                await message.reply('Hey! I am having trouble finding your IGN, please edit your previous message or send another message with the correct information!')
                 self.logger.error(f'Failed Whitelist Request, adding {message.author.name} to Failed Whitelist list.')
                 self.failed_whitelist.append(message)
                 return
@@ -308,7 +308,7 @@ class AMP_Cog(commands.Cog):
                 db_user = self.DB.AddUser(DiscordID=message.author.id, Discordname=message.author.name, MC_IngameName=user_ign, MC_UUID=user_UUID)
 
         if not self.Auto_WL:
-            self.logger.error(f'Hey a Whitelist request came in, but Auto-Whitelisting is currently disabled!')
+            self.logger.error('Hey a Whitelist request came in, but Auto-Whitelisting is currently disabled!')
             return
 
         user_check = amp_server.check_Whitelist(user_UUID)
@@ -328,7 +328,7 @@ class AMP_Cog(commands.Cog):
             return
 
         if db_server.Donator == True and db_user.Donator != True:
-            await message.reply(f'*Waves* Hey this server is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')
+            await message.reply('*Waves* Hey this server is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')
             return
 
         # This handles Whitelist Delays if set.
@@ -357,7 +357,7 @@ class AMP_Cog(commands.Cog):
     @tasks.loop(seconds=60)
     async def whitelist_waitlist_handler(self):
         """This is the Whitelist Wait list handler, every 60 seconds it will check the list and whitelist them after the alotted wait time."""
-        self.logger.command(f'Checking the Whitelist Wait List...')
+        self.logger.command('Checking the Whitelist Wait List...')
         if len(self.WL_wait_list) == 0:
             self.whitelist_waitlist_handler.stop()
 

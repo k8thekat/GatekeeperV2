@@ -102,7 +102,7 @@ class Handler():
 
     async def cog_auto_loader(self):
         """This will load all Cogs inside of the cogs folder needed for interaction with DB and AMP"""
-        path = f'cogs'  # This gets us to the folder for the module specific scripts to load via the cog.
+        path = 'cogs'  # This gets us to the folder for the module specific scripts to load via the cog.
         try:
             cog_file_list = pathlib.Path.joinpath(self._cwd, 'cogs').iterdir()
             for script in cog_file_list:

@@ -164,7 +164,7 @@ class AMPHandler():
                         # self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
                         # self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
                         #!TODO! This may change in the future. Depends on the table update.
-                        for DIS in getattr(class_module, f'DisplayImageSources'):
+                        for DIS in getattr(class_module, 'DisplayImageSources'):
                             self.AMP_Modules[DIS] = getattr(class_module, f'AMP{module_name}')
                             self.AMP_Console_Modules[DIS] = getattr(class_module, f'AMP{module_name}Console')
 
@@ -269,7 +269,7 @@ class AMPInstance:
 
                 # Bot role doesn't exists, but we have Super Admin!
                 if self.AMP_BotRoleID is None and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
-                    self.logger.warning(f'***ATTENTION*** We have `Super Admins`, setting up AMP Permissions and creating `discord_bot` role!')
+                    self.logger.warning('***ATTENTION*** We have `Super Admins`, setting up AMP Permissions and creating `discord_bot` role!')
                     self.setup_AMPbotrole()
                     self.setup_AMPpermissions()
 
@@ -286,7 +286,7 @@ class AMPInstance:
                 # Bot role exists but we do not have discord_bot role and we have Super Admin!
                 # Give myself the role here
                 if self.AMP_BotRoleID is not None and self.AMP_BotRoleID not in self.AMP_userinfo['result']['Roles'] and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
-                    self.logger.warning(f'***ATTENTION*** Adding `discord_bot` to our roles!')
+                    self.logger.warning('***ATTENTION*** Adding `discord_bot` to our roles!')
                     self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
 
                 # Not the main AMP Instance and the Bot Role Exists and we have the discord_bot role and we have super also!
@@ -346,7 +346,7 @@ class AMPInstance:
                 failed = True
 
         if failed:
-            self.logger.critical(f'***ATTENTION*** The Bot is missing permissions, some or all functionality may not work properly!')
+            self.logger.critical('***ATTENTION*** The Bot is missing permissions, some or all functionality may not work properly!')
             # Please see this image for the required bot user Permissions **(Github link to AMP Basic Perms image here)**
             return False
 
@@ -517,7 +517,7 @@ class AMPInstance:
 
         else:
             InstancesFound = False
-            self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
+            self.logger.critical('***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
             time.sleep(30)
 
     def ConsoleUpdate(self) -> dict:
