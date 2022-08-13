@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-1.2.0'
+Version = 'beta-1.3.0'
 logger = logging.getLogger(__name__)
 #logger.info(f'{user} Added the Reaction {os.path.basename(__file__)}: {reaction}')
 
@@ -54,14 +54,14 @@ async def on_ready():
     if guild_id != None:
         local_guild = client.get_guild(int(guild_id))
         client.tree.copy_global_to(guild=local_guild)
-        logger.dev(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
+        logger.info(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
         await client.tree.sync(guild=local_guild)
 
 @client.event
 async def on_guild_join(guild:discord.Guild):
     DB.getDBHandler().DBConfig.SetSetting('Guild_ID',guild.id)
     client.tree.copy_global_to(guild=guild)
-    logger.dev(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
+    logger.info(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
     await client.tree.sync(guild=guild)
 
 
@@ -172,7 +172,9 @@ async def bot_status(context:commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
     logger.command('Bot Status Called...')
     perm_node = 'bot.status'
-    await context.send(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}\nAMP Connected: {main_AMP.AMPHandler.SuccessfulConnection} // SQL Database: {main_DB.DBHandler.SuccessfulDatabase}')
+    await context.send(f'Discord Version: {discord.__version__}  // Gatekeeperv2 Version: {Version} // Python Version {sys.version}')
+    await context.send(f'SQL Database Version: {main_DB.DBHandler.DB_Version}')
+    await context.send(f'AMP Connected: {main_AMP.AMPHandler.SuccessfulConnection} // SQL Database: {main_DB.DBHandler.SuccessfulDatabase}')
 
 @main_bot.command(name='sync',description='Syncs Bot Commands to the current guild this command was used in.')
 @utils.role_check()
@@ -197,7 +199,7 @@ async def initbot():
    
     main_AMPHandler = AMP.getAMPHandler(client)
     main_AMP = main_AMPHandler.AMP
-
+    
     if main_AMP:
         await client.load_extension('cogs.AMP_cog')
 
@@ -211,6 +213,6 @@ async def initbot():
 
 def client_run():
     logger.info('Bot Intializing...')
-    logger.info(f'Discord Version: {discord.__version__}  // Bot Version: {Version} // Python Version {sys.version}')
+    logger.info(f'Discord Version: {discord.__version__}  // Gatekeeperv2 Version: {Version} // Python Version {sys.version}')
     client.run(tokens.token, reconnect = True)
 
