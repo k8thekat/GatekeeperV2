@@ -449,35 +449,36 @@ class AMPInstance:
         self.AMPHandler.SuccessfulConnection = True
 
         # Error catcher for API calls
-        if type(post_req.json()) is None:
+        post_req_json = post_req.json()
+        if type(post_req_json) is None:
             self.logger.error(f"AMP_API CallAPI ret is 0: status_code {post_req.status_code}")
             self.logger.error(post_req.raw)
 
-        self.logger.debug(f'Post Request Prints: {post_req.json()}')
+        self.logger.debug(f'Post Request Prints: {post_req_json}')
 
-        if post_req.json() is None:
+        if post_req_json is None:
             return
 
         # Permission errors will trigger this, unsure what else.
-        if "result" in post_req.json():
+        if "result" in post_req_json:
 
-            if type(post_req.json()['result']) == bool and post_req.json()['result'] == True:
-                return post_req.json()
+            if type(post_req_json['result']) == bool and post_req_json['result'] == True:
+                return post_req_json
 
-            if type(post_req.json()['result']) == bool and post_req.json()['result'] != True:
-                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
-                return post_req.json()
+            if type(post_req_json['result']) == bool and post_req_json['result'] != True:
+                self.logger.error(f'The API Call {APICall} failed because of {post_req_json}')
+                return post_req_json
 
-            if type(post_req.json()['result']) == bool and "Status" in post_req.json()['result'] and (post_req.json()['result']['Status'] == False):
-                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
+            if type(post_req_json['result']) == bool and "Status" in post_req_json['result'] and (post_req_json['result']['Status'] == False):
+                self.logger.error(f'The API Call {APICall} failed because of {post_req_json}')
                 return False
 
-        if "Title" in post_req.json():
-            if type(post_req.json()['Title']) == str and post_req.json()['Title'] == 'Unauthorized Access':
-                self.logger.error(f'["Title"]: The API Call {APICall} failed because of {post_req.json()}')
+        if "Title" in post_req_json:
+            if type(post_req_json['Title']) == str and post_req_json['Title'] == 'Unauthorized Access':
+                self.logger.error(f'["Title"]: The API Call {APICall} failed because of {post_req_json}')
                 return False
 
-        return post_req.json()
+        return post_req_json
 
     def getInstances(self):
         """This gets all Instances on AMP and puts them into a dictionary.\n {'InstanceID': AMPAPI class}"""
