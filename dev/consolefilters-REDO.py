@@ -64,9 +64,7 @@ def filters(entry: dict):
             for filter in filtertable:
                 if contents.lower().startswith(filter):
                     return True
-        return entry
-    else:
-        return entry
+    return entry
 
 # Removed the odd character for color idicators on text
 
@@ -83,5 +81,4 @@ def colorstrip(entry: dict):
                 break
             newchar = contents[index:index + 2]
             entry['Contents'] = contents.replace(newchar, '')
-        return entry
     return entry
