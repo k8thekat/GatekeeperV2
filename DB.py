@@ -72,7 +72,7 @@ class DBHandler():
             self.DBConfig.AddSetting('Auto_Whitelist', False)
             self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
             self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
-        except:
+        except Exception:
             self.logger.warning('**ATTENTION** DBConfig Default Whitelist Settings have been set.')
 
     def dbServerConsoleSetup(self, server: AMPInstance):
@@ -82,7 +82,7 @@ class DBHandler():
             self.DB_Server.Console_Flag = True
             self.DB_Server.Console_Filtered = True
             self.DB_Server.Discord_Console_Channel = None  # Should be a str, can be an int. eg 289450670581350401
-        except:
+        except Exception:
             self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
 
     def dbServerPopulate(self, server: AMPInstance):
@@ -275,7 +275,7 @@ class Database:
     # 	else:
     # 		try:
     # 			self._execute("insert into RolePermissions (RoleID, PermissionID) values(?, ?)", (dbrole.ID, permission))
-    # 		except:
+    # 		except Exception:
     # 			print("had error")
     # 			pass
     # 	jdata = dump_to_json({"Type": "UpdateRolePermission", "Role": dbrole.DiscordID, "Permission": permission, "Value": value})
@@ -316,7 +316,7 @@ class Database:
     def AddServer(self, InstanceID: str, InstanceName: str = None, DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, Console_Flag: bool = True, Console_Filtered: bool = True, Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Role: str = None, Discord_Reaction: str = None):
         # try:
         return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role, Discord_Reaction=Discord_Reaction)
-        # except:
+        # except Exception:
         # return None
 
     def GetServer(self, InstanceID: str = None, Name: str = None):
@@ -775,7 +775,7 @@ class DBServer:
             self._db._execute("Insert into ServerNicknames (ServerID, Nickname) values(?,?)", (self.ID, Nickname))
             jdata = dump_to_json({"Type": "AddServerNickname", "ServerID": self.ID, "Nickname": Nickname})
             self._db._logdata(jdata)
-        except:
+        except Exception:
             return False
         return True
 
@@ -810,7 +810,7 @@ class DBServer:
     # 		self._db._execute("Insert into ServerUsers(ServerID, UserID, Whitelisted) values(?, ?, ?)", (self.ID, dbuser.ID, False))
     # 		jdata = dump_to_json({"Type": "AddServerUser", "ServerID": self.ID, "UserID": dbuser.ID})
     # 		self._db._logdata(jdata)
-    # 	except:
+    # 	except Exception:
     # 		return None
     # 	return self._db.GetServerUser(self, dbuser)
 

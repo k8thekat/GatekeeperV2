@@ -414,7 +414,7 @@ class AMPInstance:
                 self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
                 self.Running = True
 
-            except:
+            except Exception:
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
                 self.Running = False
                 return False
@@ -442,7 +442,7 @@ class AMPInstance:
                 self.logger.error(f'{self.FriendlyName}: AMP API recieved no Data; sleeping for 5 seconds...')
                 time.sleep(5)
 
-            except:
+            except Exception:
                 if self.AMPHandler.SuccessfulConnection == False:
                     self.logger.critical('Unable to connect to URL; please check Tokens.py -> AMPURL')
                     sys.exit(-1)
