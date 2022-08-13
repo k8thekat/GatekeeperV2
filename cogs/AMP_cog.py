@@ -19,10 +19,7 @@
    02110-1301, USA.
 '''
 import os
-import datetime
-from pprint import pprint
 from datetime import timedelta, datetime, timezone
-from sre_constants import IN
 
 import utils
 import AMP
@@ -32,7 +29,6 @@ from modules.parser import Parser
 
 import discord
 from discord.ext import commands, tasks
-from discord.ui import Button, View
 
 
 class AMP_Cog(commands.Cog):

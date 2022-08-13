@@ -24,7 +24,6 @@ from discord import app_commands
 from discord.ext import commands
 import tokens
 import sys
-import os
 import logging
 
 # Custom scripts
