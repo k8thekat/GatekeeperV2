@@ -62,12 +62,14 @@ class Setup:
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB
         self.DB_Config = self.DB.GetConfig()
+        self.logger.info(f'SQL Database Version: {self.DB.DBHandler.DB_Version} // SQL Database: {self.DB.DBHandler.SuccessfulDatabase}')
 
         #This connects and creates all our AMP related parts
         import AMP
         self.AMPHandler = AMP.getAMPHandler(args=self.args)
         self.AMPHandler.setup_AMPInstances() 
         self.AMP = self.AMPHandler.AMP
+        self.logger.info(f'AMP Connected: {self.AMP.AMPHandler.SuccessfulConnection}')
 
 
     def pip_install(self):
