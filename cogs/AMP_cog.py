@@ -80,6 +80,8 @@ class AMP_Cog(commands.Cog):
     async def update_loop(self):
         #This is to keep everything up to date when we change the settings in the DB
         self.attr_update()
+        #This is to check for any new instances that have been created since the bot was running.
+        self.AMPHandler.AMP_instanceCheck()
         self.logger.dev('Updating AMP_Cog Attributes!')
         
 
