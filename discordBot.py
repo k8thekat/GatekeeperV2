@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-1.3.0'
+Version = 'beta-2.0.0'
 logger = logging.getLogger(__name__)
 #logger.info(f'{user} Added the Reaction {os.path.basename(__file__)}: {reaction}')
 
@@ -71,14 +71,6 @@ async def main_bot(context:commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...')
 
-# @main_bot.command(name='setup')
-# @commands.has_guild_permissions(administrator=True)
-# async def bot_setup(context:commands.Context,):
-#     """Set the Discord Role for Bot Moderation"""
-#     logger.command(f'Bot Setup')
-   
-#     await context.send(f'Setup Complete')
-
 @main_bot.command(name='moderator')
 @commands.has_guild_permissions(administrator=True)
 async def bot_moderator(context:commands.Context,role:str):
@@ -106,25 +98,25 @@ async def bot_permissions(context:commands.Context,permission:str):
     print(permission)
     await context.send(f'Set Bot Permissions to {permission}!')
 
-@main_bot.command(name='test',description='Test Async Function...')
+@main_bot.command(name='test')
 @utils.role_check()
 async def bot_test(context:commands.Context):
     """Test Async Function...**DO NOT USE**"""
-    perm_node = 'bot.test'
+ 
     await context.send('Test Function Used')
 
-@main_bot.command(name='ping',description='Pong...')
+@main_bot.command(name='ping')
 @utils.role_check()
 async def bot_ping(context:commands.Context):
-    """Pong.."""
-    perm_node = 'bot.ping'
+    """Pong..."""
+ 
     await context.send(f'Pong {round(client.latency * 1000)}ms')
 
-@main_bot.command(name='load',description='Loads a Cog')
+@main_bot.command(name='load')
 @utils.role_check()
 async def bot_cog_loader(context:commands.Context,cog:str):
     """Use this function for loading a cog manually."""
-    perm_node = 'bot.load'
+
     try:
         client.load_extension(name= cog)
     except Exception as e:
@@ -132,56 +124,54 @@ async def bot_cog_loader(context:commands.Context,cog:str):
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
-@main_bot.command(name='unload',description='Unloads a Cog')
+@main_bot.command(name='unload')
 @utils.role_check()
 async def bot_cog_unloader(context:commands.Context,cog:str):
     """Use this function to un-load a cog manually."""
-    perm_node = 'bot.unload'
+
     try:
-        client.unload_extension(name= cog)
+        client.unload_extension(name=cog)
     except Exception as e:
         await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}')
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
-@main_bot.command(name='disconnect',description='Closes the connection to Discord')
+@main_bot.command(name='disconnect')
 @utils.role_check()
 async def bot_stop(context:commands.Context):
     """Closes the connection to Discord."""
     logger.command('Bot Stop Called...')
-    perm_node = 'bot.disconnect'
+  
     await context.send('Disconnecting from the Server...')
     return await client.close()
 
-@main_bot.command(name='restart',description='Restarts the bot...')
+@main_bot.command(name='restart')
 @utils.role_check()
 async def bot_restart(context:commands.Context):
     """This is the discordBot restart function\n
     Requires the discordBot to be run in a Command/PowerShell Window ONLY!"""
     logger.command('Bot Restart Called...')
-    perm_node = 'bot.restart'
+ 
     import os
     import sys
     await context.send(f'**Currently Restarting the Bot, please wait...**')
     sys.stdout.flush()
     os.execv(sys.executable, ['python3'] + sys.argv)
 
-@main_bot.command(name='status',description='Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)')
+@main_bot.command(name='status')
 @utils.role_check()
 async def bot_status(context:commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
     logger.command('Bot Status Called...')
-    perm_node = 'bot.status'
+ 
     await context.send(f'Discord Version: {discord.__version__}  // Gatekeeperv2 Version: {Version} // Python Version {sys.version}')
     await context.send(f'SQL Database Version: {main_DB.DBHandler.DB_Version}')
     await context.send(f'AMP Connected: {main_AMP.AMPHandler.SuccessfulConnection} // SQL Database: {main_DB.DBHandler.SuccessfulDatabase}')
 
-@main_bot.command(name='sync',description='Syncs Bot Commands to the current guild this command was used in.')
+@main_bot.command(name='sync')
 @utils.role_check()
 async def bot_sync(context:commands.Context):
     """Syncs Bot Commands to the current guild this command was used in."""
-    perm_node = 'bot.sync'
-
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
     if guild_id == None or context.guild.id != int(guild_id):
         DB.getDBHandler().DBConfig.SetSetting('Guild_ID',context.guild.id)
@@ -206,7 +196,7 @@ async def initbot():
     if main_DB:
         await client.load_extension('cogs.DB_cog')
 
-    utils.botPerms()
+    bPerms = utils.get_botPerms()
     
     import loader
     Handler = loader.Handler(client)

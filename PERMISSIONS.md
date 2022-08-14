@@ -21,7 +21,7 @@ ___
     - **REMINDER**: You want to place the permission node inside the `opening "[" and closing "]"`, each entry needs `quotes('single' or "double")` and between each entry needs to be a `comma(,)`. *(eg `'-bot.status', '-bot.)*
     ```python
     {'name': 'Admin',
-    'discord_role_id': None,
+    'discord_role_id': "None",
     'permissions': 
         ['bot.status', #This is ALLOWING the command '/bot status'
         'bot.ping',
@@ -32,7 +32,7 @@ ___
     - **REMINDER**: You want to place the permission node inside the `opening "[" and closing "]"`, each entry needs `quotes('single' or "double")` and between each entry needs to be a `comma(,)`. *(eg `'-bot.status', '-bot.ping'`)*
     ```python
     {'name': 'Admin',
-    'discord_role_id': None,
+    'discord_role_id': "None",
     'permissions': 
         ['-bot.status', #This is REMOVING the permissions node bot.status preventing the role from using the command '/bot status'
         'bot.ping',
@@ -46,7 +46,7 @@ ___
     - The user would still have access to all other `/server` commands __EXCEPT__ `/server list`.
     ```python
     {'name': 'Admin',
-    'discord_role_id': None,
+    'discord_role_id': "None",
     'permissions': 
         ['bot.*', #This is my wildcard, allowing me to use any command that starts with '/bot'
         '-bot.status']} #This is REMOVING the permission to use the command '/bot status' even though the wildcard exists.
@@ -59,8 +59,68 @@ ___
     - **Stop Button** requires `server.stop`
     - **Restart Button** requires `server.restart`
     - **Kill Button** requires `server.kill`
-
+___
+### Discord Console Channel Permissions:
+- For a user to interact/send console commands via the Discord Console Channel. They need `server.console.interact`
+    - See [Commands-Interacting via Discord Channels](/COMMANDS.md#interacting-with-your-server-via-discord-channels)
 ___
 #### **Full Permission Node List**
 ___
-*Please see inside [bot_perms.py](/bot_perms.py)*
+```
+'bot.*',
+'bot.ping',
+'bot.cogload',
+'bot.cogunload',
+'bot.stop',
+'bot.restart',
+'bot.status',
+'bot.sync',
+'bot.settings',
+'bot.whitelist.*',
+'bot.whitelist.channel',
+'bot.whitelist.waittime',
+'bot.whitelist.auto',
+'bot.whitelist.pendingemoji',
+'bot.whitelist.doneemoji',
+'user.*',
+'user.info',
+'user.add',
+'user.update',
+'user.uuid',
+'dbserver.*',
+'dbserver.cleanup',
+'dbserver.swap',
+'server.*',
+'server.list',
+'server.start',
+'server.stop',
+'server.restart',
+'server.kill',
+'server.msg',
+'server.backup',
+'server.status',
+'server.users',
+'server.displayname',
+'server.description',
+'server.ip',
+'server.role',
+'server.whitelist.*',
+'server.whitelist.true',
+'server.whitelist.false',
+'server.whitelist.add',
+'server.whitelist.remove',
+'server.donator.*',
+'server.donator.true',
+'server.donator.false',
+'server.console.*',
+'server.console.on',
+'server.console.off',
+'server.console.channel',
+'server.console.filter',
+'server.console.interact',
+'server.chat.channel'
+'server.nickname.*'
+'server.nickname.add'
+'server.nickname.remove'
+'server.nickname.list'
+
