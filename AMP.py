@@ -530,7 +530,8 @@ class AMPInstance:
 
     def ConsoleMessage_withUpdate(self,msg:str)-> dict:
         """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
-        parameters = {'message': ' '.join(msg)}
+        #parameters = {'message': ' '.join(msg)}
+        parameters = {'message': msg}
         self.CallAPI('Core/SendConsoleMessage', parameters)
         time.sleep(0.5)
         update = self.ConsoleUpdate()
@@ -742,15 +743,16 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/EmptyTrash',parameters)
         return
 
-    def takeBackup(self,title:str, description:str, sticky:bool = False):
+    def takeBackup(self,title:str,description:str,sticky:bool=False):
         """Takes a backup of the AMP Instance; default `sticky` is False!"""
         self.Login()
         parameters = {
-            'Title' : title,
-            'Description' : description,
-            'Sticky' : sticky
+            "Title" : title,
+            "Description" : description,
+            "Sticky" : sticky
         }
-        self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
+        result = self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
+        print(result)
         return
 
     def getAMPUserInfo(self,name:str,IdOnly=False):

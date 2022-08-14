@@ -108,10 +108,15 @@ class DB_Module(commands.Cog):
             if self.whitelist_emoji_pending:
                 self.DBConfig.Whitelist_emoji_pending = reaction.emoji.id
                 self.whitelist_emoji_pending = False
+                emoji = self._client.get_emoji(reaction.emoji.id)
+                await reaction.message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {emoji}')
+
             #This is for completed whitelist requests
             if self.whitelist_emoji_done:
                 self.DBConfig.Whitelist_emoji_done = reaction.emoji.id
                 self.whitelist_emoji_done = False
+                emoji = self._client.get_emoji(reaction.emoji.id)
+                await reaction.message.edit(content = f'Woohoo! Set your **Whitelist Done Emoji** to {emoji}')
 
         return reaction,user
 
@@ -137,7 +142,7 @@ class DB_Module(commands.Cog):
 
     @user.command(name='add')
     @utils.role_check()
-    async def user_add(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=False):
+    async def user_add(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None):
         """Adds the Discord Users information to the Database"""
         self.logger.command(f'{context.author.name} used User Add Function')
        
@@ -147,7 +152,7 @@ class DB_Module(commands.Cog):
 
         discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
         if discord_user != None:
-            self.DB.AddUser(DiscordID=discord_user.id,DiscordName=discord_user.name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid,Donator=donator)
+            self.DB.AddUser(DiscordID=discord_user.id,DiscordName=discord_user.name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid)
             await context.send(f'Added {discord_user.name} to the Database!')
         else:
             await context.send(f'Unable to find the {discord_name} you provided, please try again.')
@@ -155,7 +160,7 @@ class DB_Module(commands.Cog):
 
     @user.command(name='update')
     @utils.role_check()
-    async def user_update(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=None):
+    async def user_update(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None):
         """Updated a Discord Users information in the Database"""
         self.logger.command(f'{context.author.name} used User Update Function')
        
@@ -166,8 +171,8 @@ class DB_Module(commands.Cog):
         db_params = {'discord_name': 'DiscordName',
                     'mc_ign' : 'MC_IngameName',
                     'mc_uuid' : 'MC_UUID',
-                    'steamid' : 'SteamID',
-                    'donator' : 'Donator'}
+                    'steamid' : 'SteamID'
+                    }
 
         if mc_ign != None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
@@ -236,11 +241,10 @@ class DB_Module(commands.Cog):
 
     @db_bot_whitelist.command(name='channel')
     @utils.role_check()
-    async def db_bot_whitelist_channel_set(self,context:commands.Context,id:str):
+    async def db_bot_whitelist_channel_set(self,context:commands.Context,channel:str):
         """Sets the Whitelist Channel for the Bot to monitor"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
       
-
         channel = self.uBot.channelparse(id,context,context.guild.id)
         if channel == None:
             return await context.reply(f'Unable to find the Discord Channel: {id}')
@@ -263,11 +267,11 @@ class DB_Module(commands.Cog):
 
     @db_bot_whitelist.command(name='auto')
     @utils.role_check()
+    @app_commands.autocomplete(flag=utils.bool_autocomplete)
     async def db_bot_whitelist_auto_whitelist(self,context:commands.Context,flag:str):
         """This turns on or off Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
     
-
         flag_reg = re.search("(true|false)",flag.lower())
         if flag_reg == None:
             return await context.send(f'Please use `true` or `false` for your flag.')
@@ -300,7 +304,6 @@ class DB_Module(commands.Cog):
     async def db_bot_whitelist_done_emjoi_set(self,context:commands.Context):
         """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Done Emoji...')
-    
 
         flag = 'completed Whitelist requests!'
         await context.send('Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!')
@@ -317,8 +320,7 @@ class DB_Module(commands.Cog):
     async def db_bot_settings(self,context:commands.Context):
         """Displays currently set Bot settings"""
         self.logger.command(f'{context.author.name} used Bot Settings...')
-      
-
+    
         self.DBConfig = self.DB.GetConfig()
         dbsettings_list = self.DBConfig.GetSettingList()
         settings_list = []
@@ -326,6 +328,20 @@ class DB_Module(commands.Cog):
             config = self.DBConfig.GetSetting(setting)
             settings_list.append({f'{setting.capitalize()}': f'{str(config)}'})
         await context.send(embed=self.uBot.bot_settings_embed(context, settings_list))
+
+    @commands.hybrid_command(name='donator')
+    @utils.role_check()
+    async def db_bot_donator(self,context:commands.Context,role:str):
+        """Sets the Donator Role for Donator Only AMP Server access."""
+        self.logger.command(f'{context.author.name} used Bot Donator Role...')
+        self.DBConfig = self.DB.GetConfig()
+        discord_role = self.uBot.roleparse(role,context,context.guild.id)
+        if discord_role != None:
+            self.DBConfig.SetSetting('Donator_role_id',str(discord_role.id))
+            await context.send(f'You are all set! Donator Role is now set to {discord_role.name}')
+        else:
+            await context.send(f'Hey! I was unable to find the role {role}, Please try again.')
+    
 
     @commands.hybrid_group(name='dbserver')
     @utils.role_check()

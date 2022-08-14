@@ -48,7 +48,7 @@ class DBHandler():
 		self.SuccessfulDatabase = True
 
 		#Always update this value when changing Tables!
-		self.DB_Version = 1.3
+		self.DB_Version = 1.4
 
 		#This should ONLY BE TRUE on new Database's going forward. 
 		if self.DBConfig.GetSetting('DB_Version') == None:
@@ -148,7 +148,6 @@ class Database:
 						MC_IngameName text collate nocase,
 						MC_UUID text unique collate nocase,
 						SteamID text unique collate nocase,
-						Donator integer not null,
 						Role text collate nocase,
 						)""")
 
@@ -261,9 +260,9 @@ class Database:
         cur.close()
         return ret
 
-    def AddUser(self, DiscordID: str = None, DiscordName: str = None, MC_IngameName: str = None, MC_UUID: str = None, SteamID: str = None, Donator: bool = False):
+    def AddUser(self, DiscordID: str = None, DiscordName: str = None, MC_IngameName: str = None, MC_UUID: str = None, SteamID: str = None):
         try:
-            return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, MC_IngameName=MC_IngameName, MC_UUID=MC_UUID, SteamID=SteamID, Donator=Donator)
+            return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, MC_IngameName=MC_IngameName, MC_UUID=MC_UUID, SteamID=SteamID)
         except Exception as e:
             print('DBUser error', e)
             return None
@@ -273,16 +272,6 @@ class Database:
         SQL = "Select ID from Users"
         SQLWhere = []
         SQLArgs = []
-
-        # if(GlobalBanExpiration):
-        # 	SQLWhere.append("GlobalBanExpiration <= ?")
-        # 	SQLArgs.append(GlobalBanExpiration)
-        if(Donator):
-            SQLWhere.append("and Donator = ?")
-            SQLArgs.append(Donator)
-        # if(ServerModerator):
-        # 	SQLWhere.append("ServerModerator = ?")
-        # 	SQLArgs.append(ServerModerator)
 
         if len(SQLWhere):
             SQL = SQL + " where " + " and ".join(SQLWhere)
@@ -486,19 +475,10 @@ class DBUser:
     def __setattr__(self, name: str, value):
         if (name == "ID") or (name[0] == "_"):
             return
-        # elif name == "GlobalBanExpiration":
-        # 	#make sure proper value
-        # 	if (type(value) != datetime.datetime) and (type(value) is not None):
-        # 		raise Exception("Invalid type")
-        elif name in ["Donator"]:
-            # conver to bool
-            value = bool(value)
+ 
         elif name == "DiscordID":
             # conver to int
             value = int(value)
-        # elif name == "TimePlayed":
-        # 	#conver to integer
-        # 	value = int(value)
 
         # set value and update the user
         super().__setattr__(name, value)
@@ -573,15 +553,11 @@ class DBServer:
     def __setattr__(self, name: str, value):
         if (name in ["ID", "Nicknames"]) or (name[0] == "_"):
             return
-        # elif name == "MapCreationDate":
-        # 	#make sure proper value
-        # 	if type(value) != datetime.datetime:
-        # 		raise Exception("Invalid type")
+
         elif name in ["Whitelist", "Donator"]:
             # conver to bool
             value = bool(value)
-        # elif name in ["UserLimit"]:
-        # 	value = int(value)
+    
         elif name in ["Discord_Console_Channel", "Discord_Chat_Channel"]:
             if value is not None:
                 value = int(value)
@@ -689,43 +665,54 @@ class DBConfig:
         self._ConfigNameToID.pop(name)
 
 class DBUpdate:
-	def __init__(self,DB:Database,Version:float=None):
-		self.logger = logging.getLogger(__name__)
-		self.DB = DB
-		self.DBConfig = self.DB.GetConfig()
+    def __init__(self,DB:Database,Version:float=None):
+        self.logger = logging.getLogger(__name__)
+        self.DB = DB
+        self.DBConfig = self.DB.GetConfig()
 
-		if Version == None:
-			self.DBConfig.AddSetting('DB_Version',Version)
+        if Version == None:
+            self.DBConfig.AddSetting('DB_Version',Version)
 
-		if 1.1 > Version:
-			self.logger.info('**ATTENTION** Updating DB to Version 1.1')
-			self.DBConfig.AddSetting('Guild_ID', None)
-			self.DBConfig.AddSetting('Moderator_role_id', None)
-			self.DBConfig.AddSetting('Permissions', 'Default')
-			self.DBConfig.SetSetting('DB_Version', '1.1')
+        if 1.1 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.1')
+            self.DBConfig.AddSetting('Guild_ID', None)
+            self.DBConfig.AddSetting('Moderator_role_id', None)
+            self.DBConfig.AddSetting('Permissions', 'Default')
+            self.DBConfig.SetSetting('DB_Version', '1.1')
 
-		if 1.2 > Version:
-			self.logger.info('**ATTENTION** Updating DB to Version 1.2')
-			self.user_roles()
-			self.DBConfig.SetSetting('DB_Version', '1.2')
+        if 1.2 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.2')
+            self.user_roles()
+            self.DBConfig.SetSetting('DB_Version', '1.2')
 
-		if 1.3 > Version:
-			self.logger.info('**ATTENTION** Updating DB to Version 1.3')
-			self.nicknames_unique
-			self.DBConfig.SetSetting('DB_Version', '1.3')
+        if 1.3 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.3')
+            self.nicknames_unique
+            self.DBConfig.SetSetting('DB_Version', '1.3')
 
-	def user_roles(self):
-		#create the sql line
-		SQL = "alter table users add column Role text collate nocase default None;"
-		#execute it
-		self.DB._execute(SQL, ())
-
-	def nicknames_unique(self):
-		#create the sql line
-		SQL = "alter table ServerNicknames add constraint Nickname unique;"
-		#execute it
-		self.DB._execute(SQL, ())
-		
+        if 1.4 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.4')
+            self.DBConfig.AddSetting('Donator_Role_ID', None)
+            self.user_Donator_removal()
+            self.DBConfig.SetSetting('DB_Version', '1.4')
 
 
-		
+
+    def user_roles(self):
+        #create the sql line
+        SQL = "alter table users add column Role text collate nocase default None;"
+        #execute it
+        self.DB._execute(SQL, ())
+
+    def nicknames_unique(self):
+        #create the sql line
+        SQL = "alter table ServerNicknames add constraint Nickname unique;"
+        #execute it
+        self.DB._execute(SQL, ())
+
+    def user_Donator_removal(self):
+        #create the sql line
+        SQL = "alter table users drop column Donator;"
+        #execute it
+        self.DB._execute(SQL, ())
+  

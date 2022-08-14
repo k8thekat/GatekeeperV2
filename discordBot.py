@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-2.0.0'
+Version = 'beta-2.1.0'
 logger = logging.getLogger(__name__)
 #logger.info(f'{user} Added the Reaction {os.path.basename(__file__)}: {reaction}')
 
@@ -164,9 +164,9 @@ async def bot_status(context:commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
     logger.command('Bot Status Called...')
  
-    await context.send(f'Discord Version: {discord.__version__}  // Gatekeeperv2 Version: {Version} // Python Version {sys.version}')
-    await context.send(f'SQL Database Version: {main_DB.DBHandler.DB_Version}')
-    await context.send(f'AMP Connected: {main_AMP.AMPHandler.SuccessfulConnection} // SQL Database: {main_DB.DBHandler.SuccessfulDatabase}')
+    await context.send(f'**Discord Version**: {discord.__version__}  // **Gatekeeperv2 Version**: {Version} // **Python Version**: {sys.version}')
+    await context.send(f'**SQL Database Version**: {main_DB.DBHandler.DB_Version}')
+    await context.send(f'**AMP Connected**: {main_AMP.AMPHandler.SuccessfulConnection} // **SQL Database**: {main_DB.DBHandler.SuccessfulDatabase}')
 
 @main_bot.command(name='sync')
 @utils.role_check()

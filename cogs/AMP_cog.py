@@ -330,9 +330,13 @@ class AMP_Cog(commands.Cog):
             await message.reply(f'Ooops, it appears that the server {server_name} has their Whitelisting Closed. If this is an error please contact a Staff Member.')
             return
 
-        if db_server.Donator == True and db_user.Donator != True:
-            await message.reply(f'*Waves* Hey this server is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')
-            return
+        if db_server.Donator == True:
+            author_roles = []
+            for role in message.author.roles:
+                author_roles.append(str(role.id))
+                if self.DBConfig.GetSetting('Donator_role_id') not in author_roles:
+                    await message.reply(f'*Waves* Hey this server is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')
+                    return
 
         # This handles Whitelist Delays if set.
         if self.WL_delay != 0:

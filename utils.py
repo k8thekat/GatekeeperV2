@@ -38,32 +38,33 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
-    #print(dir(context))
-    #print(type(context))
+   
+    author = context
+    if type(context) != discord.Member:
+        author = context.author
+
+    #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
+    admin = author.guild_permissions.administrator
+    if admin == True:
+        logger.command(f'Permission Check Okay on {author}')
+        return True
+
     #This handles Custom Permissions for people with the flag set.
     print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
         print(perm_node)
-        botPerms.perm_node_check(perm_node,context)
-        if botPerms.perm_node_check == False:
+        bPerms = get_botPerms()
+        bPerms.perm_node_check(perm_node,context)
+        if bPerms.perm_node_check == False:
             logger.command(f'Permission Check Failed on {author}')
             return False
         else:
             logger.command(f'Permission Check Okay on {author}')
             return True
 
-    author = context
-    if type(context) != discord.Member:
-        author = context.author
-   
-    #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
-    admin = author.guild_permissions.administrator
-    if admin == True:
-        logger.command(f'Permission Check Okay on {author}')
-        return True
-    
+    #This is the final check before we attempt to use the "DEFAULT" permissions setup.
     if DBConfig.Moderator_role_id == None:
         await context.send(f'Please have an Adminstrator run `/bot setup (admin role)`.')
         logger.error(f'DBConfig Staff role has not been set yet!')
@@ -643,14 +644,14 @@ class botUtils():
             embed.set_thumbnail(url= discord_user.avatar.url)
             if db_user != None:
                 embed.add_field(name='In Database', value='True')
-                if db_user.Donator != None:
-                    embed.add_field(name='Donator', value=f'{bool(db_user.Donator)}')
                 if db_user.MC_IngameName != None:
                     embed.add_field(name='Minecraft IGN', value=f'{db_user.MC_IngameName}',inline= False)
                 if db_user.MC_UUID != None:
                     embed.add_field(name='Minecraft UUID', value=f'{db_user.MC_UUID}',inline= True)
                 if db_user.SteamID != None:
                     embed.add_field(name='Steam ID', value=f'{db_user.SteamID}',inline=False)
+                if db_user.Role != None:
+                    embed.add_field(name='Permission Role', value=f'{db_user.Role}', inline=False)
             return embed
                 
 class botPerms():

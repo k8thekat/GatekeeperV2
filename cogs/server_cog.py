@@ -164,7 +164,7 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server != None and server.Running:
-            console_reply = server.ConsoleMessage(message)
+            console_reply = server.ConsoleMessage_withUpdate(message)
             msg_to_send = []
             for message in console_reply['ConsoleEntries']:
                 msg_to_send.append(message['Contents'])
@@ -182,10 +182,12 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server != None and server.Running:
-            title = f'%s generated backup',context.author.display_name
-            description = f'Created at %s by %s',datetime.now(tz= timezone.utc),context.author.display_name
-            server.takeBackup(title=title,description=description)
-            await context.send(f'{server.FriendlyName} Backup' + description)
+            title = f"Backup by {context.author.display_name}"
+            time = str(datetime.now(tz= timezone.utc))
+            description = f"Created at {time} by {context.author.display_name}"
+            display_description = f'Created at **{str(datetime.now(tz= timezone.utc))}**(utc) by **{context.author.display_name}**'
+            await context.send(f'Creating a backup of **{server.FriendlyName}**  // **Description**: {display_description}')
+            #server.takeBackup(title=title,description=description)
         
     @server.command(name='status')
     @utils.role_check()
