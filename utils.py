@@ -38,7 +38,8 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
-  
+    #print(dir(context))
+    #print(type(context))
     #This handles Custom Permissions for people with the flag set.
     print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
@@ -47,14 +48,20 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         print(perm_node)
         botPerms.perm_node_check(perm_node,context)
         if botPerms.perm_node_check == False:
+            logger.command(f'Permission Check Failed on {author}')
             return False
         else:
+            logger.command(f'Permission Check Okay on {author}')
             return True
 
+    author = context
+    if type(context) != discord.Member:
+        author = context.author
+   
     #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
-    admin = context.author.guild_permissions.administrator
+    admin = author.guild_permissions.administrator
     if admin == True:
-        logger.command(f'Permission Check Okay on {context.author}')
+        logger.command(f'Permission Check Okay on {author}')
         return True
     
     if DBConfig.Moderator_role_id == None:
@@ -64,7 +71,7 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
 
     staff_role,author_top_role = 0,0
     guild_roles = context.guild.roles
-    
+
     if type(context) == discord.member.Member:
         top_role_id = context.top_role.id
         author = context.name
@@ -95,24 +102,33 @@ def role_check():
                
 
 async def permissions_autocomplete(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    """This is for Default or Custom permission setting via /bot permissions"""
     types = ['Default', 'Custom']
     return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
 
 async def bool_autocomplete(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    """True or False Autocomplete reply"""
     booleans = ['True', 'False']
     return [app_commands.Choice(name=bool, value=bool) for bool in booleans if current.lower() in bool.lower()]
 
-async def autocomplete_template(interactio:discord.Interaction,current:str,choice_list:list) -> list[app_commands.Choice[str]]:
+async def autocomplete_permission_roles(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    """This is for roles inside of the bot_perms file. Returns a list of all the roles.."""
+    bPerms = get_botPerms()
+    choice_list = bPerms.get_roles()
+    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
+
+async def autocomplete_template(interactio:discord.Interaction,current:str,choice_list:list=None) -> list[app_commands.Choice[str]]:
     """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
 class CustomButton(Button):
     """ utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)"""
-    def __init__(self,server,view,function,label:str,callback_label:str,callback_disabled:bool,style=discord.ButtonStyle.green,context=None):
+    def __init__(self,server:AMP.AMPInstance,view:discord.ui.View,function,label:str,callback_label:str,callback_disabled:bool,style=discord.ButtonStyle.green,context=None):
         super().__init__(label=label, style=style, custom_id=label)
         self.server = server
         self.context = context
         self._label = label
+        self.permission_node = 'server.' + self._label.lower()
 
         self.callback_label = callback_label
         self.callback_disabled = callback_disabled
@@ -123,13 +139,13 @@ class CustomButton(Button):
 
     async def callback(self,interaction):
         """This is called when a button is interacted with."""
-        if not await async_rolecheck(interaction.user):
+        if not await async_rolecheck(interaction.user,self.permission_node):
             return
         self._interaction = interaction
         self.label = self.callback_label
         self.disabled = self.callback_disabled
-        await interaction.response.edit_message(view=self._view)
         self._function()
+        await interaction.response.edit_message(view=self._view)
         await asyncio.sleep(30)
         await self.reset()
 
@@ -138,6 +154,7 @@ class CustomButton(Button):
         print('Resetting Buttons...')
         self.label = self._label
         self.disabled = False
+        #server_embed = await self._view.update_view()
         await self._interaction.followup.edit_message(message_id=self._interaction.message.id,view=self._view)
 
 class StartButton(CustomButton):
@@ -157,8 +174,23 @@ class KillButton(CustomButton):
         super().__init__(server=server,view=view,function=function,label='Kill', callback_label='Killed...', callback_disabled=True,style=discord.ButtonStyle.danger)
     
 class StatusView(View):
-    def __init__(self,timeout=180):
+    def __init__(self,timeout=180,context:commands.Context=None,amp_server:AMP.AMPInstance=None):
         super().__init__(timeout=timeout)
+        self.server = amp_server
+        self.context = context
+        self.uBot = botUtils()
+
+    # async def update_view(self):
+    #     if self.server.Running:
+    #         tps,Users,cpu,Memory,Uptime = self.server.getStatus()
+    #         Users_online = ', '.join(self.server.getUserList())
+    #         if len(Users_online) == 0:
+    #             Users_online = 'None'
+    #         server_embed = self.uBot.server_status_embed(self.context,self.server,tps,Users,cpu,Memory,Uptime,Users_online)
+    #         return server_embed
+    #     if not self.server.Running:
+    #         server_embed = self.uBot.server_status_embed(self.context,self.server)
+    #         return server_embed
 
     async def on_timeout(self):
         """This Removes all the Buttons after timeout has expired"""
@@ -568,8 +600,25 @@ class botUtils():
             embed.set_thumbnail(url= context.guild.icon)
             embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
             for value in settings:
+                #{'Staff_role_id': '602295470546485249'}
+                # {'Whitelist_channel': '909650262464004136'}
+                # {'Whitelist_wait_time': '1'}
+                # {'Auto_whitelist': '1'}
+                # {'Whitelist_emoji_pending': 'None'}
+                # {'Whitelist_emoji_done': 'None'}
+                # {'Minecraft_multiverse_core': '0'}
+                # {'Whitelistchannel': '909650262464004136'}
+                # {'Db_version': '1.3'}
+                # {'Guild_id': '602285328320954378'}
+                # {'Moderator_role_id': '602295470546485249'}
+                # {'Permissions': 'Default'}
                 key_value = list(value.values())[0]
                 key = list(value.keys())[0]
+
+                if key_value == 'Whitelist_wait_time':
+                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value}', inline=False)
+                    continue
+
                 if key_value == '0' or key_value == '1':
                     key_value = bool(key_value)
                     embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
@@ -577,12 +626,13 @@ class botUtils():
                 
                 if key == 'Moderator_role_id':
                     key_value = self.roleparse(key_value,context,context.guild.id)
-                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+                    embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
                     continue
 
                 if key_value.isalnum() and len(key_value) > 10:
                     key_value = self.channelparse(key_value,context,context.guild.id)
-                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'<#{key_value.id}>',inline=False)
+                    if key_value != None:
+                        embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'<#{key_value.id}>',inline=False)
                     continue
 
             return embed
@@ -663,3 +713,80 @@ class botPerms():
                     self.logger.dev('Found command perm node in Roles Permissions list.',command_perm_node)
                     return True
             
+
+bPerms = None
+def get_botPerms():
+    global bPerms
+    if bPerms == None:
+        bPerms = botPerms()
+    return bPerms
+
+class botPerms():
+    def __init__(self):
+        self.logger = logging.getLogger()
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB
+
+        self._last_modified = 0
+        self.permissions = None
+        self.permission_roles = []
+
+        self.validate_and_load()
+
+
+    def validate_and_load(self):
+        self.json_file = pathlib.Path.cwd().joinpath('bot_perms.json')
+        if self.json_file.stat().st_mtime > self._last_modified:
+            try:
+                self.permissions = json.load(open(self.json_file, 'r'))
+                self._last_modified = self.json_file.stat().st_mtime
+            except json.JSONDecodeError:
+                self.permissions = None
+                self.logger.critical('Unable to load your permissions file. Please check your formatting.')
+
+    def perm_node_check(self,command_perm_node:str,context:commands.Context):
+        """Checks a Users for a DB Role then checks for that Role inside of bot_perms.py, then checks that Role for the proper permission node."""
+        #Lets get our DB user and check if they exist.
+        DB_user = self.DB.GetUser(str(context.author.id))
+        if DB_user == None:
+            return False
+
+        #Lets also check for their DB Role
+        user_role = DB_user.Role 
+        if user_role == None:
+            return False
+
+        #Need to turn author roles into a list of ints.
+        user_discord_role_ids = []
+        for user_roles in context.author.roles:
+            user_discord_role_ids.append(str(user_role.id))
+
+        #This is to check for Super perm nodes such as `server.*`
+        command_super_node = command_perm_node.split(".")[0] + '.*'
+
+        if self.permissions == None:
+            self.logger.error('**ATTENTION** Please verify your bot_perms file, it failed to load.')
+            return False
+            
+        self.validate_and_load()
+        roles = self.permissions['Roles']
+        for role in roles:
+            if user_role.lower() in role['name'].lower() or role['discord_role_id'] in user_discord_role_ids:
+                #print('Found Role in permissions list',user_role,role['name'])
+                if command_super_node in role['permissions']:
+                    #print('Found Super perm node',command_super_node)
+                    command_perm_node_false_check = '-' + command_perm_node
+                    if command_perm_node_false_check in role['permissions']:
+                        if command_perm_node_false_check[1:] == command_perm_node:
+                            self.logger.dev('This perm node has been denied even though you have global permissions.',command_perm_node_false_check,command_perm_node)
+                            return False
+
+                if command_perm_node in role['permissions']:
+                    self.logger.dev('Found command perm node in Roles Permissions list.',command_perm_node)
+                    return True
+    
+    def get_roles(self):
+        self.permission_roles = []
+        for role in self.permissions['Roles']:
+            self.permission_roles.append(role['name'])
+        return self.permission_roles

@@ -21,5 +21,6 @@ discordBot.db
 /dev/bot_test.py
 
 .vscode/launch.json
+discordBot copy.db
 dev/Patreon development.txt
 discordBot copy.db

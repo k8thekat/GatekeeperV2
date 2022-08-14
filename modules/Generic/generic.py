@@ -26,8 +26,8 @@ import discord
 from discord.ext import commands
 
 import utils
-import AMP
-import DB
+import AMP as AMP
+import DB as DB
 
 class Generic(commands.Cog):
     def __init__ (self,client):
@@ -36,8 +36,9 @@ class Generic(commands.Cog):
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
 
         self.AMPHandler = AMP.getAMPHandler()
-        self.AMP = self.AMPHandler.AMP #Main AMP object
-        
+        self.AMP = self.AMPHandler.AMP  # Main AMP object
+        self.AMPInstances = self.AMPHandler.AMP_Instances  # Main AMP Instance Dictionary
+
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
