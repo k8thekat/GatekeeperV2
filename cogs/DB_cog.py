@@ -55,7 +55,7 @@ class DB_Module(commands.Cog):
         self.whitelist_emoji_message = '' 
         self.whitelist_emoji_pending = False
         self.whitelist_emoji_done = False
-        self.logger.info(f'**SUCCESS** Initializing **{self.name.replace("db","DB")}**')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.replace("db","DB")}')
      
 
     @commands.Cog.listener('on_message')
