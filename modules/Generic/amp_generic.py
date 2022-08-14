@@ -16,22 +16,20 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.
+   02110-1301, USA. 
 
 '''
 import AMP as AMP
 
 DisplayImageSources = ['Generic']
-
-
 class AMPGeneric(AMP.AMPInstance):
-    def __init__(self, instanceID=0, serverdata={}, Index=0, Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
         self.APIModule = 'Generic'
-
-        super().__init__(instanceID, serverdata, Index, Handler=Handler)
-        self.Console = AMPGenericConsole(AMPInstance=self)
+        
+        super().__init__(instanceID,serverdata,Index,Handler=Handler)
+        self.Console = AMPGenericConsole(AMPInstance = self)
 
 
 class AMPGenericConsole(AMP.AMPConsole):
-    def __init__(self, AMPInstance=AMPGeneric):
+    def __init__(self, AMPInstance = AMPGeneric):
         super().__init__(AMPInstance)

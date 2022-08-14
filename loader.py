@@ -16,28 +16,30 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.
+   02110-1301, USA. 
 
 '''
 import os
 import asyncio
 import logging
 import pathlib
+import importlib.util
 
-# prebuilt packages
+#prebuilt packages
 from discord.ext import commands
+import discord
 
-# custom scripts
+#custom scripts
 import AMP
 
 loop = asyncio.new_event_loop()
 loaded = []
 
 
+
 class Handler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
-
-    def __init__(self, client: commands.Bot):
+    def __init__(self,client:commands.Bot):
         self._client = client
 
         self._cwd = pathlib.Path.cwd()
@@ -49,79 +51,82 @@ class Handler():
         self.AMP = self.AMPHandler.AMP
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMP_Modules = self.AMPHandler.AMP_Modules
+        self.Cog_Modules = {}
 
-        self.logger.info(f'**SUCCESS** Initializing... {self.name.capitalize()} ')
-        # await self.cog_auto_loader()
-
+        self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()} ')
+        #await self.cog_auto_loader()
+        
     async def module_auto_loader(self):
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
-
-        # Just to make it easier; always load the Generic Module as a base.
+        #Just to make it easier; always load the Generic Module as a base.
         await self._client.load_extension('modules.Generic.generic')
         self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **modules.Generic.generic**')
         loaded.append('Generic')
-
+        try:
+            dir_list = self._cwd.joinpath('modules').iterdir()
+            for folder in dir_list:
+                file_list = folder.glob('cog_*.py')
+                for script in file_list:
+                    module_name = script.name[4:-3].capitalize()
+                    #print(script)
+                    spec = importlib.util.spec_from_file_location(module_name, script)
+                    class_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(class_module)
+                    #if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
+                    for DIS in getattr(class_module,f'DisplayImageSources'):
+                        #print(DIS,script)
+                        self.Cog_Modules[DIS] = script
+                    
+                    self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **{module_name}**')
+                    
+        except Exception as e:
+            self.logger.error(f'**ERROR** {self.name} Loading Cog Module ** - File Not Found {e}')
+                    
         for instance in self.AMPInstances:
-            module = self.AMPInstances[instance].Module
-
-            # This is used to differentiate AMP Servers that use the Generic Template so we can properly handle other server types such as Starbound and Valheim; even though they rely on AMP's Generic Module.
-            if module == 'GenericModule':
-                module = self.AMPInstances[instance].ModuleDisplayName
-
-            if module not in loaded:
-                # print(module)
-                path = f'modules.{module}'  # This gets us to the folder for the module specific scripts to load via the cog.
+            DisplayImageSource = self.AMPInstances[instance].DisplayImageSource
+            if DisplayImageSource in self.Cog_Modules:
+                path = self.Cog_Modules[DisplayImageSource]
+                cog = (".").join(path.as_posix().split("/")[-3:])[:-3]
                 try:
-                    module_file_list = pathlib.Path.joinpath(self._cwd, 'modules', module).iterdir()
-                    # module_file_list = os.listdir(self._cwd + '\\' + path.replace('.','\\')) #This gets me the list of files in the directory
-                    #print('File List', module_file_list)
+                    await self._client.load_extension(cog)
+                    self.logger.info(f'**SUCCESS** {self.name} Loading Cog Module **{path.stem}**')
 
-                    for script in module_file_list:
-                        if script.name.endswith('.py') and not script.name.lower().startswith('amp'):
-                            cog = f'{path}.{script.name[:-3]}'
-                            #print('This is my cog var:',cog)
-
-                            try:
-                                await self._client.load_extension(cog)  # We will load the scripts like a cog to access the commands and functions.
-                                loaded.append(module)
-                                self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **{cog}**')
-                                continue
-
-                            except Exception as e:
-
-                                self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{cog}** - {e}')
-                                continue
-
-                except FileNotFoundError as e:
-                    self.logger.error(f'**ERROR** {self.name} Loading Module ** - File Not Found {e}')
-
-                #     # try:
-                #     #     await self._client.load_extension('modules.GenericModule.Generic')
-                #     #     loaded.append(module)
-                #     except Exception as e:
-                #         self.logger.error(f'**ERROR** Loading Module **modules.GenericModule.Generic** - {e}')
-                #     else:
-                #         self.logger.info(f'**SUCCESS** Loading Module **modules.GenericModule.Generic**')
-
-        self.logger.info('**All Modules Loaded**')
+                except discord.ext.commands.errors.ExtensionAlreadyLoaded:
+                    continue
+                
+                except Exception as e:
+                    self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{path.stem}** - {e}')
+    
+                        
+        self.logger.info(f'**All Server Modules Loaded**')
 
     async def cog_auto_loader(self):
         """This will load all Cogs inside of the cogs folder needed for interaction with DB and AMP"""
-        path = 'cogs'  # This gets us to the folder for the module specific scripts to load via the cog.
+        path = f'cogs' #This gets us to the folder for the module specific scripts to load via the cog.
         try:
-            cog_file_list = pathlib.Path.joinpath(self._cwd, 'cogs').iterdir()
+            cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
             for script in cog_file_list:
                 if script.name.endswith('.py'):
                     cog = f'{path}.{script.name[:-3]}'
 
                     try:
-                        await self._client.load_extension(cog)
+                        await self._client.load_extension(cog) 
                         self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
+                        continue
+
+                    except discord.ext.commands.errors.ExtensionAlreadyLoaded:
                         continue
 
                     except Exception as e:
                         self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
                         continue
-
+                
         except FileNotFoundError as e:
             self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
+            
+        self.logger.info(f'**All Cog Modules Loaded**')
+
+                
+
+
+

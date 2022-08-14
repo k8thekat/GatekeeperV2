@@ -16,23 +16,21 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.
+   02110-1301, USA. 
 
 '''
 import AMP as AMP
-# Resources - https://www.dexerto.com/gaming/terraria-console-commands-explained-a-simple-controls-guide-1663852/
+#Resources - https://www.dexerto.com/gaming/terraria-console-commands-explained-a-simple-controls-guide-1663852/
 DisplayImageSources = ['steam:105600']
-
-
 class AMPTerraria(AMP.AMPInstance):
-    def __init__(self, instanceID=0, serverdata={}, Index=0, Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
         self.perms = []
         self.APIModule = 'Terraria'
-
-        super().__init__(instanceID, serverdata, Index, Handler=Handler)
-        self.Console = AMPTerrariaConsole(AMPInstance=self)
+        
+        super().__init__(instanceID,serverdata,Index,Handler=Handler)
+        self.Console = AMPTerrariaConsole(AMPInstance = self)
 
 
 class AMPTerrariaConsole(AMP.AMPConsole):
-    def __init__(self, AMPInstance=AMPTerraria):
+    def __init__(self, AMPInstance = AMPTerraria):
         super().__init__(AMPInstance)
