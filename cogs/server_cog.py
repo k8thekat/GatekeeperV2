@@ -167,8 +167,8 @@ class Server(commands.Cog):
             return await context.send('Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server is not None and server.Running:
-            title = f'{context.author.display_name} generated backup',
-            description = f'Created at {datetime.datetime.now()} by {context.author.display_name}'
+            title = '%s generated backup', context.author.display_name
+            description = 'Created at %s by %s', datetime.datetime.now(), context.author.display_name
             server.takeBackup(title=title, description=description)
             await context.send(f'{server.FriendlyName} Backup' + description)
 

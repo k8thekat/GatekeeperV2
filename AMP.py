@@ -341,8 +341,7 @@ class AMPInstance:
                     self.logger.warning(f'The Bot is missing the permission {perm} Please check under Configuration -> User Management for the Bot.')
                 else:
                     end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
-                    self.logger.warning(
-                        f'The Bot is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> discord_bot')
+                    self.logger.warning(f'The Bot is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> discord_bot')
                 failed = True
 
         if failed:
