@@ -23,6 +23,7 @@ from datetime import datetime
 import logging
 import json
 import requests
+import pathlib
 
 import discord
 from discord import app_commands
@@ -33,18 +34,19 @@ import asyncio
 import DB
 import AMP
 
-async def async_rolecheck(context:commands.Context):
+async def async_rolecheck(context:commands.Context,perm_node:str=None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
   
-    #print(dir(context))
+    #This handles Custom Permissions for people with the flag set.
     print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
-        perm_node = str(context.command).replace(" ",".")
+        if perm_node == None:
+            perm_node = str(context.command).replace(" ",".")
         print(perm_node)
-        perm_node_check(perm_node,context)
-        if perm_node_check == False:
+        botPerms.perm_node_check(perm_node,context)
+        if botPerms.perm_node_check == False:
             return False
         else:
             return True
@@ -55,7 +57,7 @@ async def async_rolecheck(context:commands.Context):
         logger.command(f'Permission Check Okay on {context.author}')
         return True
     
-    if DBConfig.Staff == None:
+    if DBConfig.Moderator_role_id == None:
         await context.send(f'Please have an Adminstrator run `/bot setup (admin role)`.')
         logger.error(f'DBConfig Staff role has not been set yet!')
         return False
@@ -74,7 +76,7 @@ async def async_rolecheck(context:commands.Context):
         if guild_roles[i].id == top_role_id:
             author_top_role = i
 
-        if guild_roles[i].id == DBConfig.Staff:
+        if guild_roles[i].id == DBConfig.Moderator_role_id:
             staff_role = i
             
     if author_top_role > staff_role:
@@ -90,58 +92,7 @@ def role_check():
     """Use this before any Commands that require a Staff/Mod level permission Role, this will also check for Administrator"""
     #return commands.check(async_rolecheck(permission_node=perm))
     return commands.check(async_rolecheck)
-
-
-def perm_node_check(permission_node:str,context:commands.Context):
-    """Checks a Users for a DB Role then checks for that Role inside of bot_perms.py, then checks that Role for the proper permission node."""
-  
-    import bot_perms
-    roles = bot_perms.Roles
-    DBHandler = DB.getDBHandler()
-    main_DB = DBHandler.DB
-    DBConfig = DBHandler.DBConfig
-
-    logger = logging.getLogger()
-
-    #Lets get our DB user and check if they exist.
-    DB_user = main_DB.GetUser(str(context.author.id))
-    if DB_user == None:
-        return False
-
-    #Lets also check for their DB Role
-    #!TODO Learn how to add/Insert a column to the DB
-    user_role = DB_user.Role 
-    if user_role == None:
-        return False
-
-    #Need to turn author roles into a list of ints.
-    user_discord_role_objects = context.author.roles
-    user_discord_role_ids = []
-    for user_roles in user_discord_role_objects:
-        user_discord_role_ids.append(str(user_role.id))
-
-
-    command_perm_node = permission_node
-    #This is to check for Super perm nodes such as `server.*`
-    command_super_node = command_perm_node.split(".")[0] + '.*'
-    for role in roles:
-        if user_role.lower() in role['name'].lower() or role['discord_role_id'] in user_discord_role_ids:
-            #print('Found Role in permissions list',user_role,role['name'])
-            if command_super_node in role['permissions']:
-                #print('Found Super perm node',command_super_node)
-                command_perm_node_false_check = '-' + command_perm_node
-                if command_perm_node_false_check in role['permissions']:
-                    if command_perm_node_false_check[1:] == command_perm_node:
-                        logger.dev('This perm node has been denied even though you have global permissions.',command_perm_node_false_check,command_perm_node)
-                        return False
-
-            for perm in role['permissions']:
-                if command_perm_node == perm:
-                    logger.dev('Found command perm node in Roles Permissions list.',command_perm_node,perm)
-                    return True
-                else:
-                    logger.dev('No permission node found',perm)
-                    continue
+               
 
 async def permissions_autocomplete(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
     types = ['Default', 'Custom']
@@ -652,3 +603,63 @@ class botUtils():
                     embed.add_field(name='Steam ID', value=f'{db_user.SteamID}',inline=False)
             return embed
                 
+class botPerms():
+    def __init__(self):
+        self.logger = logging.getLogger()
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB
+        self._last_modified = 0
+        self.permissions = None
+        self.validate_and_load()
+
+    def validate_and_load(self):
+        self.json_file = pathlib.Path.cwd().joinpath('bot_perms.json')
+        if self.json_file.stat().st_mtime > self._last_modified:
+            try:
+                self.permissions = json.load(open(self.json_file, 'r'))
+                self._last_modified = self.json_file.stat().st_mtime
+            except json.JSONDecodeError:
+                self.permissions = None
+                self.logger.critical('Unable to load your permissions file. Please check your formatting.')
+
+    def perm_node_check(self,command_perm_node:str,context:commands.Context):
+        """Checks a Users for a DB Role then checks for that Role inside of bot_perms.py, then checks that Role for the proper permission node."""
+        #Lets get our DB user and check if they exist.
+        DB_user = self.DB.GetUser(str(context.author.id))
+        if DB_user == None:
+            return False
+
+        #Lets also check for their DB Role
+        user_role = DB_user.Role 
+        if user_role == None:
+            return False
+
+        #Need to turn author roles into a list of ints.
+        user_discord_role_ids = []
+        for user_roles in context.author.roles:
+            user_discord_role_ids.append(str(user_role.id))
+
+        #This is to check for Super perm nodes such as `server.*`
+        command_super_node = command_perm_node.split(".")[0] + '.*'
+
+        if self.permissions == None:
+            self.logger.error('**ATTENTION** Please verify your bot_perms file, it failed to load.')
+            return False
+            
+        self.validate_and_load()
+        roles = self.permissions['Roles']
+        for role in roles:
+            if user_role.lower() in role['name'].lower() or role['discord_role_id'] in user_discord_role_ids:
+                #print('Found Role in permissions list',user_role,role['name'])
+                if command_super_node in role['permissions']:
+                    #print('Found Super perm node',command_super_node)
+                    command_perm_node_false_check = '-' + command_perm_node
+                    if command_perm_node_false_check in role['permissions']:
+                        if command_perm_node_false_check[1:] == command_perm_node:
+                            self.logger.dev('This perm node has been denied even though you have global permissions.',command_perm_node_false_check,command_perm_node)
+                            return False
+
+                if command_perm_node in role['permissions']:
+                    self.logger.dev('Found command perm node in Roles Permissions list.',command_perm_node)
+                    return True
+            
