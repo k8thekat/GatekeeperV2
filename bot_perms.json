@@ -1,0 +1,69 @@
+ {
+  "Roles": [
+   {
+    "name": "Admin",
+    "discord_role_id": "None",
+    "permissions": [
+     "bot.*",
+     "user.*",
+     "server.*",
+     "server.whitelist.*",
+     "server.donator.*",
+     "server.console.*",
+     "server.chat.channel"
+    ]
+   },
+   {
+    "name": "Moderator",
+    "discord_role_id": "None",
+    "permissions": [
+     "bot.*",
+     "user.*",
+     "server.*",
+     "server.whitelist.*",
+     "server.donator.*",
+     "server.console.*",
+     "server.chat.channel"
+    ]
+   },
+   {
+    "name": "Maintenance",
+    "discord_role_id": "None",
+    "permissions": [
+     "bot.whitelist.waittime",
+     "bot.whitelist.auto",
+     "user.*",
+     "server.*",
+     "server.list",
+     "server.start",
+     "server.stop",
+     "server.restart",
+     "server.kill",
+     "server.msg",
+     "server.backup",
+     "server.status",
+     "server.users",
+     "server.whitelist.*",
+     "server.console.interact"
+    ]
+   },
+   {
+    "name": "Staff",
+    "discord_role_id": "None",
+    "permissions": [
+     "bot.whitelist.auto",
+     "user.*",
+     "server.msg",
+     "server.status",
+     "server.users",
+     "server.whitelist.add",
+     "server.whitelist.remove"
+    ]
+   },
+   {
+    "name": "General",
+    "discord_role_id": "None",
+    "permissions": []
+   }
+  ]
+ }
