@@ -81,7 +81,7 @@ class AMP_Cog(commands.Cog):
         #This is to keep everything up to date when we change the settings in the DB
         self.attr_update()
         #This is to check for any new instances that have been created since the bot was running.
-        self.AMPHandler.AMP_instanceCheck()
+        #self.AMPHandler.AMP_instanceCheck()
         self.logger.dev('Updating AMP_Cog Attributes!')
         
 
@@ -110,7 +110,7 @@ class AMP_Cog(commands.Cog):
                         self.AMPServer = self.AMPInstances[amp_server]
 
                         if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
-                            if utils.async_rolecheck(context):
+                            if utils.async_rolecheck(context,'server.console.interact'):
                                 self.AMPServer.ConsoleMessage(message.content)
 
                         if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):
