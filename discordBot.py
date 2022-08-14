@@ -206,6 +206,8 @@ async def initbot():
     if main_DB:
         await client.load_extension('cogs.DB_cog')
 
+    utils.botPerms()
+    
     import loader
     Handler = loader.Handler(client)
     await Handler.module_auto_loader()
