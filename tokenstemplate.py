@@ -8,7 +8,7 @@ AMPAuth = ''
 #Login creds - ## DO NOT SHARE! ##
 #AMPUser is the Login Name for the account you want the bot to use.
 #AMPPassword is the password for said Login.
-#AMPurl is the local URL to your web gui (eg.192.168.3.500:8080)
+#AMPurl is the local URL to your web gui (eg. http://192.168.3.500:8080)
 AMPUser = ''
 AMPPassword = ''
 AMPurl = ''
