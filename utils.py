@@ -38,7 +38,8 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
-  
+    #print(dir(context))
+    #print(type(context))
     #This handles Custom Permissions for people with the flag set.
     print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
@@ -51,10 +52,14 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         else:
             return True
 
+    author = context
+    if type(context) != discord.Member:
+        author = context.author
+   
     #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
-    admin = context.author.guild_permissions.administrator
+    admin = author.guild_permissions.administrator
     if admin == True:
-        logger.command(f'Permission Check Okay on {context.author}')
+        logger.command(f'Permission Check Okay on {author}')
         return True
     
     if DBConfig.Moderator_role_id == None:
@@ -95,24 +100,33 @@ def role_check():
                
 
 async def permissions_autocomplete(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    """This is for Default or Custom permission setting via /bot permissions"""
     types = ['Default', 'Custom']
     return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
 
 async def bool_autocomplete(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    """True or False Autocomplete reply"""
     booleans = ['True', 'False']
     return [app_commands.Choice(name=bool, value=bool) for bool in booleans if current.lower() in bool.lower()]
 
-async def autocomplete_template(interactio:discord.Interaction,current:str,choice_list:list) -> list[app_commands.Choice[str]]:
+async def autocomplete_permission_roles(interactio:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+    """This is for roles inside of the bot_perms file. Returns a list of all the roles.."""
+    bPerms = get_botPerms()
+    choice_list = bPerms.get_roles()
+    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
+
+async def autocomplete_template(interactio:discord.Interaction,current:str,choice_list:list=None) -> list[app_commands.Choice[str]]:
     """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
 class CustomButton(Button):
     """ utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)"""
-    def __init__(self,server,view,function,label:str,callback_label:str,callback_disabled:bool,style=discord.ButtonStyle.green,context=None):
+    def __init__(self,server:AMP.AMPInstance,view:discord.ui.View,function,label:str,callback_label:str,callback_disabled:bool,style=discord.ButtonStyle.green,context=None):
         super().__init__(label=label, style=style, custom_id=label)
         self.server = server
         self.context = context
         self._label = label
+        self.permission_node = 'server.' + self._label.lower()
 
         self.callback_label = callback_label
         self.callback_disabled = callback_disabled
@@ -123,13 +137,13 @@ class CustomButton(Button):
 
     async def callback(self,interaction):
         """This is called when a button is interacted with."""
-        if not await async_rolecheck(interaction.user):
+        if not await async_rolecheck(interaction.user,self.permission_node):
             return
         self._interaction = interaction
         self.label = self.callback_label
         self.disabled = self.callback_disabled
-        await interaction.response.edit_message(view=self._view)
         self._function()
+        await interaction.response.edit_message(view=self._view)
         await asyncio.sleep(30)
         await self.reset()
 
@@ -138,6 +152,7 @@ class CustomButton(Button):
         print('Resetting Buttons...')
         self.label = self._label
         self.disabled = False
+        #server_embed = await self._view.update_view()
         await self._interaction.followup.edit_message(message_id=self._interaction.message.id,view=self._view)
 
 class StartButton(CustomButton):
@@ -157,8 +172,23 @@ class KillButton(CustomButton):
         super().__init__(server=server,view=view,function=function,label='Kill', callback_label='Killed...', callback_disabled=True,style=discord.ButtonStyle.danger)
     
 class StatusView(View):
-    def __init__(self,timeout=180):
+    def __init__(self,timeout=180,context:commands.Context=None,amp_server:AMP.AMPInstance=None):
         super().__init__(timeout=timeout)
+        self.server = amp_server
+        self.context = context
+        self.uBot = botUtils()
+
+    # async def update_view(self):
+    #     if self.server.Running:
+    #         tps,Users,cpu,Memory,Uptime = self.server.getStatus()
+    #         Users_online = ', '.join(self.server.getUserList())
+    #         if len(Users_online) == 0:
+    #             Users_online = 'None'
+    #         server_embed = self.uBot.server_status_embed(self.context,self.server,tps,Users,cpu,Memory,Uptime,Users_online)
+    #         return server_embed
+    #     if not self.server.Running:
+    #         server_embed = self.uBot.server_status_embed(self.context,self.server)
+    #         return server_embed
 
     async def on_timeout(self):
         """This Removes all the Buttons after timeout has expired"""
@@ -602,15 +632,26 @@ class botUtils():
                 if db_user.SteamID != None:
                     embed.add_field(name='Steam ID', value=f'{db_user.SteamID}',inline=False)
             return embed
-                
+
+bPerms = None
+def get_botPerms():
+    global bPerms
+    if bPerms == None:
+        bPerms = botPerms()
+    return bPerms
+
 class botPerms():
     def __init__(self):
         self.logger = logging.getLogger()
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB
+
         self._last_modified = 0
         self.permissions = None
+        self.permission_roles = []
+
         self.validate_and_load()
+
 
     def validate_and_load(self):
         self.json_file = pathlib.Path.cwd().joinpath('bot_perms.json')
@@ -662,4 +703,9 @@ class botPerms():
                 if command_perm_node in role['permissions']:
                     self.logger.dev('Found command perm node in Roles Permissions list.',command_perm_node)
                     return True
-            
+    
+    def get_roles(self):
+        self.permission_roles = []
+        for role in self.permissions['Roles']:
+            self.permission_roles.append(role['name'])
+        return self.permission_roles

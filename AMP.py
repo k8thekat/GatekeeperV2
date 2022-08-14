@@ -62,6 +62,7 @@ class AMPHandler():
         self.SessionIDlist = {}
 
         self.AMP_Instances = {}
+        self.AMP_Instances_Names = []
         self.AMP_Modules = {}
 
         self.AMP_Console_Modules = {}
@@ -83,13 +84,21 @@ class AMPHandler():
         self.AMP = AMPInstance(Handler = self)
         #pprint(self.AMP.getAMPRolePermissions(self.AMP.AMP_BotRoleID))
         self.AMP_Instances = self.AMP.getInstances()
+        self.get_AMP_instance_names()
         #pprint(self.AMP.getAMPRolePermissions(self.AMP.AMP_BotRoleID))
 
         #This removes Super Admins from the bot user! Controlled through parser args!
         if self.args.super or not self.args.dev:
             self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID,self.AMP.super_AdminID,False) 
             self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
-      
+    
+    def get_AMP_instance_names(self):
+        for server in self.AMP_Instances:
+            if self.AMP_Instances[server].DisplayName != None:
+                self.AMP_Instances_Names.append(self.AMP_Instances[server].DisplayName)
+            else:
+                self.AMP_Instances_Names.append(self.AMP_Instances[server].FriendlyName)
+
     def AMP_instanceCheck(self):
         """Checks for any new Instances since after startup. \n
         This keeps the AMP_Instance Dictionary Current

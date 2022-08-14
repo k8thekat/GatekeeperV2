@@ -46,7 +46,7 @@ class DBHandler():
 		self.SuccessfulDatabase = True
 
 		#Always update this value when changing Tables!
-		self.DB_Version = 1.2
+		self.DB_Version = 1.3
 
 		#This should ONLY BE TRUE on new Database's going forward. 
 		if self.DBConfig.GetSetting('DB_Version') == None:
@@ -135,7 +135,7 @@ class Database:
 		cur.execute("""create table ServerNicknames (
 						ID integer primary key,
 						ServerID integer not null,
-						Nickname text not null unique collate nocase,
+						Nickname text unique not null unique collate nocase,
 						foreign key(ServerID) references Servers(ID)
 						)""")
 
@@ -426,7 +426,7 @@ class Database:
 		return ret
 
 class DBUser:
-	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False):
+	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False, Role:str=None):
 		#set defaults
 		Params = locals()
 		Params.pop("self")
@@ -613,6 +613,7 @@ class DBServer:
 		self._db._execute("delete from ServerNicknames where ServerID=? and Nickname=?", (self.ID, Nickname))
 		jdata = dump_to_json({"Type": "DeleteServerNickname", "ServerID": self.ID, "Nickname": Nickname})
 		self._db._logdata(jdata)
+		
 
 	def GetAllServers(self):
 		serverlist = []
@@ -711,9 +712,20 @@ class DBUpdate:
 			self.user_roles()
 			self.DBConfig.SetSetting('DB_Version', '1.2')
 
+		if 1.3 > Version:
+			self.logger.info('**ATTENTION** Updating DB to Version 1.3')
+			self.nicknames_unique
+			self.DBConfig.SetSetting('DB_Version', '1.3')
+
 	def user_roles(self):
 		#create the sql line
 		SQL = "alter table users add column Role text collate nocase default None;"
+		#execute it
+		self.DB._execute(SQL, ())
+
+	def nicknames_unique(self):
+		#create the sql line
+		SQL = "alter table ServerNicknames add constraint Nickname unique;"
 		#execute it
 		self.DB._execute(SQL, ())
 		

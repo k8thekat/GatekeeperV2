@@ -13,10 +13,10 @@ ___
 ### **Using your commands!**
 ___
 ### Bot Commands: 
-- `/bot permissions (type)` - Sets the Bot Permissions to either `Default` or `Custom`.
-    - **TIP**: Please see **[Permissions](/PERMISSIONS.md)** if you want `Custom` control over command usage.
 - `/bot moderator (role)` - Sets the Discord Role for Bot Moderator. 
     - **ATTENTION** - Please see `/bot permissions` for more control. 
+- `/bot permissions (type)` - Sets the Bot Permissions to either `Default` or `Custom`.
+    - **TIP**: Please see **[Permissions](/PERMISSIONS.md)** if you want `Custom` control over command usage.
 - `/bot settings` - Lists Bot settings such as channels and whitelist status.
 - `/bot ping` - Pong!
 - `/bot load (path)` - Loads a specific Cog. *(eg. path = `/cogs/cog_template`)*
@@ -59,7 +59,7 @@ ___
     - `donator` is optional and uses *True or False*.
 - `/user update (user,mc_ign,mc_uuid,steamid,donator)` - Updates the Users Database information with the provided arguments.
 - `/user uuid (mc_ign)` - Gets a users UUID! via Minecraft In-Game Name *(eg. mc_ign = k8_thekat)*
-
+- `/user role (role)` - Sets a users permission role level. See [Permissions](/PERMISSIONS.md)
 
 
 ### Server Commands: 
@@ -96,7 +96,7 @@ ___
     - **ATTENTION**: Default is `on` for Chat and Console functionality.
 - `/server console off (server)` - Turns off the console for the AMP Dedicated server.
     - **CAUTION**: Turning the console `off` will disable Server Chat and Console interactions.
-- `/server channel (server,channel)` - Sets the Discord Channel for the AMP Dedicated Server Console to output to.
+- `/server console channel (server,channel)` - Sets the Discord Channel for the AMP Dedicated Server Console to output to.
     - **TIP**: You can type commands in the set channel similar to typing in AMP Console web GUI.
 - `/server console filter (server,flag)` - Set Console filtering for the AMP Dedicated server.
     - **TIP**: Setting this to True will still display login/disconnect events, achievements, chat messages, console commands and anything else deemed important.
@@ -112,20 +112,29 @@ ___
     - `user` only supports in-game names.
 - `/server whitelist remove (server,user)` - Removes the IGN from the AMP Dedicated server whitelist.
     - `user` only supports in-game names.
+
 ___
 
 ### **Setting Server Nicknames**:
 - First thing to remember is the Nickname must be **UNIQUE**. 
     - No two AMP Servers can have the same Nickname in their list of Nicknames.
+- These Nicknames will work during **auto-whitelist requests** allowing the bot to handle a variance of "Nicknames".
 - Each AMP Server can have an unlimited amount of Nicknames; allowing for lots of variety.
     - **CAUTION**: Any SIMILARITIES between Server Nicknames will cause duplicate finds. See below.
         - *Example* - **Server 1**: `Vanilla MC` || **Server 2**: `Vanilla TDM` and you search for `Vanilla` would return multiple results.  
-### Adding a Nickname:
-- `/server nickname add (server,nickname)`
 
+### Nickname Commands:
+- `/server nickname add (server,nickname)` - Adds the specified `nickname` to the servers lists of nicknames.
+    - **TIP**: These nicknames are searched for when doing Whitelist requests allowing more variance to find a specific server.
+- `/server nickname remove (server,nickname)` - Removes the specificed `nickname` from the servers list of nicknames.
+- `/server nickname list (server)` - Displays a list of the AMP Servers nicknames.
 
-### Removing a Nickname:
-- `/server nickname remove (server,nickname)`
-
-### Listing all Nicknames:
-- `/server nickname list (server)`
+### **Interacting with your Server via Discord Channels**:
+- Set your Discord Console Channels and Discord Chat Channels per Server via
+    - `/server console channel (server,channel)`
+    - `/server chat channel (server,channel)`
+- After setting your Discord Console Channel you should see console messages be displayed to the Discord Channel.
+    - **TIP**: You can filter these messages. See [/server console filter (server,flag)](/COMMANDS.md#console-commands)
+    - **TIP**: You can type commands in the set channel similar to typing in AMP Console web GUI.
+- After setting your Discord Chat Channel you can talk to players inside the server via Discord. 
+    - Any message you send to that set channel; goes to that specific AMP Server and is sent like an in-game Chat Message.

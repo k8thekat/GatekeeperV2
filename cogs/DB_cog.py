@@ -25,6 +25,7 @@ import re
 
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 import utils
 import AMP 
@@ -48,6 +49,7 @@ class DB_Module(commands.Cog):
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
+        self.pBot = utils.botPerms()
 
         self.uBot.sub_command_handler('bot',self.db_bot_whitelist)
         self.uBot.sub_command_handler('bot',self.db_bot_settings)
@@ -124,7 +126,7 @@ class DB_Module(commands.Cog):
     async def user_info(self,context:commands.Context,user:str):
         """Displays the Discord Users Database information"""
         self.logger.command(f'{context.author.name} used User Information')
-        perm_node = 'user.info'
+     
         
         discord_user = self.uBot.userparse(user,context,context.guild.id)
         if discord_user != None:
@@ -138,7 +140,7 @@ class DB_Module(commands.Cog):
     async def user_add(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=False):
         """Adds the Discord Users information to the Database"""
         self.logger.command(f'{context.author.name} used User Add Function')
-        perm_node = 'user.add'
+       
 
         if mc_ign != None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
@@ -156,7 +158,7 @@ class DB_Module(commands.Cog):
     async def user_update(self,context:commands.Context,discord_name:str,mc_ign:str=None,mc_uuid:str=None,steamid:str=None,donator:bool=None):
         """Updated a Discord Users information in the Database"""
         self.logger.command(f'{context.author.name} used User Update Function')
-        perm_node = 'user.update'
+       
 
         discord_user = None
         db_user = None
@@ -193,9 +195,28 @@ class DB_Module(commands.Cog):
     async def user_uuid(self,context:commands.Context,mc_ign:str):
         """This will convert a Minecraft IGN to a UUID if it exists"""
         self.logger.command(f'{context.author.name} used User UUID Function')
-        perm_node = 'user.uuid'
 
         await context.send(f'The UUID of {mc_ign} is: {self.uBot.name_to_uuid_MC(mc_ign)}')
+
+
+    @user.command(name='role')
+    @utils.role_check()
+    @app_commands.autocomplete(role=utils.autocomplete_permission_roles)
+    async def user_role(self,context:commands.Context,user:str,role:str):
+        """Set a users Permission Role for commands."""
+        self.logger.command(f'{context.author.name} used User Role Function')
+
+        discord_user = self.uBot.userparse(user,context,context.guild.id)
+        if discord_user == None:
+            await context.send(f'We failed to find the User: {user}, please make sure they are apart of the server..')
+            return
+
+        db_user = self.DB.GetUser(discord_user.id)
+        if db_user != None:
+            db_user.Role = role
+            await context.send(f"We set the User: {user} permission's role to {role}.")
+        else:
+            await context.send(f'We failed to find the User: {user}, please make sure they are in the DB.')
 
     @user.command(name='test')
     @utils.role_check()
@@ -219,7 +240,7 @@ class DB_Module(commands.Cog):
     async def db_bot_whitelist_channel_set(self,context:commands.Context,id:str):
         """Sets the Whitelist Channel for the Bot to monitor"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
-        perm_node = 'bot.whitelist.channel'
+      
 
         channel = self.uBot.channelparse(id,context,context.guild.id)
         if channel == None:
@@ -233,7 +254,7 @@ class DB_Module(commands.Cog):
     async def db_bot_whitelist_wait_time_set(self,context:commands.Context,time:str):
         """Set the Bots Whitelist wait time , this value is in minutes!"""
         self.logger.command(f'{context.author.name} used Bot Whitelist wait time Set...')
-        perm_node = 'bot.whitelist.waittime'
+        
 
         if time.isalnum():
             self.DBConfig.Whitelist_wait_time = time
@@ -246,7 +267,7 @@ class DB_Module(commands.Cog):
     async def db_bot_whitelist_auto_whitelist(self,context:commands.Context,flag:str):
         """This turns on or off Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
-        perm_node = 'bot.whitelist.auto'
+    
 
         flag_reg = re.search("(true|false)",flag.lower())
         if flag_reg == None:
@@ -263,7 +284,7 @@ class DB_Module(commands.Cog):
     async def db_bot_whitelist_pending_emjoi_set(self,context:commands.Context):
         """This sets the Whitelist pending emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Pending Emoji...')
-        perm_node = 'bot.whitelist.pendingemoji'
+      
 
         flag = 'pending Whitelist requests!'
         await context.send(f'Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!')
@@ -280,7 +301,7 @@ class DB_Module(commands.Cog):
     async def db_bot_whitelist_done_emjoi_set(self,context:commands.Context):
         """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Done Emoji...')
-        perm_node = 'bot.whitelist.doneemoji'
+    
 
         flag = 'completed Whitelist requests!'
         await context.send(f'Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!')
@@ -297,7 +318,7 @@ class DB_Module(commands.Cog):
     async def db_bot_settings(self,context:commands.Context):
         """Displays currently set Bot settings"""
         self.logger.command(f'{context.author.name} used Bot Settings...')
-        perm_node = 'bot.settings'
+      
 
         self.DBConfig = self.DB.GetConfig()
         dbsettings_list = self.DBConfig.GetSettingList()
@@ -318,7 +339,7 @@ class DB_Module(commands.Cog):
     async def db_server_cleanup(self,context:commands.Context):
         """This is used to remove un-used DBServer entries and update names of existing servers."""
         self.logger.command(f'{context.author.name} used Database Clean-Up in progress...')
-        perm_node = 'dbserver.cleanup'
+    
 
         db_server_list = self.DB.GetAllServers() 
 
@@ -337,7 +358,7 @@ class DB_Module(commands.Cog):
     async def db_server_instance_swap(self,context,old_server,new_server):
         """This will be used to swap Instance ID's with an existing AMP Instance"""
         self.logger.command(f'{context.author.name} used Database Instance swap...')
-        perm_node = 'dbserver.swap'
+        
 
         old_server = self.uBot.serverparse(context,context.guild.id)
 
