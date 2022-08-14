@@ -58,7 +58,6 @@ class AMP_Cog(commands.Cog):
         #This should help prevent errors in older databases.
         try:
             self.attr_update()
-
         except:
             self.DBHandler.dbWhitelistSetup()
             self.attr_update()
@@ -110,7 +109,7 @@ class AMP_Cog(commands.Cog):
                         self.AMPServer = self.AMPInstances[amp_server]
 
                         if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
-                            if utils.async_rolecheck(context,'server.console.interact'):
+                            if await utils.async_rolecheck(context,'server.console.interact'):
                                 self.AMPServer.ConsoleMessage(message.content)
 
                         if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):

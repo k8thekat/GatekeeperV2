@@ -215,12 +215,11 @@ class Database:
         jdata = dump_to_json({"Type": "UserUpdate", "UserID": dbuser.ID, "Field": entry, "Value": args[entry]})
         self._logdata(jdata)
 
-	
-	def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Discord_Reaction:str=None):
-		#try:
-		return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role, Discord_Reaction=Discord_Reaction)
-		#except:
-			#return None
+    def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Discord_Reaction:str=None):
+        #try:
+        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role, Discord_Reaction=Discord_Reaction)
+        #except:
+            #return None
 
     def GetServer(self, InstanceID: str = None, Name: str = None):
         # print(InstanceID,Name)
@@ -249,12 +248,12 @@ class Database:
         cur.close()
         return ret
 
-	def GetUser(self, value:str):
-		#find the user
-		(row, cur) = self._fetchone(f"select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?", (value,value,value,value,value))
-		if not row:
-			cur.close()
-			return None
+    def GetUser(self, value:str):
+        #find the user
+        (row, cur) = self._fetchone(f"select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?", (value,value,value,value,value))
+        if not row:
+            cur.close()
+            return None
 
         # create a new user object to return and let the object populate itself
         ret = DBUser(ID=int(row["ID"]), db=self)
@@ -428,58 +427,58 @@ class Database:
         return ret
 
 class DBUser:
-	def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False, Role:str=None):
-		#set defaults
-		Params = locals()
-		Params.pop("self")
-		Params.pop("db")
-		Params.pop("__class__")
-		super().__setattr__("_db", db)
-		for entry in Params:
-			super().__setattr__(entry, Params[entry])
+    def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False, Role:str=None):
+        #set defaults
+        Params = locals()
+        Params.pop("self")
+        Params.pop("db")
+        Params.pop("__class__")
+        super().__setattr__("_db", db)
+        for entry in Params:
+            super().__setattr__(entry, Params[entry])
 
-		#if given a database and ID then look up our values
-		if ID:
-			(row, cur) = self._db._fetchone("Select * From Users where ID=?", (ID,))
-			if row:
-				for entry in row.keys():
-					super().__setattr__(entry, row[entry])
-			else:
-				raise Exception(f"Unable to locate User ID {ID}")
-			cur.close()
-			super().__setattr__("ID", int(self.ID))
-			super().__setattr__("DiscordID", int(self.DiscordID))
-		else:
-			#we should have a discord id
-			if not DiscordID or DiscordID == 0:
-				raise Exception("Missing discord ID on new user")
+        #if given a database and ID then look up our values
+        if ID:
+            (row, cur) = self._db._fetchone("Select * From Users where ID=?", (ID,))
+            if row:
+                for entry in row.keys():
+                    super().__setattr__(entry, row[entry])
+            else:
+                raise Exception(f"Unable to locate User ID {ID}")
+            cur.close()
+            super().__setattr__("ID", int(self.ID))
+            super().__setattr__("DiscordID", int(self.DiscordID))
+        else:
+            #we should have a discord id
+            if not DiscordID or DiscordID == 0:
+                raise Exception("Missing discord ID on new user")
 
-			#add user to the database
-			DBFields = Params
+            #add user to the database
+            DBFields = Params
 
-			#create the sql line
-			SQL = "insert into users ("
-			SQLVars = []
+            #create the sql line
+            SQL = "insert into users ("
+            SQLVars = []
 
-			for entry in DBFields:
-				if DBFields[entry] != None:
-					SQL += entry + ","
-					SQLVars.append(DBFields[entry])
+            for entry in DBFields:
+                if DBFields[entry] != None:
+                    SQL += entry + ","
+                    SQLVars.append(DBFields[entry])
 
-			SQL = SQL[:-1] + ") values (" + ("?,"*len(SQLVars))[:-1] + ")"
-			#create the tuple needed
-			SQLTuple = tuple(SQLVars)
-			
-			#execute it
-			self._db._execute(SQL, SQLTuple)
+            SQL = SQL[:-1] + ") values (" + ("?,"*len(SQLVars))[:-1] + ")"
+            #create the tuple needed
+            SQLTuple = tuple(SQLVars)
+            
+            #execute it
+            self._db._execute(SQL, SQLTuple)
 
-			#now find the ID
-			(row, cur) = self._db._fetchone("Select ID From Users where DiscordID=?", (DiscordID,))
-			if row:
-				super().__setattr__("ID", int(row["ID"]))
-			else:
-				raise Exception(f"Unable to locate new user with Discord ID {DiscordID}")
-			cur.close()
+            #now find the ID
+            (row, cur) = self._db._fetchone("Select ID From Users where DiscordID=?", (DiscordID,))
+            if row:
+                super().__setattr__("ID", int(row["ID"]))
+            else:
+                raise Exception(f"Unable to locate new user with Discord ID {DiscordID}")
+            cur.close()
 
             jdata = dump_to_json({"Type": "AddUser", "UserID": self.ID})
             self._db._logdata(jdata)
@@ -625,227 +624,6 @@ class DBServer:
     def delServer(self):
         self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
         self._db._execute("delete from Servers where ID=?", (self.ID,))
-
-    # def AddUser(self, dbuser:DBUser=None, DiscordID:str = None, DiscordName:str = None, IngameName:str = None, UUID:str = None):
-    # 	try:
-    # 		if not dbuser:
-    # 			dbuser = self._db.GetUser(DiscordID=DiscordID, DiscordName=DiscordName, IngameName=IngameName, UUID=UUID)
-    # 		if not dbuser:
-    # 			return None
-
-    # 		#make sure we don't add an already existing user
-    # 		ServerUser = self._db.GetServerUser(self, dbuser)
-    # 		if ServerUser:
-    # 			return ServerUser
-
-    # 		self._db._execute("Insert into ServerUsers(ServerID, UserID, Whitelisted) values(?, ?, ?)", (self.ID, dbuser.ID, False))
-    # 		jdata = dump_to_json({"Type": "AddServerUser", "ServerID": self.ID, "UserID": dbuser.ID})
-    # 		self._db._logdata(jdata)
-    # 	except Exception:
-    # 		return None
-    # 	return self._db.GetServerUser(self, dbuser)
-
-    # def GetUser(self, Value = None):
-    # 	if type(Value) == DBUser:
-    # 		dbuser = Value
-    # 	else:
-    # 		dbuser = self._db.GetUser(Value)
-
-    # 	if not dbuser:
-    # 		return None
-
-    # 	#go find the entry
-    # 	return self._db.GetServerUser(self, dbuser)
-
-    # def GetAllUsers(self, Whitelisted=None, LastLogin=None, SuspensionExpiration=None):
-    # 	#get all servers that we are on
-    # 	SQL = "Select UserID from ServerUsers where ServerID=?"
-    # 	SQLArgs = [self.ID]
-    # 	if(Whitelisted):
-    # 		SQL += " and Whitelisted=?"
-    # 		SQLArgs.append(Whitelisted)
-    # 	if(LastLogin):
-    # 		SQL += " and LastLogin <= ?"
-    # 		SQLArgs.append(LastLogin)
-    # 	if(SuspensionExpiration):
-    # 		SQL += " and SuspensionExpiration <= ?"
-    # 		SQLArgs.append(SuspensionExpiration)
-
-    # 	(rows, cur) = self._db._fetchall(SQL, tuple(SQLArgs))
-    # 	ret = []
-    # 	for entry in rows:
-    # 		User = DBUser(self._db, ID=entry["UserID"])
-    # 		ret.append(self._db.GetServerUser(self, User))
-
-    # 	cur.close()
-    # 	return ret
-
-    # def AddUserInfraction(self, user:DBUser, mod:DBUser, note:str):
-    # 	user.AddInfraction(server = self, mod = mod, note = note)
-
-# class DBServerUser:
-# 	def __init__(self, db:Database, Server:DBServer, User:DBUser, ID=None, Whitelisted:bool=False, LastLogin:datetime.datetime=None, SuspensionExpiration:datetime.datetime=None):
-# 		#set defaults
-# 		Params = locals()
-# 		Params.pop("self")
-# 		Params.pop("db")
-# 		Params.pop("__class__")
-# 		Params.pop("Server")
-# 		Params.pop("User")
-# 		super().__setattr__("_db", db)
-# 		super().__setattr__("_Server", Server)
-# 		super().__setattr__("_User", User)
-# 		for entry in Params:
-# 			super().__setattr__(entry, Params[entry])
-
-# 		#if given a database and ID then look up our values
-# 		if ID:
-# 			(row, cur) = self._db._fetchone("Select * From ServerUsers where ID=?", (ID,))
-# 			if row:
-# 				for entry in row.keys():
-# 					super().__setattr__(entry, row[entry])
-# 			else:
-# 				raise Exception(f"Unable to locate ServerUser ID {ID}")
-# 			cur.close()
-# 		else:
-# 			#add the combo to the database after making sure they don't already exist
-# 			serveruser = self._db.GetServerUser(Server, User)
-# 			if serveruser:
-# 				raise Exception("Server/User already found")
-
-# 			DBFields = Params
-
-# 			#create the sql line
-# 			SQL = "insert into ServerUsers (ServerID, UserID, "
-# 			SQLVars = [Server.ID, User.ID]
-
-# 			for entry in DBFields:
-# 				if DBFields[entry] is not None:
-# 					SQL += entry + ","
-# 					SQLVars.append(DBFields[entry])
-
-# 			SQL = SQL[:-1] + ") values (" + ("?,"*len(SQLVars))[:-1] + ")"
-# 			#create the tuple needed
-# 			SQLTuple = tuple(SQLVars)
-
-# 			#execute it
-# 			self._db._execute(SQL, SQLTuple)
-
-# 			#now find the ID
-# 			(row, cur) = self._db._fetchone("Select ID From ServerUsers where ServerID=? and UserID=?", (Server.ID,User.ID))
-# 			if row:
-# 				super().__setattr__("ID", row["ID"])
-# 			else:
-# 				raise Exception(f"Unable to locate new serveruser")
-# 			cur.close()
-
-# 			jdata = dump_to_json({"Type": "AddServerUser", "ServerID": Server.ID, "UserID": User.ID})
-# 			self._db._logdata(jdata)
-
-# 	def __setattr__(self, name: str, value):
-# 		if (name == "ID") or (name[0] == "_"):
-# 			return
-# 		elif name in ["LastLogin", "SuspensionExpiration"]:
-# 			#make sure proper value
-# 			if type(value) != datetime.datetime:
-# 				raise Exception("Invalid type")
-# 		elif name == "Whitelisted":
-# 			#conver to bool
-# 			value = bool(value)
-
-
-# 		#set value and update the user
-# 		super().__setattr__(name, value)
-# 		self._db._UpdateServerUser(self, **{name:value})
-
-# 	def GetServer(self):
-# 		return self._Server
-
-# 	def GetUser(self):
-# 		return self._User
-
-# class DBRole:
-# 	def __init__(self, db:Database=None, ID:int=None, DiscordID:str=None):
-# 		#set defaults
-# 		Params = locals()
-# 		Params.pop("self")
-# 		Params.pop("db")
-# 		super().__setattr__("_db", db)
-# 		for entry in Params:
-# 			super().__setattr__(entry, Params[entry])
-
-# 		if(self.DiscordID):
-# 			super().__setattr__("DiscordID", int(self.DiscordID))
-
-# 		#get the known permissions
-# 		super().__setattr__("_PermissionIDToName", {})
-# 		super().__setattr__("_PermissionNameToID", {})
-# 		(rows, cur) = self._db._fetchall("Select ID, Name from Permissions", ())
-# 		for entry in rows:
-# 			self._PermissionIDToName[entry["ID"]] = entry["Name"].capitalize()
-# 			self._PermissionNameToID[entry["Name"].capitalize()] = entry["ID"]
-# 			super().__setattr__(entry["Name"].capitalize(), False)
-# 		cur.close()
-
-# 		if ID or DiscordID:
-# 			if ID:
-# 				#get the name for this role
-# 				(row, cur) = self._db._fetchone("Select DiscordID from Roles where ID=?", (ID,))
-# 				if not row:
-# 					raise Exception("Invalid role ID")
-# 				super().__setattr__("DiscordID", int(row["DiscordID"]))
-# 			else:
-# 				#we were given a name so see if it exists otherwise add it
-# 				(row, cur) = self._db._fetchone("Select ID from Roles where DiscordID=?", (DiscordID,))
-# 				if not row:
-# 					cur.close()
-# 					self._db._execute("Insert into Roles (DiscordID) values (?)", (DiscordID,))
-
-# 					#now get the ID
-# 					(row, cur) = self._db._fetchone("Select ID from Roles where DiscordID=?", (DiscordID,))
-# 					if not row:
-# 						cur.close()
-# 						raise Exception("Error adding role")
-
-# 					jdata = dump_to_json({"Type": "AddRole", "DiscordID": DiscordID})
-# 					self._db._logdata(jdata)
-
-# 				super().__setattr__("ID", row["ID"])
-
-# 			cur.close()
-
-# 			(rows, cur) = self._db._fetchall("Select PermissionID from RolePermissions where RoleID=?", (self.ID,))
-# 			for entry in rows:
-# 				super().__setattr__(self._PermissionIDToName[entry["PermissionID"]], True)
-# 			cur.close()
-
-# 	def __setattr__(self, name, value):
-# 		if name == "ID":
-# 			return
-# 		if name in self._PermissionNameToID:
-# 			value = bool(value)
-# 			super().__setattr__(name, value)
-# 			self._db._UpdateRolePermission(self, self._PermissionNameToID[name], value)
-# 		elif name == "DiscordID":
-# 			super().__setattr__(name, int(value))
-# 			self._db._UpdateRole(self, DiscordID=value)
-# 		else:
-# 			super().__setattr__(name, value)
-
-# 	def __getitem__(self,name):
-# 			return getattr(self, name)
-
-# 	def __setitem__(self,name,value):
-# 			setattr(self, name, value)
-
-# 	def __iter__(self):
-# 		self._iter = list(self._PermissionNameToID.keys())
-# 		return self
-
-# 	def __next__(self):
-# 		if len(self._iter) == 0:
-# 			raise StopIteration
-# 		return self._iter.pop(0)
 
 class DBConfig:
     def __init__(self, db: Database = None):

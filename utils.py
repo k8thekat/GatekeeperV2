@@ -48,8 +48,10 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         print(perm_node)
         botPerms.perm_node_check(perm_node,context)
         if botPerms.perm_node_check == False:
+            logger.command(f'Permission Check Failed on {author}')
             return False
         else:
+            logger.command(f'Permission Check Okay on {author}')
             return True
 
     author = context
@@ -166,8 +168,6 @@ class StopButton(CustomButton):
 class RestartButton(CustomButton):
     def __init__(self,server,view,function):
         super().__init__(server=server,view=view,function=function,label='Restart', callback_label='Restarting...',callback_disabled=True,style=discord.ButtonStyle.blurple)
-
->>>>>>> feab6f4c13d1784c7ee49053bb26448d0b419a49
 
 class KillButton(CustomButton):
     def __init__(self,server,view,function):
@@ -600,8 +600,25 @@ class botUtils():
             embed.set_thumbnail(url= context.guild.icon)
             embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
             for value in settings:
+                #{'Staff_role_id': '602295470546485249'}
+                # {'Whitelist_channel': '909650262464004136'}
+                # {'Whitelist_wait_time': '1'}
+                # {'Auto_whitelist': '1'}
+                # {'Whitelist_emoji_pending': 'None'}
+                # {'Whitelist_emoji_done': 'None'}
+                # {'Minecraft_multiverse_core': '0'}
+                # {'Whitelistchannel': '909650262464004136'}
+                # {'Db_version': '1.3'}
+                # {'Guild_id': '602285328320954378'}
+                # {'Moderator_role_id': '602295470546485249'}
+                # {'Permissions': 'Default'}
                 key_value = list(value.values())[0]
                 key = list(value.keys())[0]
+
+                if key_value == 'Whitelist_wait_time':
+                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value}', inline=False)
+                    continue
+
                 if key_value == '0' or key_value == '1':
                     key_value = bool(key_value)
                     embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
@@ -609,12 +626,13 @@ class botUtils():
                 
                 if key == 'Moderator_role_id':
                     key_value = self.roleparse(key_value,context,context.guild.id)
-                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+                    embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
                     continue
 
                 if key_value.isalnum() and len(key_value) > 10:
                     key_value = self.channelparse(key_value,context,context.guild.id)
-                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'<#{key_value.id}>',inline=False)
+                    if key_value != None:
+                        embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'<#{key_value.id}>',inline=False)
                     continue
 
             return embed

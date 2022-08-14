@@ -26,7 +26,6 @@ import os
 
 
 DisplayImageSources = ["internal:MinecraftJava"]
-
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):

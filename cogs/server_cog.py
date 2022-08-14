@@ -41,6 +41,7 @@ class Server(commands.Cog):
         self.AMPHandler = AMP.getAMPHandler()
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMPThreads = self.AMPHandler.AMP_Console_Threads
+        self.AMP_Instance_Names = self.AMPHandler.AMP_Instances_Names
 
         #self.AMPHandler.set_discord_client(self._client)   #This is to get the Discord Client functionality into AMPHandler and AMPConsole class
 
@@ -56,12 +57,6 @@ class Server(commands.Cog):
     async def on_member_remove(self,member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
         self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
-
-        db_user = self.DB.GetUser(str(member.id))
-        if db_user != None and db_user.InGameName != None:
-            for server in self.AMPInstances:
-                if self.AMPInstances[server].Module == 'Minecraft':
-                    self.AMPInstances[server].removeWhitelist(db_user.InGameName)
 
     async def autocomplete_servers(self,interaction:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
         choice_list = self.AMP_Instance_Names
