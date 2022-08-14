@@ -29,6 +29,7 @@ import logging
 from AMP import AMPInstance
 
 
+
 def dump_to_json(data):
     for entry in data:
         if type(data[entry]) == datetime.datetime:
@@ -38,7 +39,9 @@ def dump_to_json(data):
     return json.dumps(data)
 
 
+
 Handler = None
+
 
 
 class DBHandler():
@@ -97,6 +100,7 @@ def getDBHandler() -> DBHandler:
     if Handler is None:
         Handler = DBHandler()
     return Handler
+
 
 
 class Database:
@@ -428,6 +432,7 @@ class Database:
                     entry["Log"].pop("ServerID")
 
         return ret
+
 
 
 class DBUser:

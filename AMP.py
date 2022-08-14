@@ -24,7 +24,7 @@
 from argparse import Namespace
 import requests
 import requests.sessions
-import pyotp  # 2Factor Authentication Python Module
+import pyotp   # 2Factor Authentication Python Module
 import json
 import time
 from pprint import pprint
@@ -45,9 +45,9 @@ Handler = None
 
 
 class AMPHandler():
-    def __init__(self, client: discord.Client, args: Namespace):
+    def __init__(self,  client:  discord.Client,  args:  Namespace):
         self.args = args
-        # print(self.args)
+        #  print(self.args)
         self.logger = logging.getLogger()
         #self._client = client
         self._cwd = pathlib.Path.cwd()
@@ -85,7 +85,7 @@ class AMPHandler():
         self.get_AMP_instance_names()
         #pprint(self.AMP.getAMPRolePermissions(self.AMP.AMP_BotRoleID))
 
-        # This removes Super Admins from the bot user! Controlled through parser args!
+        #  This removes Super Admins from the bot user! Controlled through parser args!
         if self.args.super or not self.args.dev:
             self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID, self.AMP.super_AdminID, False)
             self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
@@ -129,7 +129,7 @@ class AMPHandler():
             reset = True
             
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
-            tokens.AMPurl = tokens.AMPurl.replace('/', '').replace('\\', '')
+            tokens.AMPurl = tokens.AMPurl.replace('/',  '').replace('\\',  '')
 
         if len(tokens.AMPAuth) < 7:
             if tokens.AMPAuth == '':
@@ -147,7 +147,7 @@ class AMPHandler():
 
     def moduleHandler(self):
         """AMPs class Loader for specific server types."""
-        # traceback.print_stack()
+        #  traceback.print_stack()
         self.logger.dev('AMPHandler moduleHandler loading modules...')
         try:
             dir_list = self._cwd.joinpath('modules').iterdir()
@@ -156,7 +156,7 @@ class AMPHandler():
                 for script in file_list:
                     module_name = script.name[4:-3].capitalize()
                     try:
-                        # print(script)
+                        #  print(script)
                         spec = importlib.util.spec_from_file_location(module_name, script)
                         class_module = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(class_module)
@@ -183,6 +183,7 @@ def getAMPHandler(client: discord.Client = None, args: bool = False) -> AMPHandl
     if Handler is None:
         Handler = AMPHandler(client=client, args=args)
     return Handler
+
 
 
 class AMPInstance:
@@ -235,11 +236,11 @@ class AMPInstance:
             self.Console = AMPConsole(self)
 
         if instanceID != 0:
-            # This gets all the dictionary values tied to AMP and makes them attributes
+            #  This gets all the dictionary values tied to AMP and makes them attributes
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
 
-            # This cleans up the friendly name making it easier to use.
+            #  This cleans up the friendly name making it easier to use.
             self.FriendlyName = self.FriendlyName.replace(' ', '_')
 
             # This gets me the DB_Server object if it's not there; it adds the server.
@@ -253,10 +254,10 @@ class AMPInstance:
 
             self.logger.dev(f"Name: {self.FriendlyName} // InstanceID: {self.InstanceID} // Module: {self.Module} // Port: {self.Port} // DisplayImageSource: {self.DisplayImageSource}")
 
-            # This sets all my DB_Server attributes.
+            #  This sets all my DB_Server attributes.
             self.attr_update()
 
-        # Lets see if we are the main AMP or if the Instance is Running
+        #  Lets see if we are the main AMP or if the Instance is Running
         if instanceID == 0 or self.Running:
             if self.check_AMPpermissions():  # We either have to have super or our bot role perms has been set manually!
                 self.AMP_userinfo = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser)  # This gets my AMP User Information
@@ -296,7 +297,7 @@ class AMPInstance:
 
             else:
                 self.logger.critical(f'***ATTENTION*** We are missing permissions for {self.APIModule}! Please consider giving us `Super Admins` and the bot will set its own permissions and role!')
-                # If the main AMP is missing permissions; lets quit!
+                #  If the main AMP is missing permissions; lets quit!
                 if instanceID == 0:
                     sys.exit(1)
 
@@ -306,8 +307,8 @@ class AMPInstance:
         self.createRole('discord_bot')
         self.getRoleIds(True)
         self.logger.dev(f'Created `discord_bot` role. ID: {self.AMP_BotRoleID}')
-        self.AMP_UserID = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser, True)
-        self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
+        self.AMP_UserID = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser,  True)
+        self.setAMPUserRoleMembership(self.AMP_UserID,  self.AMP_BotRoleID,  True)
         self.logger.warning(f'***ATTENTION*** Adding {self.AMPHandler.tokens.AMPUser} to `discord_bot` Role.')
 
     def setup_AMPpermissions(self):
@@ -320,7 +321,7 @@ class AMPInstance:
             if perm.startswith('-'):
                 enabled = False
                 perm = perm[1:]
-            self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled)
+            self.setAMPRolePermissions(self.AMP_BotRoleID,  perm,  enabled)
             self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return
 
@@ -329,7 +330,7 @@ class AMPInstance:
         self.logger.warning(f'Checking {self.APIModule} for proper permissions...')
         failed = False
         for perm in self.perms:
-            # Skip the perm check on ones we "shouldn't have!"
+            #  Skip the perm check on ones we "shouldn't have!"
             if perm.startswith('-'):
                 continue
             has_permission = self.CurrentSessionHasPermission(perm)
@@ -340,7 +341,7 @@ class AMPInstance:
                 if self.APIModule == 'AMP':
                     self.logger.warning(f'The Bot is missing the permission {perm} Please check under Configuration -> User Management for the Bot.')
                 else:
-                    end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
+                    end_point = self.AMPHandler.tokens.AMPurl.find(":",  5)
                     self.logger.warning(f'The Bot is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> discord_bot')
                 failed = True
 
@@ -353,7 +354,7 @@ class AMPInstance:
 
     def attr_update(self):
         """This will update AMP Instance attributes."""
-        # Need to call this every so often. Possibly anytime I get instance information/update instance information
+        #  Need to call this every so often. Possibly anytime I get instance information/update instance information
         self.logger.dev(f'Updating Server Attributes - Instance Running: {self.Running}')
         self.DB_Server = self.DB.GetServer(InstanceID=self.InstanceID)
 
@@ -387,7 +388,7 @@ class AMPInstance:
         if self.SessionID == 0:
             if self.InstanceID in self.AMPHandler.SessionIDlist:
                 self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
-                # return func(*args, **kargs)
+                #  return func(*args, **kargs)
                 return
 
             self.logger.dev(f'AMPInstance Logging in {self.InstanceID}')
@@ -405,12 +406,12 @@ class AMPInstance:
                 'rememberMe': True}
 
             try:
-                result = self.CallAPI('Core/Login', parameters)
+                result = self.CallAPI('Core/Login',  parameters)
                 self.SessionID = result['sessionID']
                 self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
                 self.Running = True
 
-            except Exception:
+            except Exception Exception:
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
                 self.Running = False
                 return False
@@ -431,7 +432,7 @@ class AMPInstance:
                 if len(post_req.content) > 0:
                     break
 
-                # Since we are using GetUpdates every second for Console Updates; lets ignore them here so we don't sleep our thread.
+                #  Since we are using GetUpdates every second for Console Updates; lets ignore them here so we don't sleep our thread.
                 if APICall == 'Core/GetUpdates':
                     break
 
@@ -526,7 +527,7 @@ class AMPInstance:
         result = self.CallAPI('Core/GetUpdates', parameters)
         return result
 
-    def ConsoleMessage_withUpdate(self, msg: str) -> dict:
+    def ConsoleMessage_withUpdate(self,  msg:  str)  -> dict:
         """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
         parameters = {'message': ' '.join(msg)}
         self.CallAPI('Core/SendConsoleMessage', parameters)
@@ -534,7 +535,7 @@ class AMPInstance:
         update = self.ConsoleUpdate()
         return update
 
-    def ConsoleMessage(self, msg: str):
+    def ConsoleMessage(self,  msg:  str):
         """Basic Console Message"""
         self.Login()
         parameters = {'message': msg}
@@ -586,9 +587,9 @@ class AMPInstance:
             status = str(result['State'])
             return status != '0'
 
-        # If we want to check ONLY online users!
+        #  If we want to check ONLY online users!
         if users_only:
-            Users = (str(result['Metrics']['Active Users']['RawValue']), str(result['Metrics']['Active Users']['MaxValue']))
+            Users = (str(result['Metrics']['Active Users']['RawValue']),  str(result['Metrics']['Active Users']['MaxValue']))
             return Users
 
         Uptime = str(result['Uptime'])
@@ -609,7 +610,7 @@ class AMPInstance:
             user_list.append(result['result'][user])
         return user_list
 
-    def getSchedule(self) -> dict:
+    def getSchedule(self)  -> dict:
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetScheduleData', parameters)
@@ -643,7 +644,7 @@ class AMPInstance:
         pprint(result)
         return result
 
-    def copyFile(self, source, destination):
+    def copyFile(self,  source,  destination):
         self.Login()
         parameters = {
             'Origin': source,
@@ -652,7 +653,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/CopyFile', parameters)
         return
 
-    def renameFile(self, original, new):
+    def renameFile(self,  original,  new):
         self.Login()
         parameters = {
             'Filename': original,
@@ -661,7 +662,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/RenameFile', parameters)
         return
 
-    def getDirectoryListing(self, directory):
+    def getDirectoryListing(self,  directory):
         self.Login()
         parameters = {
             'Dir': directory
@@ -676,10 +677,10 @@ class AMPInstance:
             'Position': position,
             'Length': length
         }
-        result = self.CallAPI('FileManagerPlugin/GetFileChunk', parameters)
+        result = self.CallAPI('FileManagerPlugin/GetFileChunk',  parameters)
         return result
 
-    def writeFileChunk(self, filename: str, position: int, data: str):
+    def writeFileChunk(self,  filename:  str,  position:  int,  data:  str):
         self.Login()
         parameters = {
             'Filename': filename,
@@ -689,7 +690,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/WriteFileChunk', parameters)
         return
 
-    def endUserSession(self, sessionID: str):
+    def endUserSession(self,  sessionID:  str):
         """Ends specified User Session"""
         self.Login()
         parameters = {
@@ -698,21 +699,21 @@ class AMPInstance:
         self.CallAPI('Core/EndUserSession', parameters)
         return
 
-    def getActiveAMPSessions(self) -> dict:
+    def getActiveAMPSessions(self)  -> dict:
         """Returns currently active AMP Sessions"""
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetActiveAMPSessions', parameters)
         return result
 
-    def getInstanceStatus(self) -> dict:
+    def getInstanceStatus(self)  -> dict:
         """Returns AMP Instance Status"""
         self.Login()
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstanceStatuses', parameters)
         return result
 
-    def trashDirectory(self, dirname: str):
+    def trashDirectory(self,  dirname:  str):
         """Moves a directory to trash, files must be trashed before they can be deleted."""
         self.Login()
         parameters = {
@@ -721,13 +722,13 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/TrashDirectory', parameters)
         return
 
-    def trashFile(self, filename: str):
+    def trashFile(self,  filename:  str):
         """Moves a file to trash, files must be trashed before they can be deleted."""
         self.Login()
         parameters = {
             'Filename': filename
         }
-        self.CallAPI('FileManagerPlugin/TrashFile', parameters)
+        self.CallAPI('FileManagerPlugin/TrashFile',  parameters)
         return
 
     def emptyTrash(self, trashdir: str):
@@ -736,10 +737,10 @@ class AMPInstance:
         parameters = {
             'TrashDirectoryName': trashdir
         }
-        self.CallAPI('FileManagerPlugin/EmptyTrash', parameters)
+        self.CallAPI('FileManagerPlugin/EmptyTrash',  parameters)
         return
 
-    def takeBackup(self, title: str, description: str, sticky: bool = False):
+    def takeBackup(self,  title:  str, description:  str, sticky:  bool = False):
         """Takes a backup of the AMP Instance; default `sticky` is False!"""
         self.Login()
         parameters = {
@@ -747,10 +748,10 @@ class AMPInstance:
             'Description': description,
             'Sticky': sticky
         }
-        self.CallAPI('LocalFileBackupPlugin/TakeBackup', parameters)
+        self.CallAPI('LocalFileBackupPlugin/TakeBackup',  parameters)
         return
 
-    def getAMPUserInfo(self, name: str, IdOnly=False):
+    def getAMPUserInfo(self,  name:  str,  IdOnly=False):
         """Gets AMP user info. if IdOnly is True; returns AMP User ID only!"""
         self.Login()
         parameters = {
@@ -761,7 +762,7 @@ class AMPInstance:
             return result['result']['ID']
         return result
 
-    def CurrentSessionHasPermission(self, PermissionNode: str):
+    def CurrentSessionHasPermission(self,  PermissionNode:  str):
         """Gets current Sessions permission spec"""
         self.Login()
         parameters = {
@@ -774,7 +775,7 @@ class AMPInstance:
 
         return result
 
-    def getAMPRolePermissions(self, RoleID: str):
+    def getAMPRolePermissions(self,  RoleID:  str):
         """Gets full permission spec for Role (returns permission nodes)"""
         self.Login()
         parameters = {
@@ -815,7 +816,7 @@ class AMPInstance:
 
         return result['result']
 
-    def createRole(self, name: str, AsCommonRole=False):
+    def createRole(self,  name:  str,  AsCommonRole=False):
         """Creates a AMP User role"""
         self.Login()
         parameters = {
@@ -826,7 +827,7 @@ class AMPInstance:
         pprint(result)
         return result
 
-    def getRole(self, Roleid: str):
+    def getRole(self,  Roleid:  str):
         """Gets the AMP Role"""
         self.Login()
         parameters = {
@@ -843,10 +844,10 @@ class AMPInstance:
             'RoleId': RoleID,
             'IsMember': isMember
         }
-        result = self.CallAPI('Core/SetAMPUserRoleMembership', parameters)
+        result = self.CallAPI('Core/SetAMPUserRoleMembership',  parameters)
         return result
 
-    def setAMPRolePermissions(self, RoleID, PermissionNode: str, Enabled: bool):
+    def setAMPRolePermissions(self,  RoleID,  PermissionNode:  str,  Enabled:  bool):
         """Sets the AMP Role permission Node eg `Core.RoleManagement.DeleteRoles`"""
         self.Login()
         parameters = {
@@ -859,8 +860,8 @@ class AMPInstance:
             self.logger.critical(f'Unable to Set permissions {result}')
         return result
 
-    # These are GENERIC Methods below this point ---------------------------------------------------------------------------
-    def addWhitelist(self, user):
+    #  These are GENERIC Methods below this point ---------------------------------------------------------------------------
+    def addWhitelist(self,  user):
         """Base Function for AMP.addWhitelist"""
         return user
 
@@ -868,29 +869,30 @@ class AMPInstance:
         """Base Function for AMP.getWhitelist"""
         return
 
-    def removeWhitelist(self, user):
+    def removeWhitelist(self,  user):
         """Base Function for AMP.removeWhitelist"""
         return user
 
-    def name_Conversion(self, user):
+    def name_Conversion(self,  user):
         """Base Function for AMP.name_Conversion"""
         return user
 
-    def name_History(self, user):
+    def name_History(self,  user):
         """Base Function for AMP.name_History"""
         return user
 
-    def check_Whitelist(self, user_id: str):
+    def check_Whitelist(self,  user_id:  str):
         """Base Funcion for AMP.check_Whitelist `default return is FALSE`"""
         return False
 
-    def send_message(self, message):
+    def send_message(self,  message):
         """Base Function for Discord Chat Messages to AMP ADS"""
         return
 
-    def discord_message(self, user):
+    def discord_message(self,  user):
         """Base Function for customized discord messages"""
         return False
+
 
 
 class AMPConsole:
@@ -932,10 +934,10 @@ class AMPConsole:
 
                         self.console_thread_running = True
 
-                        # This starts the console parse on our self in a seperate thread.
+                        #  This starts the console parse on our self in a seperate thread.
                         self.console_thread = threading.Thread(target=self.console_parse, name=self.AMPInstance.FriendlyName)
 
-                        # This adds the AMPConsole Thread Object into a dictionary with the key value of AMPInstance.InstanceID
+                        #  This adds the AMPConsole Thread Object into a dictionary with the key value of AMPInstance.InstanceID
                         self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
                         self.console_thread.start()
                         self.logger.dev(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
@@ -982,7 +984,7 @@ class AMPConsole:
                 self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} DisplayImageSource: {self.AMPInstance.DisplayImageSource} Console Entry: {entry}')
                 self.logger.dev(f"Console Channel: {self.AMPInstance.Discord_Console_Channel} Chat Channel: {self.AMPInstance.Discord_Chat_Channel}")
 
-                # This should handle server events(such as join/leave/disconnects)
+                #  This should handle server events(such as join/leave/disconnects)
                 #print('Console Events')
                 if self.console_events(entry):
                     continue
@@ -1040,16 +1042,16 @@ class AMPConsole:
 
             self.console_message_list = []
 
-    def console_filter(self, message):
+    def console_filter(self,  message):
         """This will filter depending on the console_filter setting and handle what to send to Discord."""
         return False
 
-    def console_chat(self, message):
+    def console_chat(self,  message):
         """This will handle all player chat messages from AMP to Discord"""
         # **EXAMPLE** Name: ARK_-_Lost_Island DisplayImageSource: steam:346110 Console Entry:
         #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message'}
 
-        # Currently all servers set "Type" to Chat! So lets use those.
+        #  Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
             print('Found a Chat message')
 
@@ -1066,6 +1068,6 @@ class AMPConsole:
             return True
         return False
 
-    def console_events(self, message):
+    def console_events(self,  message):
         """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!"""
         return False

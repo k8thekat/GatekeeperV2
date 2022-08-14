@@ -33,8 +33,9 @@ import DB
 import utils
 
 
+
 class Server(commands.Cog):
-    def __init__(self, client: commands.Bot):
+    def __init__(self,  client:  commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
@@ -43,7 +44,7 @@ class Server(commands.Cog):
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMPThreads = self.AMPHandler.AMP_Console_Threads
 
-        # self.AMPHandler.set_discord_client(self._client)   #This is to get the Discord Client functionality into AMPHandler and AMPConsole class
+        #  self.AMPHandler.set_discord_client(self._client)   #This is to get the Discord Client functionality into AMPHandler and AMPConsole class
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB
@@ -55,7 +56,7 @@ class Server(commands.Cog):
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
     @commands.Cog.listener('on_member_remove')
-    async def on_member_remove(self, member: discord.Member):
+    async def on_member_remove(self,  member:  discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
         self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
 
@@ -295,7 +296,7 @@ class Server(commands.Cog):
     #This section is Whitelist Specific Server Commands --------------------------------------------------------------------------------
     @server.group(name='whitelist')
     @utils.role_check()
-    async def server_whitelist(self, context: commands.Context):
+    async def server_whitelist(self,  context:  commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
 
@@ -384,6 +385,7 @@ class Server(commands.Cog):
                 await context.send(f'User: {user[0]["name"]} was removed from the Whitelist on Server: {server.FriendlyName}')
 
     # This Section is DBServer Attributes -----------------------------------------------------------------------------------------------------
+    # This Section is DBServer Attributes -----------------------------------------------------------------------------------------------------
 
     @server.command(name='displayname')
     @utils.role_check()
@@ -435,7 +437,7 @@ class Server(commands.Cog):
 
     @server.group(name='donator')
     @utils.role_check()
-    async def db_server_donator(self, context: commands.Context):
+    async def db_server_donator(self,  context:  commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
 
@@ -473,7 +475,7 @@ class Server(commands.Cog):
 
     @server.group(name='console')
     @utils.role_check()
-    async def db_server_console(self, context: commands.Context):
+    async def db_server_console(self,  context:  commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
 
@@ -567,7 +569,7 @@ class Server(commands.Cog):
 
     @server.group(name='chat')
     @utils.role_check()
-    async def db_server_chat(self, context: commands.Context):
+    async def db_server_chat(self,  context:  commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
 
@@ -614,3 +616,4 @@ class Server(commands.Cog):
 
 async def setup(client):
     await client.add_cog(Server(client))
+

@@ -28,7 +28,7 @@ import pathlib
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import Button, View
+from discord.ui import Button,  View
 import asyncio
 
 import DB
@@ -67,7 +67,7 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         logger.error(f'DBConfig Staff role has not been set yet!')
         return False
 
-    staff_role, author_top_role = 0, 0
+    staff_role,  author_top_role = 0,  0
     guild_roles = context.guild.roles
 
     if type(context) == discord.member.Member:
@@ -77,7 +77,7 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         top_role_id = context.message.author.top_role.id
         author = context.message.author
 
-    for i in range(0, len(guild_roles)):
+    for i in range(0,  len(guild_roles)):
         if guild_roles[i].id == top_role_id:
             author_top_role = i
 
@@ -92,6 +92,7 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         logger.command(f'Permission Check Failed on {author}')
         await context.send('You do not have permission to use that command...')
         return False
+
 
 
 def role_check():
@@ -136,7 +137,7 @@ class CustomButton(Button):
         self._view = view
         view.add_item(self)
 
-    async def callback(self, interaction):
+    async def callback(self,  interaction):
         """This is called when a button is interacted with."""
         if not await async_rolecheck(interaction.user,self.permission_node):
             return
@@ -148,7 +149,7 @@ class CustomButton(Button):
         await asyncio.sleep(30)
         await self.reset()
 
-    # @tasks.loop(seconds=30.0)
+    #  @tasks.loop(seconds=30.0)
     async def reset(self):
         print('Resetting Buttons...')
         self.label = self._label
@@ -157,18 +158,21 @@ class CustomButton(Button):
         await self._interaction.followup.edit_message(message_id=self._interaction.message.id,view=self._view)
 
 class StartButton(CustomButton):
-    def __init__(self, server, view, function):
-        super().__init__(server=server, view=view, function=function, label='Start', callback_label='Starting...', callback_disabled=True, style=discord.ButtonStyle.green)
+    def __init__(self,  server,  view,  function):
+        super().__init__(server=server,  view=view,  function=function,  label='Start', callback_label='Starting...',  callback_disabled=True,  style=discord.ButtonStyle.green)
+
 
 
 class StopButton(CustomButton):
-    def __init__(self, server, view, function):
-        super().__init__(server=server, view=view, function=function, label='Stop', callback_label='Stopping...', callback_disabled=True, style=discord.ButtonStyle.red)
+    def __init__(self,  server,  view,  function):
+        super().__init__(server=server,  view=view,  function=function,  label='Stop', callback_label='Stopping...',  callback_disabled=True,  style=discord.ButtonStyle.red)
+
 
 
 class RestartButton(CustomButton):
-    def __init__(self, server, view, function):
-        super().__init__(server=server, view=view, function=function, label='Restart', callback_label='Restarting...', callback_disabled=True, style=discord.ButtonStyle.blurple)
+    def __init__(self,  server,  view,  function):
+        super().__init__(server=server,  view=view,  function=function,  label='Restart', callback_label='Restarting...',  callback_disabled=True,  style=discord.ButtonStyle.blurple)
+
 
 
 class KillButton(CustomButton):
@@ -201,8 +205,9 @@ class StatusView(View):
         self.stop()
 
 
+
 class discordBot():
-    def __init__(self, client: discord.Client):
+    def __init__(self,  client:  discord.Client):
         self.botLogger = logging.getLogger(__name__)
         self._client = client
         self.botLogger.debug('Utils Discord Loaded')
@@ -213,7 +218,7 @@ class discordBot():
         Supports `reason`(Optional)"""
 
         self.botLogger.dev('Add Users Discord Role Called...')
-        await user.add_roles(role, reason)
+        await user.add_roles(role,  reason)
 
     async def userRemoveRole(self, user: discord.user, role: discord.role, reason: str = None):
         """Removes a Role from the User.\n
@@ -221,8 +226,8 @@ class discordBot():
         Supports `reason`(Optional)"""
 
         self.botLogger.dev('Remove Users Discord Role Called...')
-        print(type(user), type(role))
-        await user.remove_roles(role, reason)
+        print(type(user),  type(role))
+        await user.remove_roles(role,  reason)
 
     async def delMessage(self, message: discord.message, delay: float = None):
         """Deletes the message.\n
@@ -236,7 +241,7 @@ class discordBot():
         """This will be used to access channel history up to 100. Simple scraper with datetime support."""
         if limit > 100:
             limit = 100
-        messages = await channel.history(limit, before, after, around, oldest_first).flatten()
+        messages = await channel.history(limit,  before,  after,  around,  oldest_first).flatten()
         return messages
 
     async def editMessage(self, message: discord.message, content: str = None, delete_after: float = None):
@@ -245,7 +250,7 @@ class discordBot():
         Supports `delete_after[float]`(Optional)"""
 
         self.botLogger.dev('Edit Discord Message Called...')
-        await message.edit(content, delete_after)
+        await message.edit(content,  delete_after)
 
     async def sendMessage(self, parameter: object, content: str, *, tts: bool = False, embed=None, file: discord.file = None, files: list = None, delete_after: float = None, nonce=None, allowed_mentions=None, reference: object = None):
         # content=None, *, tts=False, embed=None, file=None, files=None, delete_after=None, nonce=None, allowed_mentions=None, reference=None, mention_author=None
@@ -260,7 +265,7 @@ class discordBot():
         self.botLogger.dev('Member Send Message Called...')
         await parameter.send(content, tts=tts, embed=embed, file=file, files=files, delete_after=delete_after, nonce=nonce, allowed_mentions=allowed_mentions, reference=reference)
 
-    async def messageAddReaction(self, message: discord.message, reaction_id: str):
+    async def messageAddReaction(self,  message: discord.message, reaction_id:  str):
         """The name and ID of a custom emoji can be found with the client by prefixing ':custom_emoji:' with a backslash. \n
             For example, sending the message '\:python3:' with the client will result in '<:python3:232720527448342530>'.
             `NOTE` Can only use Emoji's the bot has access too"""
@@ -277,7 +282,7 @@ class discordBot():
 
         await message.add_reaction(emoji)
 
-    async def cog_load(self, context, cog: str):
+    async def cog_load(self,  context,  cog:  str):
         try:
             self._client.load_extension(name=cog)
         except Exception as e:
@@ -292,6 +297,7 @@ class discordBot():
             await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}')
         else:
             await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
+
 
 
 class botUtils():

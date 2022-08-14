@@ -29,7 +29,7 @@ import importlib.util
 from discord.ext import commands
 import discord
 
-# custom scripts
+#  custom scripts
 import AMP
 
 loop = asyncio.new_event_loop()
@@ -39,7 +39,8 @@ loaded = []
 class Handler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
 
-    def __init__(self, client: commands.Bot):
+
+    def __init__(self,  client:  commands.Bot):
         self._client = client
 
         self._cwd = pathlib.Path.cwd()
@@ -104,7 +105,7 @@ class Handler():
         """This will load all Cogs inside of the cogs folder needed for interaction with DB and AMP"""
         path = 'cogs'  # This gets us to the folder for the module specific scripts to load via the cog.
         try:
-            cog_file_list = pathlib.Path.joinpath(self._cwd, 'cogs').iterdir()
+            cog_file_list = pathlib.Path.joinpath(self._cwd,  'cogs').iterdir()
             for script in cog_file_list:
                 if script.name.endswith('.py'):
                     cog = f'{path}.{script.name[:-3]}'

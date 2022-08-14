@@ -26,7 +26,7 @@ import tokens
 import sys
 import logging
 
-# Custom scripts
+#  Custom scripts
 import logger
 import utils
 import AMP
@@ -36,7 +36,7 @@ Version = 'beta-2.0.0'
 logger = logging.getLogger(__name__)
 #logger.info(f'{user} Added the Reaction {os.path.basename(__file__)}: {reaction}')
 
-# Discord Specific
+#  Discord Specific
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -60,9 +60,10 @@ async def on_ready():
         await client.tree.sync(guild=local_guild)
 
 
+
 @client.event
-async def on_guild_join(guild: discord.Guild):
-    DB.getDBHandler().DBConfig.SetSetting('Guild_ID', guild.id)
+async def on_guild_join(guild:  discord.Guild):
+    DB.getDBHandler().DBConfig.SetSetting('Guild_ID',  guild.id)
     client.tree.copy_global_to(guild=guild)
     logger.info(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
     await client.tree.sync(guild=guild)
@@ -70,7 +71,7 @@ async def on_guild_join(guild: discord.Guild):
 
 @client.hybrid_group(name='bot')
 @utils.role_check()
-async def main_bot(context: commands.Context):
+async def main_bot(context:  commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...')
 
@@ -103,7 +104,7 @@ async def bot_permissions(context:commands.Context,permission:str):
 
 @main_bot.command(name='test')
 @utils.role_check()
-async def bot_test(context: commands.Context):
+async def bot_test(context:  commands.Context):
     """Test Async Function...**DO NOT USE**"""
  
     await context.send('Test Function Used')
@@ -117,7 +118,7 @@ async def bot_ping(context:commands.Context):
 
 @main_bot.command(name='load')
 @utils.role_check()
-async def bot_cog_loader(context: commands.Context, cog: str):
+async def bot_cog_loader(context:  commands.Context,  cog:  str):
     """Use this function for loading a cog manually."""
 
     try:
@@ -129,7 +130,7 @@ async def bot_cog_loader(context: commands.Context, cog: str):
 
 @main_bot.command(name='unload')
 @utils.role_check()
-async def bot_cog_unloader(context: commands.Context, cog: str):
+async def bot_cog_unloader(context:  commands.Context,  cog:  str):
     """Use this function to un-load a cog manually."""
 
     try:
@@ -141,7 +142,7 @@ async def bot_cog_unloader(context: commands.Context, cog: str):
 
 @main_bot.command(name='disconnect')
 @utils.role_check()
-async def bot_stop(context: commands.Context):
+async def bot_stop(context:  commands.Context):
     """Closes the connection to Discord."""
     logger.command('Bot Stop Called...')
   
@@ -150,7 +151,7 @@ async def bot_stop(context: commands.Context):
 
 @main_bot.command(name='restart')
 @utils.role_check()
-async def bot_restart(context: commands.Context):
+async def bot_restart(context:  commands.Context):
     """This is the discordBot restart function\n
     Requires the discordBot to be run in a Command/PowerShell Window ONLY!"""
     logger.command('Bot Restart Called...')
@@ -163,7 +164,7 @@ async def bot_restart(context: commands.Context):
 
 @main_bot.command(name='status')
 @utils.role_check()
-async def bot_status(context: commands.Context):
+async def bot_status(context:  commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
     logger.command('Bot Status Called...')
  
@@ -173,7 +174,7 @@ async def bot_status(context: commands.Context):
 
 @main_bot.command(name='sync')
 @utils.role_check()
-async def bot_sync(context: commands.Context):
+async def bot_sync(context:  commands.Context):
     """Syncs Bot Commands to the current guild this command was used in."""
     guild_id = DB.getDBHandler().DBConfig.GetSetting('Guild_ID')
     if guild_id is None or context.guild.id != int(guild_id):
@@ -186,7 +187,7 @@ async def bot_sync(context: commands.Context):
 
 async def initbot():
     """This is the main startup function..."""
-    global main_AMP, main_DB, main_DB_Config
+    global main_AMP,  main_DB,  main_DB_Config
     main_DB = DB.getDBHandler().DB
     main_DB_Config = main_DB.GetConfig()  # Can point to here or main_DBHandler.DBConfig
 
@@ -205,6 +206,7 @@ async def initbot():
     Handler = loader.Handler(client)
     await Handler.module_auto_loader()
     await Handler.cog_auto_loader()
+
 
 
 def client_run():

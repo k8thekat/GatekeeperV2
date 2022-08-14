@@ -25,9 +25,10 @@ import re
 import argparse
 
 
+
 class Setup:
     def __init__(self):
-        # Use action="store_true", then check the arg via "args.name" eg. "args.dev"
+        #  Use action="store_true", then check the arg via "args.name" eg. "args.dev"
         parser = argparse.ArgumentParser(description='AMP Discord Bot')
         parser.add_argument('-token', help='Bypasse tokens validation check.', required=False, action="store_true")
         parser.add_argument('-super', help='This leaves AMP Super Admin role intact, use at your own risk.', required=False, action="store_true")
@@ -45,7 +46,7 @@ class Setup:
 
         self.pip_install()
 
-        # Custom Logger functionality.
+        #  Custom Logger functionality.
         import logger
         logger.init(self.args)
         self.logger = logging.getLogger()
@@ -64,7 +65,7 @@ class Setup:
         self.DB_Config = self.DB.GetConfig()
         self.logger.info(f'SQL Database Version: {self.DB.DBHandler.DB_Version} // SQL Database: {self.DB.DBHandler.SuccessfulDatabase}')
 
-        # This connects and creates all our AMP related parts
+        #  This connects and creates all our AMP related parts
         import AMP
         self.AMPHandler = AMP.getAMPHandler(args=self.args)
         self.AMPHandler.setup_AMPInstances()
@@ -72,7 +73,7 @@ class Setup:
         self.logger.info(f'AMP Connected: {self.AMP.AMPHandler.SuccessfulConnection}')
 
     def pip_install(self):
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r',  'requirements.txt'])
         try:
             import discord
             ver = discord.__version__
@@ -88,7 +89,7 @@ class Setup:
 
 Start = Setup()
 
-# This has to be called outside of the init; its blocking and will cause issues inside of the Setup.init()
+#  This has to be called outside of the init; its blocking and will cause issues inside of the Setup.init()
 if Start.args.discord:
     import discordBot
     discordBot.client_run()

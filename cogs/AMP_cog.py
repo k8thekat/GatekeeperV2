@@ -51,16 +51,16 @@ class AMP_Cog(commands.Cog):
         self.Parser = Parser()
         self.logger.info(f'**SUCCESS** Initializing {self.name.replace("amp","AMP")}')
 
-        # This should help prevent errors in older databases.
+        #  This should help prevent errors in older databases.
         try:
             self.attr_update()
 
-        except Exception:
+        except Exception Exception:
             self.DBHandler.dbWhitelistSetup()
             self.attr_update()
 
         self.failed_whitelist = []
-        self.WL_wait_list = []  # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
+        self.WL_wait_list = []   # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
 
         self.update_loop.start()
         self.logger.dev('AMP_Cog Update Loop Running:' + str(self.update_loop.is_running()))
@@ -73,7 +73,7 @@ class AMP_Cog(commands.Cog):
 
     @tasks.loop(seconds=5)
     async def update_loop(self):
-        # This is to keep everything up to date when we change the settings in the DB
+        #  This is to keep everything up to date when we change the settings in the DB
         self.attr_update()
         #This is to check for any new instances that have been created since the bot was running.
         #self.AMPHandler.AMP_instanceCheck()
@@ -87,7 +87,7 @@ class AMP_Cog(commands.Cog):
         self.WL_Finished_Emoji = self.DBConfig.Whitelist_emoji_done
 
     @commands.Cog.listener('on_message')
-    async def on_message(self, message: discord.Message):
+    async def on_message(self,  message:  discord.Message):
         context = await self._client.get_context(message)
         if message.webhook_id is not None:
             return message
@@ -112,43 +112,44 @@ class AMP_Cog(commands.Cog):
                             self.AMPServer.send_message(message) #This calls the generic AMP Function; each server will handle this differently.
                         
             return message
-    # This is called when a message in any channel of the guild is edited. Returns <message> object.
+    #  This is called when a message in any channel of the guild is edited. Returns <message> object.
+
 
     @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self, message_before: discord.Message, message_after: discord.Message):
+    async def on_message_edit(self,  message_before:  discord.Message,  message_after:  discord.Message):
         """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
         if message_before.author != self._client.user:
-            # This handles edited whitelist requests!
+            #  This handles edited whitelist requests!
             if message_before in self.failed_whitelist and message_before.channel.id == self.WL_channel:
                 context = await self._client.get_context(message_before)
-                await self.on_message_whitelist(message_after, context)
+                await self.on_message_whitelist(message_after,  context)
 
             self.logger.dev(f'Edited Message Event for {self.name}')
-            return message_before, message_after
+            return message_before,  message_after
 
     @commands.Cog.listener('on_member_remove')
-    async def on_member_remove(self, member: discord.Member):
+    async def on_member_remove(self,  member:  discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
         self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
-        for index in len(0, self.WL_wait_list):
+        for index in len(0,  self.WL_wait_list):
             if member.name == self.WL_wait_list[index]['author']:
                 self.WL_wait_list.pop(index)
                 self.logger.info(f'Removed {member.name} from Whitelist Wait List.')
         return member
 
     @commands.Cog.listener('on_reaction_add')
-    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
+    async def on_reaction_add(self,  reaction:  discord.Reaction,  user:  discord.User):
         """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
         self.logger.dev(f'Reaction Add {self.name}: {user} Reaction: {reaction}')
-        return reaction, user
+        return reaction,  user
 
     @commands.Cog.listener('on_reaction_remove')
-    async def on_reaction_remove(self, reaction: discord.Reaction, user: discord.User):
+    async def on_reaction_remove(self,  reaction:  discord.Reaction,  user:  discord.User):
         """Called when a message has a reaction removed from it. Similar to on_message_edit, if the message is not found in the internal message cache, then this event will not be called."""
         self.logger.dev(f'Reaction Remove {self.name}: {user} Reaction: {reaction}')
-        return reaction, user
+        return reaction,  user
 
-    def webhook_verify(self, message: discord.Message):
+    def webhook_verify(self,  message:  discord.Message):
         """This checks the message against ourselves to make sure we don't reply or send our own message back."""
         for webhook in self.webhook_list:
             if webhook.id == message.author.id:
@@ -177,7 +178,7 @@ class AMP_Cog(commands.Cog):
                 self.AMP_Server_Console.console_messages = []
                 self.AMP_Server_Console.console_message_lock.release()
 
-                # This setup is for getting/used old webhooks and allowing custom avatar names per message.
+                #  This setup is for getting/used old webhooks and allowing custom avatar names per message.
                 self.webhook_list = await channel.webhooks()
                 self.logger.debug(f'*AMP Console Message* webhooks {self.webhook_list}')
                 console_webhook = None
@@ -221,7 +222,7 @@ class AMP_Cog(commands.Cog):
                 self.AMP_Server_Console.console_chat_messages = []
                 self.AMP_Server_Console.console_chat_message_lock.release()
 
-                # This setup is for getting/used old webhooks and allowing custom avatar names per message.
+                #  This setup is for getting/used old webhooks and allowing custom avatar names per message.
                 self.webhook_list = await channel.webhooks()
                 self.logger.debug(f'*AMP Chat Message* webhooks {self.webhook_list}')
                 chat_webhook = None
@@ -265,7 +266,7 @@ class AMP_Cog(commands.Cog):
 
     async def on_message_whitelist(self, message: discord.Message, context: commands.context):
         """This handles on_message whitelist requests."""
-        user_ign, user_servers = self.Parser.ParseIGNServer(message.content)
+        user_ign,  user_servers = self.Parser.ParseIGNServer(message.content)
         self.logger.command(f'Whitelist Request: ign: {user_ign} servers: {user_servers}')
         amp_servers = []
 
@@ -343,7 +344,7 @@ class AMP_Cog(commands.Cog):
             if emoji is not None:
                 await message.add_reaction(emoji)  # This should point to bot_config Emoji
 
-            # Checks if the Tasks is running, if not starts the task.
+            #  Checks if the Tasks is running, if not starts the task.
             if not self.whitelist_waitlist_handler.is_running():
                 self.whitelist_waitlist_handler.start()
             return
@@ -367,7 +368,7 @@ class AMP_Cog(commands.Cog):
         except Exception:
             wait_time = timedelta(minutes=1)  # Fallback to 1 min delay if somehow the value fails to get parsed.
 
-        for index in range(0, len(self.WL_wait_list)):
+        for index in range(0,  len(self.WL_wait_list)):
             cur_message = self.WL_wait_list[index]
 
             # This should compare datetime objects and if the datetime of when the message was created plus the wait time is greater than or equal the cur_time they get whitelisted.
@@ -379,3 +380,4 @@ class AMP_Cog(commands.Cog):
 
 async def setup(client: commands.Bot):
     await client.add_cog(AMP_Cog(client))
+

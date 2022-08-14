@@ -44,9 +44,11 @@ class Terraria(commands.Cog):
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
-        # self.uBot.sub_command_handler(self,'user',self.info)
+        #  self.uBot.sub_command_handler(self,'user',self.info)
         self.logger.info(f'**SUCCESS** Initializing Module **{self.name.capitalize()}**')
+
 
 
 async def setup(client):
     await client.add_cog(Terraria(client))
+

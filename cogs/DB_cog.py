@@ -51,8 +51,8 @@ class DB_Module(commands.Cog):
         self.dBot = utils.discordBot(client)
         self.pBot = utils.botPerms()
 
-        self.uBot.sub_command_handler('bot', self.db_bot_whitelist)
-        self.uBot.sub_command_handler('bot', self.db_bot_settings)
+        self.uBot.sub_command_handler('bot',  self.db_bot_whitelist)
+        self.uBot.sub_command_handler('bot',  self.db_bot_settings)
 
         self.whitelist_emoji_message = ''
         self.whitelist_emoji_pending = False
@@ -78,10 +78,10 @@ class DB_Module(commands.Cog):
             return message
 
     @commands.Cog.listener('on_member_update')
-    async def on_member_update(self, user_before: discord.User, user_after: discord.User):
-        # Lets see if the name is different from before.
+    async def on_member_update(self,  user_before:  discord.User,  user_after:  discord.User):
+        #  Lets see if the name is different from before.
         if user_before.name != user_after.name:
-            # Lets look up the previous ID to gaurentee a proper search, could use the newer user ID; both in theory should be the same.
+            #  Lets look up the previous ID to gaurentee a proper search, could use the newer user ID; both in theory should be the same.
             db_user = self.DB.GetUser(user_before.id)
             # If we found the DB User
             if db_user is not None:
@@ -93,37 +93,37 @@ class DB_Module(commands.Cog):
             return user_after
 
     @commands.Cog.listener('on_member_remove')
-    async def on_member_remove(self, member: discord.Member):
+    async def on_member_remove(self,  member:  discord.Member):
         self.logger.dev(f'Member has left the server {member.name}')
         return member
 
     @commands.Cog.listener('on_reaction_add')
-    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
+    async def on_reaction_add(self,  reaction:  discord.Reaction,  user:  discord.User):
         """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
         self.logger.dev(f'Reaction Add {self.name}: {user} Reaction: {reaction}')
 
-        # This is for setting the Whitelist_Emoji_pending after using the command!
+        #  This is for setting the Whitelist_Emoji_pending after using the command!
         if reaction.message.id == self.whitelist_emoji_message:
-            # This is for pending whitelist requests
+            #  This is for pending whitelist requests
             if self.whitelist_emoji_pending:
                 self.DBConfig.Whitelist_emoji_pending = reaction.emoji.id
                 self.whitelist_emoji_pending = False
-            # This is for completed whitelist requests
+            #  This is for completed whitelist requests
             if self.whitelist_emoji_done:
                 self.DBConfig.Whitelist_emoji_done = reaction.emoji.id
                 self.whitelist_emoji_done = False
 
-        return reaction, user
+        return reaction,  user
 
     @utils.role_check()
     @commands.hybrid_group()
-    async def user(self, context: commands.Context):
+    async def user(self,  context:  commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Please try your command again...')
 
     @user.command(name='info')
     @utils.role_check()
-    async def user_info(self, context: commands.Context, user: str):
+    async def user_info(self,  context:  commands.Context,  user:  str):
         """Displays the Discord Users Database information"""
         self.logger.command(f'{context.author.name} used User Information')
      
@@ -141,7 +141,7 @@ class DB_Module(commands.Cog):
         self.logger.command(f'{context.author.name} used User Add Function')
        
 
-        if mc_ign != None:
+        if mc_ign is not None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
 
         discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
@@ -190,7 +190,7 @@ class DB_Module(commands.Cog):
 
     @user.command(name='uuid')
     @utils.role_check()
-    async def user_uuid(self, context: commands.Context, mc_ign: str):
+    async def user_uuid(self,  context:  commands.Context,  mc_ign:  str):
         """This will convert a Minecraft IGN to a UUID if it exists"""
         self.logger.command(f'{context.author.name} used User UUID Function')
 
@@ -226,16 +226,16 @@ class DB_Module(commands.Cog):
         self.logger.command(f'{context.author.name} used User Test Function')
         await context.send(cur_user)
 
-    # All DBConfig Whitelist Specific function settings --------------------------------------------------------------
+    #  All DBConfig Whitelist Specific function settings --------------------------------------------------------------
     @commands.hybrid_group(name='whitelist')
     @utils.role_check()
-    async def db_bot_whitelist(self, context: commands.Context):
+    async def db_bot_whitelist(self,  context:  commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
 
     @db_bot_whitelist.command(name='channel')
     @utils.role_check()
-    async def db_bot_whitelist_channel_set(self, context: commands.Context, id: str):
+    async def db_bot_whitelist_channel_set(self,  context:  commands.Context,  id:  str):
         """Sets the Whitelist Channel for the Bot to monitor"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
       
@@ -244,12 +244,12 @@ class DB_Module(commands.Cog):
         if channel is None:
             return await context.reply(f'Unable to find the Discord Channel: {id}')
         else:
-            self.DBConfig.SetSetting('Whitelist_channel', channel.id)
+            self.DBConfig.SetSetting('Whitelist_channel',  channel.id)
             await context.send(f'Set Bot Channel Whitelist to {channel.name}')
 
     @db_bot_whitelist.command(name='waittime')
     @utils.role_check()
-    async def db_bot_whitelist_wait_time_set(self, context: commands.Context, time: str):
+    async def db_bot_whitelist_wait_time_set(self,  context:  commands.Context,  time:  str):
         """Set the Bots Whitelist wait time , this value is in minutes!"""
         self.logger.command(f'{context.author.name} used Bot Whitelist wait time Set...')
         
@@ -262,7 +262,7 @@ class DB_Module(commands.Cog):
 
     @db_bot_whitelist.command(name='auto')
     @utils.role_check()
-    async def db_bot_whitelist_auto_whitelist(self, context: commands.Context, flag: str):
+    async def db_bot_whitelist_auto_whitelist(self,  context:  commands.Context,  flag:  str):
         """This turns on or off Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
     
@@ -279,7 +279,7 @@ class DB_Module(commands.Cog):
 
     @db_bot_whitelist.command(name='pending_emoji')
     @utils.role_check()
-    async def db_bot_whitelist_pending_emjoi_set(self, context: commands.Context):
+    async def db_bot_whitelist_pending_emjoi_set(self,  context:  commands.Context):
         """This sets the Whitelist pending emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Pending Emoji...')
       
@@ -296,7 +296,7 @@ class DB_Module(commands.Cog):
 
     @db_bot_whitelist.command(name='done_emoji')
     @utils.role_check()
-    async def db_bot_whitelist_done_emjoi_set(self, context: commands.Context):
+    async def db_bot_whitelist_done_emjoi_set(self,  context:  commands.Context):
         """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Done Emoji...')
     
@@ -313,7 +313,7 @@ class DB_Module(commands.Cog):
 
     @commands.hybrid_command(name='settings')
     @utils.role_check()
-    async def db_bot_settings(self, context: commands.Context):
+    async def db_bot_settings(self,  context:  commands.Context):
         """Displays currently set Bot settings"""
         self.logger.command(f'{context.author.name} used Bot Settings...')
       
@@ -328,13 +328,13 @@ class DB_Module(commands.Cog):
 
     @commands.hybrid_group(name='dbserver')
     @utils.role_check()
-    async def db_server(self, context: commands.Context):
+    async def db_server(self,  context:  commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
 
     @db_server.command(name='cleanup')
     @utils.role_check()
-    async def db_server_cleanup(self, context: commands.Context):
+    async def db_server_cleanup(self,  context:  commands.Context):
         """This is used to remove un-used DBServer entries and update names of existing servers."""
         self.logger.command(f'{context.author.name} used Database Clean-Up in progress...')
     
@@ -353,7 +353,7 @@ class DB_Module(commands.Cog):
     #!TODO! This Function needs to be laid out and tested.
     @db_server.command(name='swap')
     @utils.role_check()
-    async def db_server_instance_swap(self, context, old_server, new_server):
+    async def db_server_instance_swap(self,  context,  old_server,  new_server):
         """This will be used to swap Instance ID's with an existing AMP Instance"""
         self.logger.command(f'{context.author.name} used Database Instance swap...')
         
@@ -362,3 +362,4 @@ class DB_Module(commands.Cog):
 
 async def setup(client):
     await client.add_cog(DB_Module(client))
+
