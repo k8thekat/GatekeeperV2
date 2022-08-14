@@ -117,6 +117,10 @@ class AMPHandler():
 
         import tokens
         self.tokens = tokens
+        if not tokens.AMPurl.startswith('http://'):
+            self.logger.critical('** Please Append "http://" at the start of your AMPurl.')
+            reset = True
+            
         if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
             tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
