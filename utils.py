@@ -50,11 +50,11 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         return True
 
     #This handles Custom Permissions for people with the flag set.
-    print('Permission Setting', DBConfig.GetSetting('Permissions'))
+    #print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
-        print(perm_node)
+        #print(perm_node)
         bPerms = get_botPerms()
         bPerms.perm_node_check(perm_node,context)
         if bPerms.perm_node_check == False:

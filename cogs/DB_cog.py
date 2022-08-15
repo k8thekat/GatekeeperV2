@@ -138,6 +138,8 @@ class DB_Module(commands.Cog):
             db_user = self.DB.GetUser(str(discord_user.id))
             if db_user != None:
                 await context.send(embed= self.uBot.user_info_embed(context,db_user,discord_user))
+            else:
+                await context.send(f'Unable to find the user {discord_user} in the Database, please add them.')
                
 
     @user.command(name='add')
@@ -146,7 +148,6 @@ class DB_Module(commands.Cog):
         """Adds the Discord Users information to the Database"""
         self.logger.command(f'{context.author.name} used User Add Function')
        
-
         if mc_ign != None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
 

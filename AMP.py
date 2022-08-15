@@ -1003,7 +1003,7 @@ class AMPConsole:
                 #This will filter any messages such as errors or mods loading, etc..
                 #print('Console Filter')
                 if self.console_filter(entry):
-                    print(f"Filtered message {entry}")
+                    #print(f"Filtered message {entry}")
                     continue
                 
                 if len(entry['Contents']) > 1500:
@@ -1059,7 +1059,7 @@ class AMPConsole:
 
         #Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
-            print('Found a Chat message')
+            #print('Found a Chat message')
 
             #Removed the odd character for color idicators on text
             message['Contents'] = message['Contents'].replace('�','')
