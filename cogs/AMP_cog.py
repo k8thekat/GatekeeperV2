@@ -93,8 +93,6 @@ class AMP_Cog(commands.Cog):
     @commands.Cog.listener('on_message')
     async def on_message(self,message:discord.Message):
         context = await self._client.get_context(message)
-        if message.webhook_id != None:
-            return message
         if message.content.startswith(self._client.command_prefix):
             return message
         if message.author != self._client.user:
@@ -103,19 +101,25 @@ class AMP_Cog(commands.Cog):
                 if message.channel.id == int(self.WL_channel):  # This is AMP Specific; for handling whitelist requests to any server.
                     await self.on_message_whitelist(message, context)
 
-            if not self.webhook_verify(message):
+        for amp_server in self.AMPInstances:
+            self.AMPServer = self.AMPInstances[amp_server]
+            if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
+                if message.webhook_id == None:
+                    if await utils.async_rolecheck(context,'server.console.interact'):
+                        self.AMPServer.ConsoleMessage(message.content)
+                continue
 
-                    for amp_server in self.AMPInstances:
-                        self.AMPServer = self.AMPInstances[amp_server]
+            if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):
+                #print(cur_webhook.name[:-5], self.AMPServer.FriendlyName)
+                if message.webhook_id == None:
+                    self.AMPServer.send_message(message) #This calls the generic AMP Function; each server will handle this differently.
+                else:
+                    cur_webhook = await self._client.fetch_webhook(message.webhook_id)
+                    if cur_webhook.name[:-5] == self.AMPServer.FriendlyName:
+                        continue
+                    self.AMPServer.send_message(message)
 
-                        if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
-                            if await utils.async_rolecheck(context,'server.console.interact'):
-                                self.AMPServer.ConsoleMessage(message.content)
-
-                        if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):
-                            self.AMPServer.send_message(message) #This calls the generic AMP Function; each server will handle this differently.
-                        
-            return message
+        return message
     #This is called when a message in any channel of the guild is edited. Returns <message> object.
     @commands.Cog.listener('on_message_edit')
     async def on_message_edit(self,message_before:discord.Message,message_after:discord.Message):
@@ -150,16 +154,6 @@ class AMP_Cog(commands.Cog):
         """Called when a message has a reaction removed from it. Similar to on_message_edit, if the message is not found in the internal message cache, then this event will not be called."""
         self.logger.dev(f'Reaction Remove {self.name}: {user} Reaction: {reaction}')
         return reaction,user
-
-    def webhook_verify(self,message:discord.Message):
-        """This checks the message against ourselves to make sure we don't reply or send our own message back."""
-        for webhook in self.webhook_list:
-            if webhook.id == message.author.id:
-                self.logger.debug(f'Found a Matching Webhook ID to Message Author ID; ignoring Message Webhook:{webhook.id} Author:{message.author.id}')
-                return True
-            else:
-                continue
-        return False
 
     @tasks.loop(seconds=1)
     async def amp_server_console_messages_send(self):
@@ -240,6 +234,7 @@ class AMP_Cog(commands.Cog):
 
                 if len(chat_messages) != 0:
                     for message in chat_messages:
+                        print(message)
                         author = None
                         author_db = self.DB.GetUser(message['Source'])
 
@@ -261,7 +256,7 @@ class AMP_Cog(commands.Cog):
                         else:
                             self.logger.dev('*AMP Chat Message* sending a message with default information')
 
-                            await chat_webhook.send(message['Contents'], username=message['Source'])
+                            await chat_webhook.send(message['Contents'], username=self._client.user.name)
                             continue
 
                     self.AMP_Server_Console.console_chat_messages = []

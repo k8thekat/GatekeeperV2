@@ -78,6 +78,17 @@ class Server(commands.Cog):
         amp_server = self.uBot.serverparse(server,context,context.guild.id)
         await context.send(f'This is a test command {amp_server}')
 
+    @server.command(name='info')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def amp_server_info(self,context:commands.Context,server):
+        """Displays Specific Server Information."""
+        self.logger.command(f'{context.author.name} used AMP Server Test')
+        amp_server = self.uBot.serverparse(server,context,context.guild.id)
+        if amp_server == None:
+            await context.send(f"Hey, we uhh can't find the server {server}. Please try again.")
+        await context.send(embed=self.uBot.server_info_embed(amp_server,context))
+
     @server.command(name='list')
     @utils.role_check()
     async def amp_server_list(self,context:commands.Context):

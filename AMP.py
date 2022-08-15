@@ -371,7 +371,6 @@ class AMPInstance:
         self.Discord_Console_Channel = self.DB_Server.Discord_Console_Channel
         self.Discord_Chat_Channel = self.DB_Server.Discord_Chat_Channel
         self.Discord_Role = self.DB_Server.Discord_Role
-        self.Discord_Reaction = self.DB_Server.Discord_Reaction
 
     def server_check(self):
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
@@ -1063,11 +1062,7 @@ class AMPConsole:
             print('Found a Chat message')
 
             #Removed the odd character for color idicators on text
-            message = message.replace('�','')
-
-
-            #Removed the odd character for color idicators on text
-            message = message.replace('�','')
+            message['Contents'] = message['Contents'].replace('�','')
 
             self.console_chat_message_lock.acquire()
             self.console_chat_messages.append(message)

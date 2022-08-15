@@ -41,56 +41,55 @@ Handler = None
 
 
 class DBHandler():
-	def __init__(self):
-		self.logger = logging.getLogger(__name__)
-		self.DB = Database(Handler = self)
-		self.DBConfig = self.DB.GetConfig()
-		self.SuccessfulDatabase = True
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self.DB = Database(Handler = self)
+        self.DBConfig = self.DB.GetConfig()
+        self.SuccessfulDatabase = True
 
-		#Always update this value when changing Tables!
-		self.DB_Version = 1.4
+        #Always update this value when changing Tables!
+        self.DB_Version = 1.5
 
-		#This should ONLY BE TRUE on new Database's going forward. 
-		if self.DBConfig.GetSetting('DB_Version') == None:
-			self.DBUpdate = DBUpdate(self.DB,self.DB_Version)
-			return
+        #This should ONLY BE TRUE on new Database's going forward. 
+        if self.DBConfig.GetSetting('DB_Version') == None:
+            self.DBUpdate = DBUpdate(self.DB,self.DB_Version)
+            return
 
-		#This is to handle 1.0.0 Converting to new DB Version systems.
-		if type(self.DBConfig.GetSetting('DB_Version')) == str and self.DBConfig.GetSetting('DB_Version') == '1.0.0':
-			self.DBConfig.SetSetting('DB_Version', '1.0')
+        #This is to handle 1.0.0 Converting to new DB Version systems.
+        if type(self.DBConfig.GetSetting('DB_Version')) == str and self.DBConfig.GetSetting('DB_Version') == '1.0.0':
+            self.DBConfig.SetSetting('DB_Version', '1.0')
 
-		#self.DBConfig.SetSetting('DB_Version', 1.2)
-		#This handles version checks and calling all updates from version 1.0
-		if self.DB_Version > float(self.DBConfig.GetSetting('DB_Version')):
-			self.logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}")
-			self.DBUpdate = DBUpdate(self.DB,float(self.DBConfig.GetSetting('DB_Version')))
-		
-		self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
-	
-	
-	def dbWhitelistSetup(self):
-		"""This is set Default AMP Specific Whitelist Settings"""
-		try:
-			#self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
-			self.DBConfig.AddSetting('Whitelist_Channel', None)
-			self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
-			self.DBConfig.AddSetting('Auto_Whitelist', False)
-			self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
-			self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
-		except:
-			self.logger.warning('**ATTENTION** DBConfig Default Whitelist Settings have been set.')
+        #self.DBConfig.SetSetting('DB_Version', 1.2)
+        #This handles version checks and calling all updates from version 1.0
+        if self.DB_Version > float(self.DBConfig.GetSetting('DB_Version')):
+            self.logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}")
+            self.DBUpdate = DBUpdate(self.DB,float(self.DBConfig.GetSetting('DB_Version')))
+        
+        self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
 
-	def dbServerConsoleSetup(self,server:AMPInstance):
-		"""This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
-		self.DB_Server = self.DB.GetServer(server.InstanceID)
-		try:
-			self.DB_Server.Console_Flag = True
-			self.DB_Server.Console_Filtered = True
-			self.DB_Server.Discord_Console_Channel = None #Should be a str, can be an int. eg 289450670581350401
-		except:
-			self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
 
-			
+    def dbWhitelistSetup(self):
+        """This is set Default AMP Specific Whitelist Settings"""
+        try:
+            #self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
+            self.DBConfig.AddSetting('Whitelist_Channel', None)
+            self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
+            self.DBConfig.AddSetting('Auto_Whitelist', False)
+            self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
+            self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
+        except:
+            self.logger.warning('**ATTENTION** DBConfig Default Whitelist Settings have been set.')
+
+    def dbServerConsoleSetup(self,server:AMPInstance):
+        """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
+        self.DB_Server = self.DB.GetServer(server.InstanceID)
+        try:
+            self.DB_Server.Console_Flag = True
+            self.DB_Server.Console_Filtered = True
+            self.DB_Server.Discord_Console_Channel = None #Should be a str, can be an int. eg 289450670581350401
+        except:
+            self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
+
 def getDBHandler() -> DBHandler:
     global Handler
     if Handler == None:
@@ -118,50 +117,49 @@ class Database:
         cur = self._db.cursor()
 
         cur.execute("""create table Servers (
-						ID integer primary key,
-						InstanceID text not null unique collate nocase,
-						InstanceName text unique collate nocase,
-						DisplayName text,
-						Description text,
-						IP text unique,
-						Whitelist integer not null,
-						Donator integer not null,
-						Console_Flag integer not null,
-						Console_Filtered integer not null,
-						Discord_Console_Channel text nocase,
-						Discord_Chat_Channel text nocase,
-						Discord_Role text collate nocase,
-						Discord_Reaction text nocase
-						)""")
+                        ID integer primary key,
+                        InstanceID text not null unique collate nocase,
+                        InstanceName text unique collate nocase,
+                        DisplayName text,
+                        Description text,
+                        IP text unique,
+                        Whitelist integer not null,
+                        Donator integer not null,
+                        Console_Flag integer not null,
+                        Console_Filtered integer not null,
+                        Discord_Console_Channel text nocase,
+                        Discord_Chat_Channel text nocase,
+                        Discord_Role text collate nocase
+                        )""")
 
         cur.execute("""create table ServerNicknames (
-						ID integer primary key,
-						ServerID integer not null,
-						Nickname text unique not null unique collate nocase,
-						foreign key(ServerID) references Servers(ID)
-						)""")
+                        ID integer primary key,
+                        ServerID integer not null,
+                        Nickname text unique not null unique collate nocase,
+                        foreign key(ServerID) references Servers(ID)
+                        )""")
 
         cur.execute("""create table Users (
-						ID integer primary key,
-						DiscordID text not null unique collate nocase,
-						DiscordName text collate nocase,
-						MC_IngameName text collate nocase,
-						MC_UUID text unique collate nocase,
-						SteamID text unique collate nocase,
-						Role text collate nocase,
-						)""")
+                        ID integer primary key,
+                        DiscordID text not null unique collate nocase,
+                        DiscordName text collate nocase,
+                        MC_IngameName text collate nocase,
+                        MC_UUID text unique collate nocase,
+                        SteamID text unique collate nocase,
+                        Role text collate nocase,
+                        )""")
 
         cur.execute("""create table Log (
-						ID integer primary key,
-						Log text not null,
-						LogDate timestamp default (datetime('now'))
-						)""")
+                        ID integer primary key,
+                        Log text not null,
+                        LogDate timestamp default (datetime('now'))
+                        )""")
 
         cur.execute("""create table Config (
-						ID integer primary key,
-						Name text not null unique,
-						Value text
-						)""")
+                        ID integer primary key,
+                        Name text not null unique,
+                        Value text
+                        )""")
 
         self._db.commit()
 
@@ -214,9 +212,9 @@ class Database:
         jdata = dump_to_json({"Type": "UserUpdate", "UserID": dbuser.ID, "Field": entry, "Value": args[entry]})
         self._logdata(jdata)
 
-    def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Discord_Reaction:str=None):
+    def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None):
         #try:
-        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role, Discord_Reaction=Discord_Reaction)
+        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role)
         #except:
             #return None
 
@@ -297,13 +295,7 @@ class Database:
         return ID
 
     def GetConfig(self):
-        #global main_Database_Config
-        # if self.DBHandler.DBConfig is None:
-        # if main_Database_Config is None:
-        #main_Database_Config = DBConfig(self)
         self.DBHandler.DBConfig = DBConfig(self)
-        # return main_Database_Config
-        #print('DB Config Get Config', self.DBHandler.DBConfig)
         return self.DBHandler.DBConfig
 
     def _DeleteConfig(self, ConfigID, ConfigName):
@@ -485,7 +477,7 @@ class DBUser:
         self._db._UpdateUser(self, **{name: value})
 
 class DBServer:
-    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True, Discord_Reaction: str = None):
+    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True):
         # set defaults
         Params = locals()
         Params.pop("self")
@@ -696,7 +688,10 @@ class DBUpdate:
             self.user_Donator_removal()
             self.DBConfig.SetSetting('DB_Version', '1.4')
 
-
+        if 1.5 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.5')
+            self.server_Discord_reaction_removal()
+            self.DBConfig.SetSetting('DB_Version', '1.5')
 
     def user_roles(self):
         #create the sql line
@@ -715,4 +710,11 @@ class DBUpdate:
         SQL = "alter table users drop column Donator;"
         #execute it
         self.DB._execute(SQL, ())
+
+    def server_Discord_reaction_removal(self):
+        #create the sql line
+        SQL = "alter table servers drop column Discord_Reaction;"
+        #execute it
+        self.DB._execute(SQL, ())
+
   
