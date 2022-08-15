@@ -133,8 +133,13 @@ class AMPMinecraft(AMP.AMPInstance):
 
     def discord_message(self,user):
         """Handles returning customized discord message data for Minecraft Servers only."""
-        if user.MC_IngameName != None and user.MC_UUID != None:
+        if type(user) != str and user.MC_IngameName != None and user.MC_UUID != None:
+            #print('sending with DB information')
             return user.MC_IngameName, self.getHeadbyUUID(user.MC_UUID)
+        else:
+            #print('Sending without DB information')
+            user_uuid = self.name_Conversion(user)
+            return user, self.getHeadbyUUID(user_uuid)
 
 
 class AMPMinecraftConsole(AMP.AMPConsole):

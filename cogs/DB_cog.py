@@ -153,7 +153,7 @@ class DB_Module(commands.Cog):
 
         discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
         if discord_user != None:
-            self.DB.AddUser(DiscordID=discord_user.id,DiscordName=discord_user.name,MC_IngameName=mc_ign,MC_UUID=mc_uuid,SteamID=steamid)
+            self.DB.AddUser(DiscordID=discord_user.id, DiscordName=discord_user.name, MC_IngameName=mc_ign, MC_UUID=mc_uuid, SteamID=steamid)
             await context.send(f'Added {discord_user.name} to the Database!')
         else:
             await context.send(f'Unable to find the {discord_name} you provided, please try again.')

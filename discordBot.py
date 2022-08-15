@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-2.2.1'
+Version = 'beta-2.2.3'
 logger = logging.getLogger(__name__)
 #logger.info(f'{user} Added the Reaction {os.path.basename(__file__)}: {reaction}')
 

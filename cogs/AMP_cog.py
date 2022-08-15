@@ -117,7 +117,8 @@ class AMP_Cog(commands.Cog):
                     cur_webhook = await self._client.fetch_webhook(message.webhook_id)
                     if cur_webhook.name[:-5] == self.AMPServer.FriendlyName:
                         continue
-                    self.AMPServer.send_message(message)
+                    if self.AMPServer.ADS_Running:
+                        self.AMPServer.send_message(message)
 
         return message
     #This is called when a message in any channel of the guild is edited. Returns <message> object.
@@ -234,31 +235,42 @@ class AMP_Cog(commands.Cog):
 
                 if len(chat_messages) != 0:
                     for message in chat_messages:
-                        print(message)
+                        #print(message)
                         author = None
                         author_db = self.DB.GetUser(message['Source'])
+                        #print(author_db)
 
+                        #If we have a DB user, lets try to send customized message.
                         if author_db != None:
-                            #This is a default method in each Server, returns False for no customization
+                            #This can return false to land into the else:
                             if self.AMPServer.discord_message(author_db):
-                                self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration')
+                                self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration with DB Information')
                                 name, avatar = self.AMPServer.discord_message(author_db)
                                 await chat_webhook.send(message['Contents'], username=name, avatar_url=avatar)
                                 continue
+                            #This is for if we exist in the DB, but don't have proper DB information (MC IGN or similar)
                             else:    
                                 author = self._client.get_user(int(author_db.DiscordID)) 
 
-                        #This will use discord Information for there Display name and Avatar if possible.
+                        #This will use discord Information after finding them in the DB, for there Display name and Avatar if possible.
                         if author != None:
-                            self.logger.dev('*AMP Chat Message* sending a message with discord information')
+                            self.logger.dev('*AMP Chat Message** sending a message with discord information')
                             await chat_webhook.send(message['Contents'], username=author.name, avatar_url=author.avatar)
                             continue
+                        #This fires if we cant find a DB user and the Discord User
                         else:
-                            self.logger.dev('*AMP Chat Message* sending a message with default information')
-
-                            await chat_webhook.send(message['Contents'], username=self._client.user.name)
-                            continue
-
+                            #This can return False to land into the pass through else:
+                            if self.AMPServer.discord_message(message['Source']):
+                                self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration without DB information')
+                                name, avatar = self.AMPServer.discord_message(message['Source'])
+                                await chat_webhook.send(message['Contents'], username=name, avatar_url=avatar)
+                                continue
+                            #This just sends the message as is with default information from the bot.
+                            else:
+                                self.logger.dev('**AMP Chat Message** sending message as is without changes.')
+                                await chat_webhook.send(message['Contents'], username= message['Source'], avatar_url=self._client.user.avatar)
+                                continue
+        
                     self.AMP_Server_Console.console_chat_messages = []
 
 
