@@ -67,7 +67,7 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
     #This is the final check before we attempt to use the "DEFAULT" permissions setup.
     if DBConfig.GetSetting('Moderator_role_id') == None:
         await context.send(f'Please have an Adminstrator run `/bot moderator (role)` or consider setting up Custom Permissons.')
-        logger.error(f'DBConfig Staff role has not been set yet!')
+        logger.error(f'DBConfig Moderator role has not been set yet!')
         return False
 
     staff_role,author_top_role = 0,0
@@ -499,26 +499,27 @@ class botUtils():
             embed=discord.Embed(title=f'__**{server_name}**__', color=0x00ff00, description=server.Description)
             #!TODO! Add Avatar URL fetching here
             embed.set_thumbnail(url=context.guild.icon)
-
-            if db_server.IP != None:
-                embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
-
+            embed.add_field(name=f'Server IP: ', value=str(db_server.IP), inline=False)
             embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
             embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
-
-            if db_server.Discord_Role != None:
-                discord_role = self.roleparse(db_server.Discord_Role,context,context.guild.id)
-                embed.add_field(name='Role:', value= discord_role.name)
-
+            embed.add_field(name='Role:', value= str(db_server.Discord_Role), inline=False)
             embed.add_field(name='Filtered Console:', value= str(bool(db_server.Whitelist)), inline=False)
+
             if db_server.Discord_Console_Channel != None:
                 discord_channel = self.channelparse(db_server.Discord_Console_Channel,context,context.guild.id)
                 embed.add_field(name='Console Channel:', value= discord_channel.name, inline=True)
+            else:
+                embed.add_field(name='Console Channel:', value= db_server.Discord_Console_Channel, inline=True)
+
 
             if db_server.Discord_Chat_Channel != None:
                 discord_channel = self.channelparse(db_server.Discord_Chat_Channel,context,context.guild.id)
                 embed.add_field(name='Console Channel:', value= discord_channel.name, inline=True)
-            embed.add_field(name='Nicknames:', value=(", ").join(db_server.Nicknames),inline=False)
+            else:
+                embed.add_field(name='Console Channel:', value= db_server.Discord_Chat_Channel, inline=True)
+
+            if len(db_server.Nicknames) != 0:
+                embed.add_field(name='Nicknames:', value=(", ").join(db_server.Nicknames),inline=False)
             return embed
 
         #This was designed for smaller servers showing only a few embed messages, it does support up to the buffer limit of discord sending embeds currently.

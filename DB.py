@@ -265,7 +265,7 @@ class Database:
             print('DBUser error', e)
             return None
 
-    def GetAllUsers(self, Donator=None):
+    def GetAllUsers(self):
         # get all servers that we are on
         SQL = "Select ID from Users"
         SQLWhere = []
@@ -408,7 +408,7 @@ class Database:
         return ret
 
 class DBUser:
-    def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Donator:bool=False, Role:str=None):
+    def __init__(self, db:Database, ID:int=None, DiscordID:str=None, DiscordName:str=None, MC_IngameName:str=None, MC_UUID:str=None, SteamID:str=None, Role:str=None):
         #set defaults
         Params = locals()
         Params.pop("self")
