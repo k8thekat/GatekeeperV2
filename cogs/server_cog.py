@@ -78,6 +78,17 @@ class Server(commands.Cog):
         amp_server = self.uBot.serverparse(server,context,context.guild.id)
         await context.send(f'This is a test command {amp_server}')
 
+    @server.command(name='info')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def amp_server_info(self,context:commands.Context,server):
+        """Displays Specific Server Information."""
+        self.logger.command(f'{context.author.name} used AMP Server Test')
+        amp_server = self.uBot.serverparse(server,context,context.guild.id)
+        if amp_server == None:
+            await context.send(f"Hey, we uhh can't find the server {server}. Please try again.")
+        await context.send(embed=self.uBot.server_info_embed(amp_server,context))
+
     @server.command(name='list')
     @utils.role_check()
     async def amp_server_list(self,context:commands.Context):
@@ -164,7 +175,7 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server != None and server.Running:
-            console_reply = server.ConsoleMessage(message)
+            console_reply = server.ConsoleMessage_withUpdate(message)
             msg_to_send = []
             for message in console_reply['ConsoleEntries']:
                 msg_to_send.append(message['Contents'])
@@ -182,10 +193,12 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server != None and server.Running:
-            title = f'%s generated backup',context.author.display_name
-            description = f'Created at %s by %s',datetime.now(tz= timezone.utc),context.author.display_name
-            server.takeBackup(title=title,description=description)
-            await context.send(f'{server.FriendlyName} Backup' + description)
+            title = f"Backup by {context.author.display_name}"
+            time = str(datetime.now(tz= timezone.utc))
+            description = f"Created at {time} by {context.author.display_name}"
+            display_description = f'Created at **{str(datetime.now(tz= timezone.utc))}**(utc) by **{context.author.display_name}**'
+            await context.send(f'Creating a backup of **{server.FriendlyName}**  // **Description**: {display_description}')
+            #server.takeBackup(title=title,description=description)
         
     @server.command(name='status')
     @utils.role_check()

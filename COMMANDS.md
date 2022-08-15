@@ -26,6 +26,8 @@ ___
 - `/bot status` - Replies with **AMP version** and if setup is complete, **DB version** and if setup is complete and **Displays Bot version information**.
     - **TIP**: This information is useful when reporting bugs/errors on Github!
 - `/bot sync` - Syncs Gatekeeperv2 slash commands to your guild.
+- `/bot donator (role)` - Sets the Donator Role for Donator Only AMP Server access.
+    - **TIP**: This will prevent people without the role from requesting whitelist to Donator only Servers.
 
 ### Whitelist Commands:
 - `/bot whitelist auto (flag)` - Allows the bot to automatically Whitelist a Users request.
@@ -49,15 +51,14 @@ ___
 
 ### User/Member Group Commands: 
 - `/user info (user)` - Displays a Discord Users information and their Database information.
-- `/user add (user,mc_ign,mc_uuid,steamid,donator)` - Adds a User to the Database with the provided arguments.
+- `/user add (user,mc_ign,mc_uuid,steamid)` - Adds a User to the Database with the provided arguments.
     - **ATTENTION**: `user` is the **only required paramater**. 
         - **TIP**: Supports Discord Name/ID or Discord Display Name/Nickname's.
     - `mc_ign` and `mc_uuid` are optional.
         - **TIP**: When providing `mc_ign`, the bot will fetch the `mc_uuid` and set it for you in the Database if not provided.
     - `steamid` is optional. 
         - **TIP**: You can get someones `steamid` via their name at [Steam Finder](https://www.steamidfinder.com) or use `/user steamid (name)`
-    - `donator` is optional and uses *True or False*.
-- `/user update (user,mc_ign,mc_uuid,steamid,donator)` - Updates the Users Database information with the provided arguments.
+- `/user update (user,mc_ign,mc_uuid,steamid)` - Updates the Users Database information with the provided arguments.
 - `/user uuid (mc_ign)` - Gets a users UUID! via Minecraft In-Game Name *(eg. mc_ign = k8_thekat)*
 - `/user role (role)` - Sets a users permission role level. See [Permissions](/PERMISSIONS.md)
 

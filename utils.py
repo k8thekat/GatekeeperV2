@@ -38,32 +38,33 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
-    #print(dir(context))
-    #print(type(context))
+   
+    author = context
+    if type(context) != discord.Member:
+        author = context.author
+
+    #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
+    admin = author.guild_permissions.administrator
+    if admin == True:
+        logger.command(f'Permission Check Okay on {author}')
+        return True
+
     #This handles Custom Permissions for people with the flag set.
     print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
         print(perm_node)
-        botPerms.perm_node_check(perm_node,context)
-        if botPerms.perm_node_check == False:
+        bPerms = get_botPerms()
+        bPerms.perm_node_check(perm_node,context)
+        if bPerms.perm_node_check == False:
             logger.command(f'Permission Check Failed on {author}')
             return False
         else:
             logger.command(f'Permission Check Okay on {author}')
             return True
 
-    author = context
-    if type(context) != discord.Member:
-        author = context.author
-   
-    #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
-    admin = author.guild_permissions.administrator
-    if admin == True:
-        logger.command(f'Permission Check Okay on {author}')
-        return True
-    
+    #This is the final check before we attempt to use the "DEFAULT" permissions setup.
     if DBConfig.Moderator_role_id == None:
         await context.send(f'Please have an Adminstrator run `/bot setup (admin role)`.')
         logger.error(f'DBConfig Staff role has not been set yet!')
@@ -491,18 +492,34 @@ class botUtils():
 
         def server_info_embed(self,server:AMP.AMPInstance, context:commands.Context):
             """For Individual Server info embed replies"""
-            embed=discord.Embed(title=f'Server Info for {server.DisplayName}', color=0x00ff00, description=server.Description)
             db_server = self.DB.GetServer(InstanceID = server.InstanceID)
-            if db_server != None:
-                embed.set_thumbnail(url=context.guild.icon)
-                embed.add_field(name='\u1CBC\u1CBC',value = f'========={server.DisplayName}=========',inline=False)
+            server_name = db_server.InstanceName
+            if db_server.DisplayName != None:
+                server_name = db_server.DisplayName
+            embed=discord.Embed(title=f'__**{server_name}**__', color=0x00ff00, description=server.Description)
+            #!TODO! Add Avatar URL fetching here
+            embed.set_thumbnail(url=context.guild.icon)
 
-                if db_server.IP != None:
-                    embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
+            if db_server.IP != None:
+                embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
 
-                embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
-                embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
-                embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
+            embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
+            embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
+
+            if db_server.Discord_Role != None:
+                discord_role = self.roleparse(db_server.Discord_Role,context,context.guild.id)
+                embed.add_field(name='Role:', value= discord_role.name)
+
+            embed.add_field(name='Filtered Console:', value= str(bool(db_server.Whitelist)), inline=False)
+            if db_server.Discord_Console_Channel != None:
+                discord_channel = self.channelparse(db_server.Discord_Console_Channel,context,context.guild.id)
+                embed.add_field(name='Console Channel:', value= discord_channel.name, inline=True)
+
+            if db_server.Discord_Chat_Channel != None:
+                discord_channel = self.channelparse(db_server.Discord_Chat_Channel,context,context.guild.id)
+                embed.add_field(name='Console Channel:', value= discord_channel.name, inline=True)
+            embed.add_field(name='Nicknames:', value=(", ").join(db_server.Nicknames),inline=False)
+            return embed
 
         #This was designed for smaller servers showing only a few embed messages, it does support up to the buffer limit of discord sending embeds currently.
         #See AMP_module for server list command that is text based.
@@ -643,14 +660,14 @@ class botUtils():
             embed.set_thumbnail(url= discord_user.avatar.url)
             if db_user != None:
                 embed.add_field(name='In Database', value='True')
-                if db_user.Donator != None:
-                    embed.add_field(name='Donator', value=f'{bool(db_user.Donator)}')
                 if db_user.MC_IngameName != None:
                     embed.add_field(name='Minecraft IGN', value=f'{db_user.MC_IngameName}',inline= False)
                 if db_user.MC_UUID != None:
                     embed.add_field(name='Minecraft UUID', value=f'{db_user.MC_UUID}',inline= True)
                 if db_user.SteamID != None:
                     embed.add_field(name='Steam ID', value=f'{db_user.SteamID}',inline=False)
+                if db_user.Role != None:
+                    embed.add_field(name='Permission Role', value=f'{db_user.Role}', inline=False)
             return embed
                 
 class botPerms():

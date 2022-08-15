@@ -371,7 +371,6 @@ class AMPInstance:
         self.Discord_Console_Channel = self.DB_Server.Discord_Console_Channel
         self.Discord_Chat_Channel = self.DB_Server.Discord_Chat_Channel
         self.Discord_Role = self.DB_Server.Discord_Role
-        self.Discord_Reaction = self.DB_Server.Discord_Reaction
 
     def server_check(self):
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
@@ -530,7 +529,8 @@ class AMPInstance:
 
     def ConsoleMessage_withUpdate(self,msg:str)-> dict:
         """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
-        parameters = {'message': ' '.join(msg)}
+        #parameters = {'message': ' '.join(msg)}
+        parameters = {'message': msg}
         self.CallAPI('Core/SendConsoleMessage', parameters)
         time.sleep(0.5)
         update = self.ConsoleUpdate()
@@ -742,15 +742,16 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/EmptyTrash',parameters)
         return
 
-    def takeBackup(self,title:str, description:str, sticky:bool = False):
+    def takeBackup(self,title:str,description:str,sticky:bool=False):
         """Takes a backup of the AMP Instance; default `sticky` is False!"""
         self.Login()
         parameters = {
-            'Title' : title,
-            'Description' : description,
-            'Sticky' : sticky
+            "Title" : title,
+            "Description" : description,
+            "Sticky" : sticky
         }
-        self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
+        result = self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
+        print(result)
         return
 
     def getAMPUserInfo(self,name:str,IdOnly=False):
@@ -1061,11 +1062,7 @@ class AMPConsole:
             print('Found a Chat message')
 
             #Removed the odd character for color idicators on text
-            message = message.replace('�','')
-
-
-            #Removed the odd character for color idicators on text
-            message = message.replace('�','')
+            message['Contents'] = message['Contents'].replace('�','')
 
             self.console_chat_message_lock.acquire()
             self.console_chat_messages.append(message)

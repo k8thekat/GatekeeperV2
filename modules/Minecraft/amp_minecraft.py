@@ -174,12 +174,12 @@ class AMPMinecraftConsole(AMP.AMPConsole):
         """ALWAYS RETURN FALSE!"""
         if message['Contents'].endswith('has joined the game!'):
             self.console_chat_message_lock.acquire()
-            self.console_chat_messages.append(message['Contents'])
+            self.console_chat_messages.append(message)
             self.console_chat_message_lock.release()
             return False
         if message['Contents'].endswith('has left the game!'):
             self.console_chat_message_lock.acquire()
-            self.console_chat_messages.append(message['Contents'])
+            self.console_chat_messages.append(message)
             self.console_chat_message_lock.release()
             return False
         else:
