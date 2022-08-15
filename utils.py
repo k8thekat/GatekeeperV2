@@ -65,8 +65,8 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
             return True
 
     #This is the final check before we attempt to use the "DEFAULT" permissions setup.
-    if DBConfig.Moderator_role_id == None:
-        await context.send(f'Please have an Adminstrator run `/bot setup (admin role)`.')
+    if DBConfig.GetSetting('Moderator_role_id') == None:
+        await context.send(f'Please have an Adminstrator run `/bot moderator (role)` or consider setting up Custom Permissons.')
         logger.error(f'DBConfig Staff role has not been set yet!')
         return False
 
@@ -84,7 +84,7 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
         if guild_roles[i].id == top_role_id:
             author_top_role = i
 
-        if guild_roles[i].id == DBConfig.Moderator_role_id:
+        if str(guild_roles[i].id) == DBConfig.Moderator_role_id:
             staff_role = i
             
     if author_top_role > staff_role:

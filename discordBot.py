@@ -81,8 +81,8 @@ async def bot_moderator(context:commands.Context,role:str):
     if guild_role == None:
         await context.send(f'Unable to find role {role}, please try again.')
 
-    if main_DB_Config.Moderator_role_id == None:
-        main_DB_Config.Moderator_role_id = guild_role.id
+    if main_DB_Config.GetSetting('Moderator_role_id') == None:
+        main_DB_Config.SetSetting('Moderator_role_id', guild_role.id)
         
     await context.send(f'Set Moderator Role to {guild_role.name}.')
 

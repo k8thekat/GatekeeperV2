@@ -689,32 +689,35 @@ class DBUpdate:
 
         if 1.5 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.5')
-            self.DBConfig.AddSetting('Moderator_Role_ID', None)
             self.server_Discord_reaction_removal()
             self.DBConfig.SetSetting('DB_Version', '1.5')
 
     def user_roles(self):
-        #create the sql line
-        SQL = "alter table users add column Role text collate nocase default None;"
-        #execute it
-        self.DB._execute(SQL, ())
+        try:
+            SQL = "alter table users add column Role text collate nocase default None;"
+            self.DB._execute(SQL, ())
+        except:
+            return
 
     def nicknames_unique(self):
-        #create the sql line
-        SQL = "alter table ServerNicknames add constraint Nickname unique;"
-        #execute it
-        self.DB._execute(SQL, ())
+        try:
+            SQL = "alter table ServerNicknames add constraint Nickname unique;"
+            self.DB._execute(SQL, ())
+        except:
+            return
 
     def user_Donator_removal(self):
-        #create the sql line
-        SQL = "alter table users drop column Donator;"
-        #execute it
-        self.DB._execute(SQL, ())
+        try:
+            SQL = "alter table users drop column Donator;"
+            self.DB._execute(SQL, ())
+        except:
+            return
 
     def server_Discord_reaction_removal(self):
-        #create the sql line
-        SQL = "alter table servers drop column Discord_Reaction;"
-        #execute it
-        self.DB._execute(SQL, ())
+        try:
+            SQL = "alter table servers drop column Discord_Reaction;"
+            self.DB._execute(SQL, ())
+        except:
+            return
 
   
