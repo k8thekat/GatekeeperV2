@@ -146,7 +146,7 @@ class Database:
                         MC_IngameName text collate nocase,
                         MC_UUID text unique collate nocase,
                         SteamID text unique collate nocase,
-                        Role text collate nocase,
+                        Role text collate nocase
                         )""")
 
         cur.execute("""create table Log (
@@ -684,12 +684,12 @@ class DBUpdate:
 
         if 1.4 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.4')
-            self.DBConfig.AddSetting('Donator_Role_ID', None)
             self.user_Donator_removal()
             self.DBConfig.SetSetting('DB_Version', '1.4')
 
         if 1.5 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.5')
+            self.DBConfig.AddSetting('Moderator_Role_ID', None)
             self.server_Discord_reaction_removal()
             self.DBConfig.SetSetting('DB_Version', '1.5')
 
