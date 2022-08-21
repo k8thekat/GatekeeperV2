@@ -23,6 +23,9 @@ import requests
 import json
 import discord
 import os
+import pathlib
+
+from DB import DBUser
 
 
 DisplayImageSources = ["internal:MinecraftJava"]
@@ -34,6 +37,10 @@ class AMPMinecraft(AMP.AMPInstance):
         
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
         self.Console = AMPMinecraftConsole(self)
+        
+        if self.Avatar_url == None:
+            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12Gd4qUO1aLsYoQBqMR0JPPdkUOSAX94r'
+
          
     def setup_AMPpermissions(self):
         """Sets the Permissions for Minecraft Modules"""
@@ -76,11 +83,14 @@ class AMPMinecraft(AMP.AMPInstance):
     def addWhitelist(self,User:str):
         """Adds a User to the Whitelist File *Supports UUID or IGN*"""
         self.Login()
-        #print(User)
-        parameters = {'UserOrUUID': User}
-        result = self.CallAPI(f'{self.APIModule}/AddToWhitelist', parameters)
-        #print(result)
-        return result
+        result = self.ConsoleMessage_withUpdate(f'whitelist add {User}')
+        msg_to_send = []
+        for message in result['ConsoleEntries']:
+            msg_to_send.append(message['Contents'])
+            self.Console.console_message_lock.acquire()
+            self.Console.console_messages.append(message['Contents'])
+            self.Console.console_message_lock.release()
+        return msg_to_send
 
     def getWhitelist(self):
         """Returns a List of Dictionary Entries of all Whitelisted Users `{'name': 'IGN', 'uuid': '781a2971-c14b-42c2-8742-d1e2b029d00a'}`"""
@@ -93,9 +103,14 @@ class AMPMinecraft(AMP.AMPInstance):
     def removeWhitelist(self,User:str):
         """Removes a User from the Whitelist File *Supports UUID or IGN*"""
         self.Login()
-        parameters = {'UserOrUUID': User}
-        result = self.CallAPI(f'{self.APIModule}/RemoveWhitelistEntry',parameters)
-        return result
+        result = self.ConsoleMessage_withUpdate(f'whitelist remove {User}')
+        msg_to_send = []
+        for message in result['ConsoleEntries']:
+            msg_to_send.append(message['Contents'])
+            self.Console.console_message_lock.acquire()
+            self.Console.console_messages.append(message['Contents'])
+            self.Console.console_message_lock.release()
+        return msg_to_send
 
     def check_Whitelist(self,user_UUID):
         """Checks if the User is already in the whitelist file.
@@ -119,7 +134,7 @@ class AMPMinecraft(AMP.AMPInstance):
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
     
-    def send_message(self, message:discord.Message):
+    def send_message(self, message:discord.Message, prefix:str=None):
         """Sends a customized message via tellraw through the console."""
         self.Login()
         # Colors:
@@ -129,17 +144,26 @@ class AMPMinecraft(AMP.AMPInstance):
         # Writing font is fairly simple. Use the basic /tellraw command, and write {"(insert font)":true}. The fonts you can use are:italic, underlined, and bold.
         # How To Use Both:
         # To use both font and color, write a comma between the variables. Ex: /tellraw {"color":"green","bold":"true"}
-        self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"blue"}},{{"text":" <{message.author.name}>: {message.content}","color":"white"}}]')
-
-    def discord_message(self,user):
-        """Handles returning customized discord message data for Minecraft Servers only."""
-        if type(user) != str and user.MC_IngameName != None and user.MC_UUID != None:
-            #print('sending with DB information')
-            return user.MC_IngameName, self.getHeadbyUUID(user.MC_UUID)
+        if prefix != None:
+            self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"blue"}},{{"text":" ({prefix}) ","color":"gold"}},{{"text":"<{message.author.name}>: {message.content}","color":"white"}}]')
         else:
-            #print('Sending without DB information')
+            self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"blue"}},{{"text":" <{message.author.name}>: {message.content}","color":"white"}}]')
+
+    def discord_message(self,db_user:DBUser=None, user:str=None):
+        """Handles returning customized discord message data for Minecraft Servers only."""
+
+        if db_user != None and db_user.MC_IngameName != None and db_user.MC_UUID != None:
+            return db_user.MC_IngameName, self.getHeadbyUUID(db_user.MC_UUID)
+
+        if user != None:
             user_uuid = self.name_Conversion(user)
+            if user_uuid == None:
+                return False
             return user, self.getHeadbyUUID(user_uuid)
+
+        else:
+            print('We failed to format')
+            return False
 
 
 class AMPMinecraftConsole(AMP.AMPConsole):
@@ -160,7 +184,7 @@ class AMPMinecraftConsole(AMP.AMPConsole):
             message_finder_list = ['Unkown command.', 'players online.','Staff','?','Help']
             for entry in message_finder_list:
                 if message['Contents'].find(entry) != -1:
-                    print(f"Found {entry} in {message['Contents']}")
+                    #print(f"Found {entry} in {message['Contents']}")
                     return False
             if message['Contents'].startswith('/'):
                 return False
@@ -176,16 +200,17 @@ class AMPMinecraftConsole(AMP.AMPConsole):
                 return True
     
     def console_events(self, message):
-        """ALWAYS RETURN FALSE!"""
+        """ALWAYS RETURN FALSE! ALL events go to `console_event_messages`"""
         if message['Contents'].endswith('has joined the game!'):
-            self.console_chat_message_lock.acquire()
-            self.console_chat_messages.append(message)
-            self.console_chat_message_lock.release()
+            self.console_event_message_lock.acquire()
+            self.console_event_messages.append(message['Contents'])
+            self.console_event_message_lock.release()
             return False
+
         if message['Contents'].endswith('has left the game!'):
-            self.console_chat_message_lock.acquire()
-            self.console_chat_messages.append(message)
-            self.console_chat_message_lock.release()
+            self.console_event_message_lock.acquire()
+            self.console_event_messages.append(message['Contents'])
+            self.console_event_message_lock.release()
             return False
         else:
             return False

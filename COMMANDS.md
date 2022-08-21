@@ -28,6 +28,8 @@ ___
 - `/bot sync` - Syncs Gatekeeperv2 slash commands to your guild.
 - `/bot donator (role)` - Sets the Donator Role for Donator Only AMP Server access.
     - **TIP**: This will prevent people without the role from requesting whitelist to Donator only Servers.
+- `/bot display (flag)` - Allows the bot to automatically update the `/server display` embed messages.
+    - **TIP**: Use the `/server display` command inplace of your "Server Info" or similar! 
 
 ### Whitelist Commands:
 - `/bot whitelist auto (flag)` - Allows the bot to automatically Whitelist a Users request.
@@ -61,10 +63,13 @@ ___
 - `/user update (user,mc_ign,mc_uuid,steamid)` - Updates the Users Database information with the provided arguments.
 - `/user uuid (mc_ign)` - Gets a users UUID! via Minecraft In-Game Name *(eg. mc_ign = k8_thekat)*
 - `/user role (role)` - Sets a users permission role level. See [Permissions](/PERMISSIONS.md)
+    - **TIP**: These have prefix's that you can set, allowing you to give people custom prefix's via a role for displaying inside of your Servers!
+        - This only displays when sending a message from Discord to the Dedicated Server.
 
 
 ### Server Commands: 
-- `/server list` - Lists all available and online AMP Dedicated Servers
+- `/server display` - Lists all AMP Servers in Embeds with current information.
+    - **TIP**: Those embeds get updated every minute! So use the command in a "Info" style channel and pin them!
 - `/server start (server)` - Starts the specified dedicated server *(eg. name = `Vanilla MC`)*
     - **TIP**: `server` supports server nicknames that are set via `/server nickname add` command.
 - `/server stop (server)` - Stops the specified AMP Dedicated server.
@@ -86,17 +91,19 @@ ___
 - `/server IP (server,IP)` - Sets the IP of the AMP Dedicated server in the Database.
     - **ATTENTION**: This is only used and displayed when commands such as `/server status` and `/server list`.
     - **TIP**: `IP` is what you want your players to use to connect to the server!
-- `/server role (server,role)` - Sets the role of the AMP Dedicated server in the Database.
+- `/server role (server,role)` - Sets the role of the AMP Dedicated Server in the Database.
+    - **ATTENTION**: This is the Discord Role the bot will give the User when requesting whitelist on said AMP Dedicated Server.
     - **TIP**: `role` can be a Discord Role ID or Discord Role Name.
+- `/server prefix (server,prefix)` - Set a prefix to be displayed on Chat messages IN-game from other servers.
+    - **ATTENTION**: Any messages from Discord to a Server will be prefixed with `[DISCORD]`, otherwise if it comes from another AMP Server it will use the server's prefix.
+- `/server avatar (server,url)` - Sets the Avatar Icon for the specified AMP Dedicated Server.
+    - **TIP**: Supports `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated. 
+        - `url` Can be set to **None** so it displays the default/original Icon created.
 ### Donator Commands:
 - `/server donator true` - Sets Donator Only Flag for the AMP Dedicated server to True
     - **ATTENTION**: This doesn't prevent players without the rank from connecting; only for auto whitelisting purposes.
 - `/server donator false` - Sets the Donator Only flag for the AMP Dedicated server to False
 ### Console Commands: 
-- `/server console on (server)` - Turns the console on for the AMP Dedicated server.
-    - **ATTENTION**: Default is `on` for Chat and Console functionality.
-- `/server console off (server)` - Turns off the console for the AMP Dedicated server.
-    - **CAUTION**: Turning the console `off` will disable Server Chat and Console interactions.
 - `/server console channel (server,channel)` - Sets the Discord Channel for the AMP Dedicated Server Console to output to.
     - **TIP**: You can type commands in the set channel similar to typing in AMP Console web GUI.
 - `/server console filter (server,flag)` - Set Console filtering for the AMP Dedicated server.

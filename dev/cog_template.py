@@ -51,6 +51,9 @@ class Cog_Template(commands.Cog):
         self.uBot = utils.botUtils(client)
         #utils.discordBot provides access to utility functions such as sending/deleting messages, kicking/ban users.
         self.dBot = utils.discordBot(client)
+        #utils.botPerms provides access to permissions, allows you to verify a players permissions. 
+        #I recommend using the @utils.role_check() decorator ONLY!
+        self.bPerms = utils.botPerms()
 
         #Leave this commented out unless you need to create a sub-command.
         #self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)

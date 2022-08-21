@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-2.2.3'
+Version = 'beta-3.0.0'
 logger = logging.getLogger(__name__)
 #logger.info(f'{user} Added the Reaction {os.path.basename(__file__)}: {reaction}')
 
@@ -54,15 +54,14 @@ async def on_ready():
     if guild_id != None:
         local_guild = client.get_guild(int(guild_id))
         client.tree.copy_global_to(guild=local_guild)
-        logger.info(f'Syncing Commands via on_ready locally to guild: {local_guild.name}')
-        await client.tree.sync(guild=local_guild)
+        logger.info(f'Syncing Commands via on_ready locally to guild: {local_guild.name} {await client.tree.sync(guild=local_guild)}')
+        
 
 @client.event
-async def on_guild_join(guild:discord.Guild):
-    DB.getDBHandler().DBConfig.SetSetting('Guild_ID',guild.id)
-    client.tree.copy_global_to(guild=guild)
-    logger.info(f'Syncing Commands via on_guild_join locally to guild: {guild.name}')
-    await client.tree.sync(guild=guild)
+async def on_guild_join(join_guild:discord.Guild):
+    DB.getDBHandler().DBConfig.SetSetting('Guild_ID',join_guild.id)
+    client.tree.copy_global_to(guild=join_guild)
+    logger.info(f'Syncing Commands via on_guild_join locally to guild: {join_guild.name} {await client.tree.sync(guild=join_guild)}')
 
 
 @client.hybrid_group(name='bot')

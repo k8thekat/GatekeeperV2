@@ -20,6 +20,7 @@
 
 '''
 import AMP as AMP
+import pathlib
 
 DisplayImageSources = ['Generic']
 class AMPGeneric(AMP.AMPInstance):
@@ -29,6 +30,8 @@ class AMPGeneric(AMP.AMPInstance):
         super().__init__(instanceID,serverdata,Index,Handler=Handler)
         self.Console = AMPGenericConsole(AMPInstance = self)
 
+        if self.Avatar_url == None:
+            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12XKmQwng3lNSDKxmvImyHIMQ1Ykg6XcQ'
 
 class AMPGenericConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPGeneric):

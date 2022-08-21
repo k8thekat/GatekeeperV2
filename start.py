@@ -74,19 +74,6 @@ class Setup:
 
     def pip_install(self):
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r','requirements.txt'])
-        try:
-            import discord
-            ver = discord.__version__
-            flag = re.search("(2.0)",ver.lower())
-            if flag == None:
-                self.logger.error('Please visit: https://github.com/Rapptz/discord.py to install discord.py development version!')
-                sys.exit(1)
-
-        except:
-            
-            self.logger.error('Please visit: https://github.com/Rapptz/discord.py to install discord.py development version!')
-            sys.exit(1)
-
 
 Start = Setup()
 
