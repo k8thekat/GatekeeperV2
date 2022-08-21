@@ -91,7 +91,9 @@ ___
 'dbserver.cleanup',
 'dbserver.swap',
 'server.*',
-'server.list',
+'server.info',
+'server.display',
+'server.avatar',
 'server.start',
 'server.stop',
 'server.restart',
@@ -118,9 +120,9 @@ ___
 'server.console.channel',
 'server.console.filter',
 'server.console.interact',
-'server.chat.channel'
-'server.nickname.*'
-'server.nickname.add'
-'server.nickname.remove'
-'server.nickname.list'
+'server.chat.channel',
+'server.nickname.*',
+'server.nickname.add',
+'server.nickname.remove',
+'server.nickname.list',
 

@@ -19,13 +19,15 @@
    02110-1301, USA. 
 
 '''
+from email import message
 import os
 import logging
 from datetime import datetime,timezone
 import re
+import asyncio
 
 import discord
-from discord.ext import commands
+from discord.ext import commands,tasks
 from discord import app_commands
 
 import AMP
@@ -49,9 +51,18 @@ class Server(commands.Cog):
         self.DB = self.DBHandler.DB
         self.DBConfig = self.DBHandler.DBConfig
 
+        self.Display_cache = False
+        self.AMP_Server_Info_Channel = ''
+        self.AMP_Server_Info_Messages = []
+        self.AMP_Server_Info_Guild = ''
+
         self.uBot = utils.botUtils(client)
+        self.dBot = utils.discordBot(client)
         #self.uBot.sub_command_handler('server',self.server_whitelist) 
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
+
+        if self.DBConfig.GetSetting('Server_Info_Display') != None:
+            self.server_display_update.start()
 
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self,member:discord.Member):
@@ -61,7 +72,46 @@ class Server(commands.Cog):
     async def autocomplete_servers(self,interaction:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
         choice_list = self.AMP_Instance_Names
         return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
+
+    async def autocomplete_roles(self,interaction:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+        choice_list = []
+        for role in interaction.guild.roles:
+            choice_list.append(role.name)
+        return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
+
     
+    @tasks.loop(minutes=1)
+    async def server_display_update(self):
+        """This will handle the constant updating of Server Display Embeds"""
+        if self._client.is_ready():
+            if not self.DBConfig.Auto_display:
+                return
+            self.logger.dev('Updating Server Info Display Embeds')
+            #This handles the first initial fetch of information for Channels/Messages for `/server Display`
+            
+            if self.Display_cache == False:
+                self.logger.dev('First Initial Cache of messages, hold tight...')
+                #First occurence is channel.id followed by message.ids  (eg list[0] = channel.id, list[1:] will always be message.id)
+                server_info_list = self.DBConfig.GetSetting('Server_Info_Display').split(",")
+
+                self.AMP_Server_Info_Channel = await self._client.fetch_channel(int(server_info_list[0]))
+                for index in range(1,len(server_info_list)):
+                    self.AMP_Server_Info_Messages.append(self.AMP_Server_Info_Channel.get_partial_message(int(server_info_list[index])))
+                self.AMP_Server_Info_Guild = self.AMP_Server_Info_Channel.guild
+                self.Display_cache = True
+
+            embed_list = await self.uBot.server_display_embed(self.AMP_Server_Info_Guild)
+
+            start,stop = 0,10
+            for message in self.AMP_Server_Info_Messages:
+                if len(embed_list[start:stop]) == 0:
+                    return
+                await message.edit(embeds=embed_list[start:stop]) #0,10 // 10,20 // 20,30
+                await asyncio.sleep(5)
+                start += 10 # 10 // 20 //
+                stop += 10 # 20 // 30 //
+            
+          
     @commands.hybrid_group(name='server')
     @utils.role_check() #Only Needed on the group Command
     async def server(self,context:commands.Context):
@@ -83,21 +133,46 @@ class Server(commands.Cog):
     @app_commands.autocomplete(server= autocomplete_servers)
     async def amp_server_info(self,context:commands.Context,server):
         """Displays Specific Server Information."""
-        self.logger.command(f'{context.author.name} used AMP Server Test')
+        self.logger.command(f'{context.author.name} used AMP Server Info')
+        await context.defer()
         amp_server = self.uBot.serverparse(server,context,context.guild.id)
         if amp_server == None:
             await context.send(f"Hey, we uhh can't find the server {server}. Please try again.")
-        await context.send(embed=self.uBot.server_info_embed(amp_server,context))
+        embed = await self.uBot.server_info_embed(amp_server,context)
+        await context.send(embed=embed)
 
-    @server.command(name='list')
+    @server.command(name='display')
     @utils.role_check()
-    async def amp_server_list(self,context:commands.Context):
-        """Retrieves a list of all AMP Instances and displays them as embeds."""
-        self.logger.command(f'{context.author.name} used AMP Server List...')
+    async def amp_server_display(self,context:commands.Context):
+        """Retrieves a list of all AMP Instances and displays them as embeds with constant updates."""
+        self.logger.command(f'{context.author.name} used AMP Display List...')
+    
+        await context.defer()
+        embed_list = await self.uBot.server_display_embed()
+        Server_Info_Embeds = []
+        start,stop = 0,10
+        first_msg = True
+        while stop < len(embed_list):
+            sent_msg = await context.send(embeds= embed_list[start:stop]) #0,10 // 10,20 // 20,30
+            if first_msg == True:
+                Server_Info_Embeds.append(str(sent_msg.channel.id))
+                self.AMP_Server_Info_Channel = sent_msg.channel
+                first_msg = False
+            start += 10 # 10 // 20 //
+            stop += 10 # 20 // 30 //
+            Server_Info_Embeds.append(str(sent_msg.id))
+            self.AMP_Server_Info_Messages.append(sent_msg)
+            if stop > len(embed_list):
+                sent_msg = await context.send(embeds= embed_list[start:stop]) #0,10 // 10,20 // 20,30
+                Server_Info_Embeds.append(str(sent_msg.id))
+                self.AMP_Server_Info_Messages.append(sent_msg)
 
-        embed_list = self.uBot.server_list_embed(context)
-        for embed in embed_list:
-            await context.send(embed = embed)
+        self.DBConfig.SetSetting('Server_Info_Display', (",").join(Server_Info_Embeds))
+        if self.DBConfig.Auto_display:
+            await context.send('Pin the Server Info Embeds! and the bot will update the embeds every minute! ')
+            if not self.server_display_update.is_running():
+                self.server_display_update.start()
+
 
     @server.command(name='start')
     @utils.role_check()
@@ -206,12 +281,12 @@ class Server(commands.Cog):
     async def amp_server_status(self,context:commands.Context,server):
         """AMP Instance Status(TPS, Player Count, CPU Usage, Memory Usage and Online Players)"""
         self.logger.command(f'{context.author.name} used AMP Server Status...')
-
+        await context.defer()
         server = self.uBot.serverparse(server, context, context.guild.id)
         if server is None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
         if server != None and server.Running == False:
-            server_embed = self.uBot.server_status_embed(context,server)
+            server_embed =  await self.uBot.server_status_embed(context,server)
             view = utils.StatusView()
             utils.StartButton(server,view,server.StartInstance)
             utils.StopButton(server,view,server.StopInstance).disabled = True
@@ -224,7 +299,7 @@ class Server(commands.Cog):
             Users_online = ', '.join(server.getUserList())
             if len(Users_online) == 0:
                 Users_online = 'None'
-            server_embed = self.uBot.server_status_embed(context,server,tps,Users,cpu,Memory,Uptime,Users_online)
+            server_embed = await self.uBot.server_status_embed(context,server,tps,Users,cpu,Memory,Uptime,Users_online)
             view = utils.StatusView(context=context,amp_server=server)
             utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)
             utils.StopButton(server,view,server.StopInstance)
@@ -245,9 +320,9 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server != None and server.Running:
-            cur_users = server.getUserList()
+            cur_users = (', ').join(server.getUserList())
             if len(cur_users) != 0:
-                await context.send("**Server Users**" + '\n' + ', '.join(server.getUserList()))
+                await context.send("**Server Users**" + '\n' + cur_users)
             else:
                 await context.send('The Server currently has no online players.')
 
@@ -336,27 +411,10 @@ class Server(commands.Cog):
             server.attr_update() #This will update the AMPInstance Attributes
         await context.send(f"Server: {server.FriendlyName}, Whitelist set to : `False`")
 
-    @server_whitelist.command(name='test')
-    @utils.role_check()
-    @app_commands.autocomplete(server= autocomplete_servers)
-    async def dbserver_whitelist_test(self,context:commands.Context,server=None,user=None):
-        """Server Whitelist Test function."""
-        self.logger.command(f'{context.author.name} used Database Server Whitelist Test...')
-
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        if server == None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
-
-        if server != None:
-            user = server.name_Conversion(context,user)
-            # server_whitelist = server.getWhitelist()
-            # print(server_whitelist)
-            await context.send(f'Test Function for Server Whitelist {server}{user[0]["name"]}')
-
     @server_whitelist.command(name='add')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
-    async def amp_server_whitelist_add(self,context:commands.Context,server,user):
+    async def amp_server_whitelist_add(self,context:commands.Context,server,in_gamename):
         """Adds User to Servers Whitelist"""
         self.logger.command(f'{context.author.name} used AMP Server Whitelist Add...')
 
@@ -365,15 +423,13 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server != None:
-            user = server.name_Conversion(context,user)
-            if user != None:
-                server.addWhitelist(user[0]['name'])
-                await context.send(f'User: {user[0]["name"]} was whitelisted on Server: {server.FriendlyName}')
+            reply = server.addWhitelist(in_gamename)
+            await context.send(f'**{server.FriendlyName}**: {(",").join(reply)}')
 
     @server_whitelist.command(name='remove')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
-    async def amp_server_whitelist_remove(self,context:commands.Context,server,user):
+    async def amp_server_whitelist_remove(self,context:commands.Context,server,in_gamename):
         """Remove a User from the Servers Whitelist"""
         self.logger.command(f'{context.author.name} used AMP Server Whitelist Remove...')
 
@@ -382,14 +438,35 @@ class Server(commands.Cog):
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
         if server != None:
-            #Converts the name to the proper format depending on the server type
-            user = server.name_Conversion(context,user)
-
-            if user != None:
-                server.removeWhitelist(user[0]['name'])
-                await context.send(f'User: {user[0]["name"]} was removed from the Whitelist on Server: {server.FriendlyName}')
+            reply = server.removeWhitelist(in_gamename)
+            await context.send(f'**{server.FriendlyName}**: {(",").join(reply)}')
 
     # This Section is DBServer Attributes -----------------------------------------------------------------------------------------------------
+
+    @server.command(name='avatar')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def db_server_avatar_set(self,context:commands.Context,server,url:str):
+        """Sets the Servers Avatar via url. Supports `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
+        self.logger.command(f'{context.author.name} used Database Server Avatar Set')
+
+        await context.defer()
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server == None:
+            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+
+        if server != None:
+            db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+            db_server.Avatar_url = url
+            if url == 'None':
+                await context.send(f"Removed {server.FriendlyName} Avatar Icon.")
+                server.attr_update() #This will update the AMPInstance Attributes
+                return
+            if await self.uBot.validate_avatar(db_server) != None:
+                server.attr_update() #This will update the AMPInstance Attributes
+                await context.send(f"Set {server.FriendlyName} Avatar Icon.{url}")
+            else:
+                await context.send(f'I encountered an issue using that url, please try again. Heres your url: {url}')
 
     @server.command(name='displayname')
     @utils.role_check()
@@ -483,48 +560,51 @@ class Server(commands.Cog):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...')
     
-    @db_server_console.command(name='on')
-    @utils.role_check()
-    @app_commands.autocomplete(server= autocomplete_servers)
-    async def db_server_console_on(self,context:commands.Context,server):
-        """Turns the Console on for the provided Server"""
-        self.logger.command(f'{context.author.name} used Database Server Console On...')
+    # @db_server_console.command(name='on')
+    # @utils.role_check()
+    # @app_commands.autocomplete(server= autocomplete_servers)
+    # async def db_server_console_on(self,context:commands.Context,server):
+    #     """Turns the Console on for the provided Server"""
+    #     self.logger.command(f'{context.author.name} used Database Server Console On...')
 
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        if server == None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+    #     server = self.uBot.serverparse(server,context,context.guild.id)
+    #     if server == None:
+    #         return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
-        if server != None:
-            self.DB.GetServer(InstanceID= server.InstanceID).Console_Flag = True
-            server.attr_update() #This will update the AMPConsole Attributes
+    #     if server != None:
+    #         self.DB.GetServer(InstanceID= server.InstanceID).Console_Flag = True
+    #         server.attr_update() #This will update the AMPConsole Attributes
 
-            if self.AMPThreads[server.InstanceID].console_thread_running != True:
-                self.AMPThreads[server.InstanceID].console_thread.start()
-                await context.send(f"Starting {server.FriendlyName} Console Thread.")
+    #         if server.Running and server.ADS_Running:
+    #             if self.AMPThreads[server.InstanceID].console_thread_running != True:
+    #                 self.AMPThreads[server.InstanceID].console_thread.start()
+    #                 await context.send(f"Starting {server.FriendlyName} Console Thread.")
+    #         else:
+    #             await context.send(f'It appears {server.FriendlyName} ADS/Instance is not running. Please try again after those have started.')
 
-            await context.send(f'Console for {server.FriendlyName} is already running.')
+    #         await context.send(f'Console for {server.FriendlyName} is already running.')
 
 
-    @db_server_console.command(name='off')      
-    @utils.role_check()
-    @app_commands.autocomplete(server= autocomplete_servers)
-    async def db_server_console_off(self,context:commands.Context,server):
-        """Turns the Console off for the provided Server"""
-        self.logger.command(f'{context.author.name} used Database Server Console Off...')
+    # @db_server_console.command(name='off')      
+    # @utils.role_check()
+    # @app_commands.autocomplete(server= autocomplete_servers)
+    # async def db_server_console_off(self,context:commands.Context,server):
+    #     """Turns the Console off for the provided Server"""
+    #     self.logger.command(f'{context.author.name} used Database Server Console Off...')
 
-        server = self.uBot.serverparse(server,context,context.guild.id)
-        if server == None:
-            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+    #     server = self.uBot.serverparse(server,context,context.guild.id)
+    #     if server == None:
+    #         return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
-        if server != None:
-            self.DB.GetServer(InstanceID= server.InstanceID).Console_Flag = False
-            server.attr_update() #This will update the AMPConsole Attributes
+    #     if server != None:
+    #         self.DB.GetServer(InstanceID= server.InstanceID).Console_Flag = False
+    #         server.attr_update() #This will update the AMPConsole Attributes
 
-            if self.AMPThreads[server.InstanceID].console_thread_running == True:
-                self.AMPThreads[server.InstanceID].console_thread_running = False
-                await context.send(f"Stopping {server.FriendlyName} Console Thread.")
+    #         if self.AMPThreads[server.InstanceID].console_thread_running == True:
+    #             self.AMPThreads[server.InstanceID].console_thread_running = False
+    #             await context.send(f"Stopping {server.FriendlyName} Console Thread.")
 
-            await context.send(f"Turned {server.FriendlyName} Console Off.")
+    #         await context.send(f"Turned {server.FriendlyName} Console Off.")
 
     @db_server_console.command(name='channel')
     @utils.role_check()
@@ -599,10 +679,36 @@ class Server(commands.Cog):
             server.attr_update() #This will update the AMPInstance Attributes
             await context.send(f'Set {server.FriendlyName} Chat channel to {channel.name}')
 
+    @server.group(name='event')
+    @utils.role_check()
+    async def db_server_event(self,context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Invalid command passed...')
+
+    @db_server_event.command(name='channel')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def db_server_event_channel_set(self, context:commands.Context, server, channel:str):
+        self.logger.command(f'{context.author.name} used Database Server Event Channel')
+
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server == None:
+            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+
+        channel = self.uBot.channelparse(channel,context,context.guild.id)
+        if channel == None:
+            return await context.send(f'Unable to find the provided channel, please try again.')
+
+        if server != None and channel != None:
+            self.DB.GetServer(server.InstanceID).Discord_Event_Channel = channel.id
+            server.attr_update() #This will update the AMPInstance Attributes
+            await context.send(f'Set {server.FriendlyName} Event channel to {channel.name}')
+
     @server.command(name='role')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
-    async def db_server_discord_role_set(self,context:commands.Context,server,role:str):
+    @app_commands.autocomplete(discord_role= autocomplete_roles)
+    async def db_server_discord_role_set(self,context:commands.Context,server,discord_role:str):
         """Sets the Discord Role for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Discord Role')
     
@@ -610,14 +716,30 @@ class Server(commands.Cog):
         if server == None:
             return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
 
-        role = self.uBot.roleparse(role,context,context.guild.id)
-        if role == None:
+        discord_role = self.uBot.roleparse(discord_role,context,context.guild.id)
+        if discord_role == None:
             return await context.send(f'Unable to find the provided role, please try again.')
 
-        if server != None and role != None:
-            self.DB.GetServer(server.InstanceID).Discord_Role = role.id
+        if server != None and discord_role != None:
+            self.DB.GetServer(server.InstanceID).Discord_Role = discord_role.id
             server.attr_update() #This will update the AMPInstance Attributes
-            await context.send(f'Set {server.FriendlyName} Discord Role to {role.name}')
+            await context.send(f'Set {server.FriendlyName} Discord Role to {discord_role.name}')
+
+    @server.command(name='prefix')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def db_server_discord_prefix_set(self,context:commands.Context,server,server_prefix:str):
+        """Sets the Discord Chat Prefix for the provided Server"""
+        self.logger.command(f'{context.author.name} used Database Server Discord Chat Prefix')
+    
+        server = self.uBot.serverparse(server,context,context.guild.id)
+        if server == None:
+            return await context.send(f'Unable to find a unique Server matching the provided name, please be more specific.')
+
+        if server != None:
+            self.DB.GetServer(server.InstanceID).Discord_Chat_prefix = server_prefix
+            server.attr_update() #This will update the AMPInstance Attributes
+            await context.send(f'Set {server.FriendlyName} Discord Chat Prefix to {server_prefix}')
 
         
 async def setup(client):

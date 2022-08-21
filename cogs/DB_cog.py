@@ -53,6 +53,7 @@ class DB_Module(commands.Cog):
 
         self.uBot.sub_command_handler('bot',self.db_bot_whitelist)
         self.uBot.sub_command_handler('bot',self.db_bot_settings)
+        self.uBot.sub_command_handler('bot',self.db_bot_display)
 
         self.whitelist_emoji_message = '' 
         self.whitelist_emoji_pending = False
@@ -64,9 +65,7 @@ class DB_Module(commands.Cog):
     async def on_message(self,message:discord.Message):
         if message.webhook_id != None:
             return message
-        if message.content.startswith(self._client.command_prefix):
-            return message
-
+        
         #This is purely for testing!
         if message.content.startswith('test_emoji') and message.author.id == 144462063920611328: #This is my Discord ID
             if self.DBConfig.Whitelist_emoji_pending != None:
@@ -75,7 +74,16 @@ class DB_Module(commands.Cog):
 
         if message.author != self._client.user:
             self.logger.dev(f'On Message Event for {self.name}')
+            if not message.guild:
+                try:
+                    await message.channel.send("This is a DM.")
+                except discord.errors.Forbidden:
+                    pass
             return message
+            
+        if message.content.startswith(self._client.command_prefix):
+            return message
+
 
     @commands.Cog.listener('on_member_update')
     async def on_member_update(self,user_before:discord.User,user_after:discord.User):
@@ -246,9 +254,9 @@ class DB_Module(commands.Cog):
         """Sets the Whitelist Channel for the Bot to monitor"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
       
-        channel = self.uBot.channelparse(id,context,context.guild.id)
+        channel = self.uBot.channelparse(channel,context,context.guild.id)
         if channel == None:
-            return await context.reply(f'Unable to find the Discord Channel: {id}')
+            return await context.reply(f'Unable to find the Discord Channel: {channel}')
         else:
             self.DBConfig.SetSetting('Whitelist_channel',channel.id)
             await context.send(f'Set Bot Channel Whitelist to {channel.name}')
@@ -273,14 +281,14 @@ class DB_Module(commands.Cog):
         """This turns on or off Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
     
-        flag_reg = re.search("(true|false)",flag.lower())
-        if flag_reg == None:
+        #flag_reg = re.search("(true|false)",flag.lower())
+        if flag == None:
             return await context.send(f'Please use `true` or `false` for your flag.')
-        if flag_reg.group() == 'true':
-            self.DBConfig.Auto_whitelist = True
+        if flag.lower() == 'true':
+            self.DBConfig.SetSetting('Auto_Whitelist', True)
             return await context.send('Enabling Auto-Whitelist.')
-        if flag_reg.group() == 'false':
-            self.DBConfig.Auto_whitelist = False
+        if flag.lower() == 'false':
+            self.DBConfig.SetSetting('Auto_Whitelist', False)
             return await context.send('Disabling Auto-Whitelist')
 
     @db_bot_whitelist.command(name='pending_emoji')
@@ -343,6 +351,23 @@ class DB_Module(commands.Cog):
         else:
             await context.send(f'Hey! I was unable to find the role {role}, Please try again.')
     
+    @commands.hybrid_group(name='display')
+    @utils.role_check()
+    async def db_bot_display(self,context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Invalid command passed...')
+
+    @db_bot_display.command(name='auto')
+    @utils.role_check()
+    @app_commands.autocomplete(flag=utils.bool_autocomplete)
+    async def db_bot_display_auto(self,context:commands.Context,flag:str):
+        self.logger.command(f'{context.author.name} used Bot Display Auto...')
+        self.DBConfig.SetSetting('Auto_Display', flag)
+        if flag != None:
+            await context.send(f'All set! Set the bot to Auto Update `/server Display` embeds to {flag}')
+        else:
+            await context.send('Hey! You gotta pick `true` or `false`.')
+
 
     @commands.hybrid_group(name='dbserver')
     @utils.role_check()

@@ -3,6 +3,7 @@
    {
     "name": "Admin",
     "discord_role_id": "None",
+    "prefix": "Admin",
     "permissions": [
      "bot.*",
      "user.*",
@@ -16,6 +17,7 @@
    {
     "name": "Moderator",
     "discord_role_id": "None",
+    "prefix": "Mod",
     "permissions": [
      "bot.*",
      "user.*",
@@ -29,6 +31,7 @@
    {
     "name": "Maintenance",
     "discord_role_id": "None",
+    "prefix": "Mod",
     "permissions": [
      "bot.whitelist.waittime",
      "bot.whitelist.auto",
@@ -50,6 +53,7 @@
    {
     "name": "Staff",
     "discord_role_id": "None",
+    "prefix": "Staff",
     "permissions": [
      "bot.whitelist.auto",
      "user.*",
@@ -63,6 +67,7 @@
    {
     "name": "General",
     "discord_role_id": "None",
+    "prefix": "None",
     "permissions": []
    }
   ]
