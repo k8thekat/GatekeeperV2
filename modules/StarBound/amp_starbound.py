@@ -20,6 +20,7 @@
 
 '''
 import AMP as AMP
+import pathlib
 
 DisplayImageSources = ['steam:211820']
 class AMPStarbound(AMP.AMPInstance):
@@ -30,6 +31,8 @@ class AMPStarbound(AMP.AMPInstance):
         super().__init__(instanceID,serverdata,Index,Handler=Handler)
         self.Console = AMPStarboundConsole(AMPInstance = self)
 
+        if self.Avatar_url == None:
+            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12GZ0KwJN4iOuHC2d21oPseuXClh6OeNa'
 
 class AMPStarboundConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPStarbound):

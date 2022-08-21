@@ -20,7 +20,7 @@
 
 '''
 import sqlite3
-import os
+import pathlib
 import datetime
 import json
 import time
@@ -36,49 +36,36 @@ def dump_to_json(data):
             data[entry] = int(data[entry])
     return json.dumps(data)
 
-
 Handler = None
-
+DB_Version = 1.6
 
 class DBHandler():
     def __init__(self):
+        global DB_Version
         self.logger = logging.getLogger(__name__)
         self.DB = Database(Handler = self)
         self.DBConfig = self.DB.GetConfig()
         self.SuccessfulDatabase = True
 
         #Always update this value when changing Tables!
-        self.DB_Version = 1.5
+        self.DB_Version = DB_Version
 
         #This should ONLY BE TRUE on new Database's going forward. 
-        if self.DBConfig.GetSetting('DB_Version') == None:
-            self.DBUpdate = DBUpdate(self.DB,self.DB_Version)
+        #self.DBConfig.SetSetting('DB_Version', 1.5)
+        if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
+            DBUpdate(self.DB, 1.0)
             return
 
         #This is to handle 1.0.0 Converting to new DB Version systems.
         if type(self.DBConfig.GetSetting('DB_Version')) == str and self.DBConfig.GetSetting('DB_Version') == '1.0.0':
             self.DBConfig.SetSetting('DB_Version', '1.0')
 
-        #self.DBConfig.SetSetting('DB_Version', 1.2)
         #This handles version checks and calling all updates from version 1.0
         if self.DB_Version > float(self.DBConfig.GetSetting('DB_Version')):
             self.logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}")
             self.DBUpdate = DBUpdate(self.DB,float(self.DBConfig.GetSetting('DB_Version')))
         
         self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
-
-
-    def dbWhitelistSetup(self):
-        """This is set Default AMP Specific Whitelist Settings"""
-        try:
-            #self.DBConfig.AddSetting('Whitelist_Format','**IGN**: minecraft_ign \n **SERVER**: servername')
-            self.DBConfig.AddSetting('Whitelist_Channel', None)
-            self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
-            self.DBConfig.AddSetting('Auto_Whitelist', False)
-            self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
-            self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
-        except:
-            self.logger.warning('**ATTENTION** DBConfig Default Whitelist Settings have been set.')
 
     def dbServerConsoleSetup(self,server:AMPInstance):
         """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
@@ -98,8 +85,11 @@ def getDBHandler() -> DBHandler:
 
 class Database:
     def __init__(self, Handler=None):
+        
         self.DBExists = False
-        if os.path.exists("discordBot.db"):
+
+        db_file = pathlib.Path("discordBot.db")
+        if pathlib.Path.exists(db_file):
             self.DBExists = True
 
         if Handler:
@@ -114,6 +104,7 @@ class Database:
             # self._InitializeDefaultData()
 
     def _InitializeDatabase(self):
+        global DB_Version
         cur = self._db.cursor()
 
         cur.execute("""create table Servers (
@@ -129,7 +120,10 @@ class Database:
                         Console_Filtered integer not null,
                         Discord_Console_Channel text nocase,
                         Discord_Chat_Channel text nocase,
-                        Discord_Role text collate nocase
+                        Discord_Chat_Prefix text,
+                        Discord_Event_Channel text nocase,
+                        Discord_Role text collate nocase,
+                        Avatar_url text
                         )""")
 
         cur.execute("""create table ServerNicknames (
@@ -162,6 +156,19 @@ class Database:
                         )""")
 
         self._db.commit()
+        #Any Default Config Settings should go here during INIT.
+        #Still keep the ones in Update; just in case existing DBs need updating.
+        self._AddConfig('DB_Version', DB_Version)
+        self._AddConfig('Guild_ID', None)
+        self._AddConfig('Moderator_role_id', None)
+        self._AddConfig('Permissions', 'Default')
+        self._AddConfig('Server_Info_Display', None)
+        self._AddConfig('Whitelist_Channel', None)
+        self._AddConfig('WhiteList_Wait_Time', 5)
+        self._AddConfig('Auto_Whitelist', False)
+        self._AddConfig('Whitelist_Emoji_Pending', None)
+        self._AddConfig('Whitelist_Emoji_Done', None)
+        self._AddConfig('Auto_Display', True)
 
     def _execute(self, SQL, params):
         Retry = 0
@@ -212,9 +219,9 @@ class Database:
         jdata = dump_to_json({"Type": "UserUpdate", "UserID": dbuser.ID, "Field": entry, "Value": args[entry]})
         self._logdata(jdata)
 
-    def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None):
+    def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Discord_Chat_Prefix: str= None):
         #try:
-        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role)
+        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role, Discord_Chat_Prefix=Discord_Chat_Prefix)
         #except:
             #return None
 
@@ -477,7 +484,7 @@ class DBUser:
         self._db._UpdateUser(self, **{name: value})
 
 class DBServer:
-    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True):
+    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Chat_Prefix: str= None, Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True):
         # set defaults
         Params = locals()
         Params.pop("self")
@@ -663,13 +670,18 @@ class DBUpdate:
         self.DBConfig = self.DB.GetConfig()
 
         if Version == None:
-            self.DBConfig.AddSetting('DB_Version',Version)
+            self.DBConfig.AddSetting('DB_Version', 1.0)
 
         if 1.1 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.1')
             self.DBConfig.AddSetting('Guild_ID', None)
             self.DBConfig.AddSetting('Moderator_role_id', None)
             self.DBConfig.AddSetting('Permissions', 'Default')
+            self.DBConfig.AddSetting('Whitelist_Channel', None)
+            self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
+            self.DBConfig.AddSetting('Auto_Whitelist', False)
+            self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
+            self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
             self.DBConfig.SetSetting('DB_Version', '1.1')
 
         if 1.2 > Version:
@@ -692,32 +704,63 @@ class DBUpdate:
             self.server_Discord_reaction_removal()
             self.DBConfig.SetSetting('DB_Version', '1.5')
 
+        if 1.6 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.6')
+            self.server_Discord_Chat_prefix()
+            self.server_Discord_event_channel()
+            self.server_Avatar_url()
+            self.DBConfig.AddSetting('Server_Info_Display', None)
+            self.DBConfig.AddSetting('Auto_Display', True)
+            self.DBConfig.SetSetting('DB_Version', '1.6')
+
     def user_roles(self):
         try:
-            SQL = "alter table users add column Role text collate nocase default None;"
+            SQL = "alter table users add column Role text collate nocase default None"
             self.DB._execute(SQL, ())
         except:
             return
 
     def nicknames_unique(self):
         try:
-            SQL = "alter table ServerNicknames add constraint Nickname unique;"
+            SQL = "alter table ServerNicknames add constraint Nickname unique"
             self.DB._execute(SQL, ())
         except:
             return
 
     def user_Donator_removal(self):
         try:
-            SQL = "alter table users drop column Donator;"
+            SQL = "alter table users drop column Donator"
             self.DB._execute(SQL, ())
         except:
             return
 
     def server_Discord_reaction_removal(self):
         try:
-            SQL = "alter table servers drop column Discord_Reaction;"
+            SQL = "alter table servers drop column Discord_Reaction"
             self.DB._execute(SQL, ())
         except:
             return
+
+    def server_Discord_Chat_prefix(self):
+        try:
+            SQL = "alter table servers add column Discord_Chat_Prefix text"
+            self.DB._execute(SQL, ())
+        except:
+            return
+
+    def server_Discord_event_channel(self):
+        try:
+            SQL = "alter table servers add column Discord_Event_Channel text nocase"
+            self.DB._execute(SQL, ())
+        except:
+            return
+
+    def server_Avatar_url(self):
+        try:
+            SQL = "alter table servers add column Avatar_url text"
+            self.DB._execute(SQL, ())
+        except:
+            return
+
 
   

@@ -20,6 +20,7 @@
 
 '''
 import AMP as AMP
+import pathlib
 #Resources - https://www.dexerto.com/gaming/terraria-console-commands-explained-a-simple-controls-guide-1663852/
 DisplayImageSources = ['steam:105600']
 class AMPTerraria(AMP.AMPInstance):
@@ -30,6 +31,8 @@ class AMPTerraria(AMP.AMPInstance):
         super().__init__(instanceID,serverdata,Index,Handler=Handler)
         self.Console = AMPTerrariaConsole(AMPInstance = self)
 
+        if self.Avatar_url == None:
+            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12SJ2Z9BBuOKiTkdKSMgtRrsmOgWWZIz3'
 
 class AMPTerrariaConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPTerraria):

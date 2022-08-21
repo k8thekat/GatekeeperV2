@@ -24,6 +24,7 @@ import logging
 import json
 import requests
 import pathlib
+import aiohttp
 
 import discord
 from discord import app_commands
@@ -39,6 +40,7 @@ async def async_rolecheck(context:commands.Context,perm_node:str=None):
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
    
+    print(str(context.command).replace(" ","."))
     author = context
     if type(context) != discord.Member:
         author = context.author
@@ -236,13 +238,13 @@ class discordBot():
         messages = await channel.history(limit,before,after,around,oldest_first).flatten()
         return messages
 
-    async def editMessage(self,message: discord.message ,content: str=None, delete_after:float=None):
+    async def editMessage(self,message: discord.message ,content: str=None,embed: discord.Embed=None,embeds: list[discord.Embed]=None, delete_after:float=None):
         """Edits the message.\n
         The content must be able to be transformed into a string via `str(content)`.\n
         Supports `delete_after[float]`(Optional)"""
-
+        
         self.botLogger.dev('Edit Discord Message Called...')
-        await message.edit(content,delete_after)
+        await message.edit(content=content,embed=embed,embeds=embeds,delete_after= delete_after)
 
     async def sendMessage(self, parameter:object, content:str,*, tts:bool=False,embed=None, file:discord.file=None, files:list=None, delete_after:float=None, nonce= None, allowed_mentions=None, reference:object=None):
         #content=None, *, tts=False, embed=None, file=None, files=None, delete_after=None, nonce=None, allowed_mentions=None, reference=None, mention_author=None
@@ -265,14 +267,16 @@ class discordBot():
         self.botLogger.dev('Message Add Reaction Called...')
         if reaction_id.isnumeric():
             emoji = self._client.get_emoji(int(reaction_id))
+            return await message.add_reaction(emoji)
 
         if not reaction_id.startswith('<') and not reaction_id.endswith('>'):
             emoji = discord.utils.get(self._client.emojis, name= reaction_id)
+            return await message.add_reaction(emoji)
 
         else:
             emoji = reaction_id
+            return await message.add_reaction(emoji)
 
-        await message.add_reaction(emoji)
 
     async def cog_load(self,context,cog:str):
         try:
@@ -302,7 +306,29 @@ class botUtils():
 
             self.AMPHandler = AMP.getAMPHandler()
             self.AMPInstances = self.AMPHandler.AMP_Instances
+            self.AMPServer_Avatar_urls = []
 
+        async def validate_avatar(self,db_server):
+            """This checks the DB Server objects Avatar_url and returns the proper object type. \n
+            Must be either `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
+            if db_server.Avatar_url == None:
+                return None
+            #This handles web URL avatar icon urls.
+            if db_server.Avatar_url.startswith("https://") or db_server.Avatar_url.startswith("http://"):
+                if db_server.Avatar_url not in self.AMPServer_Avatar_urls:
+                    await asyncio.sleep(.5)
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(db_server.Avatar_url) as response:
+                            if response.status == 200:
+                                self.AMPServer_Avatar_urls.append(db_server.Avatar_url)
+                                return db_server.Avatar_url
+                            else:
+                                self.logger.error(f'We are getting Error Code {response.status}, not sure whats going on...')
+                                return None
+                else:
+                    return db_server.Avatar_url
+            else:
+                return None
 
         def name_to_uuid_MC(self,name): 
             """Converts an IGN to a UUID/Name Table \n
@@ -336,7 +362,7 @@ class botUtils():
             #Role ID catch
             if parameter.isnumeric():
                 role = guild.get_role(int(parameter))
-                self.logger.debug('Found the Discord Role {role}')
+                self.logger.debug(f'Found the Discord Role {role}')
                 return role
             else:
                 #This allows a user to pass in a role in quotes double or single
@@ -347,13 +373,13 @@ class botUtils():
                 #If a user provides a role name; this will check if it exists and return the ID
                 for role in role_list:
                     if role.name.lower() == parameter.lower():
-                        self.logger.debug('Found the Discord Role {role}')
+                        self.logger.debug(f'Found the Discord Role {role}')
                         return role
 
                     #This is to handle roles with spaces
                     parameter.replace('_',' ')
                     if role.name.lower() == parameter.lower():
-                        self.logger.debug('Found the Discord Role {role}')
+                        self.logger.debug(f'Found the Discord Role {role}')
                         return role
 
                 #await context.reply(f'Unable to find the Discord Role: {parameter}')
@@ -490,33 +516,47 @@ class botUtils():
             embed.add_field(name=field, value=field_value, inline=False)
             return embed
 
-        def server_info_embed(self,server:AMP.AMPInstance, context:commands.Context):
+        async def server_info_embed(self,server:AMP.AMPInstance, context:commands.Context):
             """For Individual Server info embed replies"""
             db_server = self.DB.GetServer(InstanceID = server.InstanceID)
             server_name = db_server.InstanceName
             if db_server.DisplayName != None:
                 server_name = db_server.DisplayName
             embed=discord.Embed(title=f'__**{server_name}**__', color=0x00ff00, description=server.Description)
-            #!TODO! Add Avatar URL fetching here
-            embed.set_thumbnail(url=context.guild.icon)
+
+            discord_role = db_server.Discord_Role
+            if discord_role != None:
+                discord_role = context.guild.get_role(int(db_server.Discord_Role)).name
+
+            avatar = await self.validate_avatar(db_server)
+            if avatar != None:
+                embed.set_thumbnail(url=avatar)
+
             embed.add_field(name=f'Server IP: ', value=str(db_server.IP), inline=False)
             embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
             embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
-            embed.add_field(name='Role:', value= str(db_server.Discord_Role), inline=False)
-            embed.add_field(name='Filtered Console:', value= str(bool(db_server.Whitelist)), inline=False)
+            embed.add_field(name='Role:', value= str(discord_role), inline=False)
+            embed.add_field(name='Discord Chat Prefix:', value= str(db_server.Discord_Chat_Prefix), inline=True)
+            embed.add_field(name='Filtered Console:', value= str(bool(db_server.Whitelist)), inline=True)
 
             if db_server.Discord_Console_Channel != None:
                 discord_channel = self.channelparse(db_server.Discord_Console_Channel,context,context.guild.id)
-                embed.add_field(name='Console Channel:', value= discord_channel.name, inline=True)
+                embed.add_field(name='Console Channel:', value= discord_channel.name, inline=False)
             else:
-                embed.add_field(name='Console Channel:', value= db_server.Discord_Console_Channel, inline=True)
+                embed.add_field(name='Console Channel:', value= db_server.Discord_Console_Channel, inline=False)
 
 
             if db_server.Discord_Chat_Channel != None:
                 discord_channel = self.channelparse(db_server.Discord_Chat_Channel,context,context.guild.id)
-                embed.add_field(name='Console Channel:', value= discord_channel.name, inline=True)
+                embed.add_field(name='Chat Channel:', value= discord_channel.name, inline=True)
             else:
-                embed.add_field(name='Console Channel:', value= db_server.Discord_Chat_Channel, inline=True)
+                embed.add_field(name='Chat Channel:', value= db_server.Discord_Chat_Channel, inline=True)
+            
+            if db_server.Discord_Event_Channel != None:
+                discord_channel = self.channelparse(db_server.Discord_Event_Channel, context, context.guild.id)
+                embed.add_field(name='Event Channel:', value= discord_channel.name, inline=True)
+            else:
+                embed.add_field(name='Event Channel:', value= db_server.Discord_Chat_Channel, inline=True)
 
             if len(db_server.Nicknames) != 0:
                 embed.add_field(name='Nicknames:', value=(", ").join(db_server.Nicknames),inline=False)
@@ -524,44 +564,60 @@ class botUtils():
 
         #This was designed for smaller servers showing only a few embed messages, it does support up to the buffer limit of discord sending embeds currently.
         #See AMP_module for server list command that is text based.
-        def server_list_embed(self,context:commands.Context) -> list:
+        async def server_display_embed(self,guild:discord.Guild=None) -> list:
             """Possibly an Option for Server Displays? Currently Un-used..."""
-            embed=discord.Embed(title=f'Server List for {context.guild.name}', color=0x00ff00)
-            embed_fieldindex = 0
+            #embed_fieldindex = 0
             embed_list = []
             for server in self.AMPInstances:
                 server = self.AMPInstances[server]
     
-                if server.Running and server.ADS_Running:
-                    Users = server.getStatus(users_only= True)
-                    db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-                    if db_server != None:
-                        embed.set_thumbnail(url=context.guild.icon)
+                db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+                if db_server != None:
 
-                        server_name = server.FriendlyName
-                        if server.DisplayName != None:
-                            server_name = db_server.DisplayName
+                    status = 'Offline'
+                    Users = None
+                    User_list = None
+                    if server.Running and server.ADS_Running:
+                        Users = server.getStatus(users_only= True)
+                        if len(server.getUserList()) > 1:
+                            User_list = (', ').join(server.getUserList())
+                        status = 'Online'
 
-                        nicknames = db_server.Nicknames
-                        if len(db_server.Nicknames) == 0:
-                            nicknames = None
+                    embed_color = 0x71368a
+                    if guild != None and db_server.Discord_Role != None:
+                        db_server_role = guild.get_role(int(db_server.Discord_Role))
+                        if db_server_role != None:
+                            embed_color = db_server_role.color
 
-                        embed.add_field(name=f'**========={server_name}=========**',value = f'**Nicknames**: {nicknames}',inline=False)
-                        embed.add_field(name=f'**IP**: {db_server.IP}', value=f'**About**: {db_server.Description}', inline=False)
-                        embed.add_field(name=f'__Online Users__', value= f'{Users[0]}/{Users[1]}',inline= False)
-                        embed.add_field(name='**Status**: Online', value= f'**Donator Only**: {str(bool(db_server.Donator))}  //  **Whitelist Open**: {str(bool(db_server.Whitelist))}',inline= False)
-                    embed_fieldindex += 5
-                
-                if embed_fieldindex == 25:
+                    server_name = server.FriendlyName
+                    if server.DisplayName != None:
+                        server_name = db_server.DisplayName
+
+                    nicknames = db_server.Nicknames
+                    if len(db_server.Nicknames) == 0:
+                        nicknames = None
+
+                    embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= db_server.Description, color=embed_color)
+                    #This is for future custom avatar support.
+                    avatar = await self.validate_avatar(db_server)
+                    if avatar != None:
+                        embed.set_thumbnail(url=avatar)
+    
+                    embed.add_field(name='**IP**:', value= str(db_server.IP), inline=True)
+                    embed.add_field(name='**Status**:' , value= status, inline= True)
+                    embed.add_field(name='**Donator Only**:', value= str(bool(db_server.Donator)), inline= True)
+                    embed.add_field(name='**Whitelist Open**:', value= str(bool(db_server.Whitelist)), inline= True)
+                    embed.add_field(name='**Nicknames**:' , value= str(nicknames) ,inline=True)
+                    if Users != None:
+                        embed.add_field(name=f'**Player Limit**:', value= f'{Users[0]}/{Users[1]}',inline=True)
+                    else:
+                        embed.add_field(name='**Player Limit**:', value= str(Users), inline= True)
+                    embed.add_field(name='**Players Online**:', value=str(User_list), inline=False)
                     embed_list.append(embed)
-                    embed_fieldindex = 0
-                    embed=discord.Embed(title=f'Continued Server List for {context.guild.name}', color=0x00ff00)
-
-            if embed_fieldindex != 0:
-                embed_list.append(embed)
+            
             return embed_list
 
-        def server_status_embed(self,context:commands.Context,server:AMP.AMPInstance,TPS=None,Users=None,CPU=None,Memory=None,Uptime=None,Users_Online=None) -> discord.Embed:
+        async def server_status_embed(self,context:commands.Context,server:AMP.AMPInstance,TPS=None,Users=None,CPU=None,Memory=None,Uptime=None,Users_Online=None) -> discord.Embed:
             """This is the Server Status Embed Message"""
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
             if server.ADS_Running:
@@ -569,12 +625,22 @@ class botUtils():
             else:
                 server_status = 'Offline'
 
-            if db_server.DisplayName == None:
-                embed=discord.Embed(title=f'{db_server.InstanceName}', description=f'Dedicated Server Status: **{server_status}**', color=0x00ff40)
-            else:
-                embed=discord.Embed(title=f'{db_server.DisplayName}', description=f'Dedicated Server Status: **{server_status}**', color=0x00ff40)
+            embed_color = 0x71368a
+            if db_server.Discord_Role != None:
+                db_server_role = context.guild.get_role(int(db_server.Discord_Role))
+                if db_server_role != None:
+                    embed_color = db_server_role.color
 
-            embed.set_thumbnail(url=context.guild.icon)
+            server_name = server.FriendlyName
+            if server.DisplayName != None:
+                server_name = db_server.DisplayName
+
+            embed=discord.Embed(title=server_name, description=f'Dedicated Server Status: **{server_status}**', color=embed_color)
+           
+            avatar = await self.validate_avatar(db_server)
+            if avatar != None:
+                embed.set_thumbnail(url=avatar)
+
             if db_server.IP != None:
                 embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
 
@@ -597,51 +663,70 @@ class botUtils():
                    
 
 
-        def server_whitelist_embed(self,context:commands.Context,server:AMP.AMPInstance) -> discord.Embed:
+        async def server_whitelist_embed(self,context:commands.Context,server:AMP.AMPInstance) -> discord.Embed:
             """Default Embed Reply for Successful Whitelist requests"""
-            #!TODO! Update Database/Setup DisplayName for Title
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-            users_online = server.getUserList()
 
-            embed=discord.Embed(title=f'{server.FriendlyName}', color=0x00ff00)
+            embed_color = 0x71368a
             if db_server != None:
-                embed.set_thumbnail(url=context.guild.icon)
-                if db_server.IP != None:
-                    embed.add_field(name='IP: ', value=db_server.IP, inline=False)
-                embed.add_field(name='Users Online:' , value=users_online, inline=False)
-            return embed
+                if db_server.Discord_Role != None:
+                    db_server_role = context.guild.get_role(int(db_server.Discord_Role))
+                    if db_server_role != None:
+                        embed_color = db_server_role.color
+
+                User_list = None
+                if len(server.getUserList()) > 1:
+                    User_list = (', ').join(server.getUserList())
+
+                server_name = server.FriendlyName
+                if server.DisplayName != None:
+                    server_name = db_server.DisplayName
+
+                embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= db_server.Description, color=embed_color)
+                avatar = await self.validate_avatar(db_server)
+                if avatar != None:
+                    embed.set_thumbnail(url=avatar)
+
+                embed.add_field(name='**IP**:', value= str(db_server.IP), inline=True)
+                embed.add_field(name='Users Online:' , value=str(User_list), inline=False)
+                return embed
                 
 
         def bot_settings_embed(self,context:commands.Context,settings:list) -> discord.Embed:
             """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
-            embed=discord.Embed(title=f'**Bot Settings**', color=0x00ff00)
+            embed=discord.Embed(title=f'**Bot Settings**', color=0x71368a)
             embed.set_thumbnail(url= context.guild.icon)
             embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
             for value in settings:
-                #{'Staff_role_id': '602295470546485249'}
-                # {'Whitelist_channel': '909650262464004136'}
-                # {'Whitelist_wait_time': '1'}
-                # {'Auto_whitelist': '1'}
-                # {'Whitelist_emoji_pending': 'None'}
-                # {'Whitelist_emoji_done': 'None'}
-                # {'Minecraft_multiverse_core': '0'}
-                # {'Whitelistchannel': '909650262464004136'}
-                # {'Db_version': '1.3'}
-                # {'Guild_id': '602285328320954378'}
-                # {'Moderator_role_id': '602295470546485249'}
-                # {'Permissions': 'Default'}
                 key_value = list(value.values())[0]
                 key = list(value.keys())[0]
 
-                if key_value == 'Whitelist_wait_time':
-                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value}', inline=False)
+                if key == 'Server_info_display':
+                    continue
+
+                if key == 'Whitelist_wait_time':
+                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value} Minutes', inline=False)
                     continue
 
                 if key_value == '0' or key_value == '1':
                     key_value = bool(key_value)
                     embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
                     continue
-                
+
+                if key == 'Whitelist_emoji_pending' or key == 'Whitelist_emoji_done':
+                    if key_value != 'None':
+                        emoji = self._client.get_emoji(int(key_value))
+                        embed.add_field(name=f'{key.replace("_"," ")}', value=emoji, inline=True)
+                    else:
+                        embed.add_field(name=f'{key.replace("_"," ")}', value='None', inline=True)
+                    continue
+
+                if key == 'Permission':
+                    embed.add_field(name='Permissions:', value=f'{key_value}', inline=True)
+
+                if key == 'Db_version':
+                    embed.add_field(name='SQL Database Version:', value=f'{key_value}', inline=True)
+
                 if key == 'Moderator_role_id':
                     key_value = self.roleparse(key_value,context,context.guild.id)
                     embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
@@ -657,18 +742,18 @@ class botUtils():
 
         def user_info_embed(self,context:commands.Context,db_user:DB.DBUser,discord_user:discord.User):
             #print(db_user.DiscordID,db_user.DiscordName,db_user.MC_IngameName,db_user.MC_UUID,db_user.SteamID,db_user.Donator)
-            embed=discord.Embed(title=f'{discord_user.name}',description=f'Discord ID: {discord_user.id}', color=0x00ff00)
+            embed=discord.Embed(title=f'{discord_user.name}',description=f'Discord ID: {discord_user.id}', color=discord_user.color)
             embed.set_thumbnail(url= discord_user.avatar.url)
             if db_user != None:
-                embed.add_field(name='In Database', value='True')
+                embed.add_field(name='In Database:', value='True')
                 if db_user.MC_IngameName != None:
-                    embed.add_field(name='Minecraft IGN', value=f'{db_user.MC_IngameName}',inline= False)
+                    embed.add_field(name='Minecraft IGN:', value=f'{db_user.MC_IngameName}',inline= False)
                 if db_user.MC_UUID != None:
-                    embed.add_field(name='Minecraft UUID', value=f'{db_user.MC_UUID}',inline= True)
+                    embed.add_field(name='Minecraft UUID:', value=f'{db_user.MC_UUID}',inline= True)
                 if db_user.SteamID != None:
-                    embed.add_field(name='Steam ID', value=f'{db_user.SteamID}',inline=False)
+                    embed.add_field(name='Steam ID:', value=f'{db_user.SteamID}',inline=False)
                 if db_user.Role != None:
-                    embed.add_field(name='Permission Role', value=f'{db_user.Role}', inline=False)
+                    embed.add_field(name='Permission Role:', value=f'{db_user.Role}', inline=False)
             return embed
                 
 class botPerms():
@@ -750,7 +835,7 @@ class botPerms():
         self.permission_roles = []
 
         self.validate_and_load()
-
+        self.get_roles()
 
     def validate_and_load(self):
         self.json_file = pathlib.Path.cwd().joinpath('bot_perms.json')
@@ -787,6 +872,7 @@ class botPerms():
             return False
             
         self.validate_and_load()
+        self.logger.info('Validated and Loaded Permissions File.')
         roles = self.permissions['Roles']
         for role in roles:
             if user_role.lower() in role['name'].lower() or role['discord_role_id'] in user_discord_role_ids:
@@ -804,7 +890,21 @@ class botPerms():
                     return True
     
     def get_roles(self):
+        """Pre build my Permissions Role Name List"""
         self.permission_roles = []
         for role in self.permissions['Roles']:
             self.permission_roles.append(role['name'])
         return self.permission_roles
+
+    def get_role_prefix(self,user_id:str=None):
+        """Use to get a Users Role Prefix for displaying."""
+        db_user = self.DB.GetUser(user_id)
+        if db_user != None and db_user.Role != None:
+            rolename = db_user.Role    
+            if rolename in self.permission_roles:
+                for role in self.permissions['Roles']:
+                    if role['name'] == rolename:
+                        return role['prefix']
+                    else:
+                        continue
+        return None

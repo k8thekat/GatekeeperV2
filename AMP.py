@@ -48,9 +48,7 @@ Handler = None
 class AMPHandler():
     def __init__(self,client:discord.Client,args:Namespace):
         self.args = args
-        #print(self.args)
         self.logger = logging.getLogger()
-        #self._client = client
         self._cwd = pathlib.Path.cwd()
         self.name = os.path.basename(__file__)
 
@@ -82,10 +80,8 @@ class AMPHandler():
     def setup_AMPInstances(self):
         """Intializes the connection to AMP and creates AMP_Instance objects."""
         self.AMP = AMPInstance(Handler = self)
-        #pprint(self.AMP.getAMPRolePermissions(self.AMP.AMP_BotRoleID))
         self.AMP_Instances = self.AMP.getInstances()
         self.get_AMP_instance_names()
-        #pprint(self.AMP.getAMPRolePermissions(self.AMP.AMP_BotRoleID))
 
         #This removes Super Admins from the bot user! Controlled through parser args!
         if self.args.super or not self.args.dev:
@@ -149,7 +145,6 @@ class AMPHandler():
     
     def moduleHandler(self):
         """AMPs class Loader for specific server types."""
-        #traceback.print_stack()
         self.logger.dev('AMPHandler moduleHandler loading modules...')
         try:
             dir_list = self._cwd.joinpath('modules').iterdir()
@@ -190,6 +185,7 @@ class AMPInstance:
     """Base class for AMP"""
     def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
         self.logger = logging.getLogger()
+        #self.script_dir = pathlib.Path(__file__).parent.absolute()
 
         self.AMPHandler = Handler
         if self.AMPHandler == None:
@@ -197,6 +193,7 @@ class AMPInstance:
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB
+        self.DBConfig = self.DB.GetConfig()
 
         self.SessionID = 0
         self.Index = Index
@@ -234,7 +231,7 @@ class AMPInstance:
             self.Console = AMPConsole(self)
 
         if instanceID != 0:
-            #This gets all the dictionary values tied to AMP and makes them attributes
+            #This gets all the dictionary values tied to AMP and makes them attributes of self.
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
 
@@ -262,10 +259,6 @@ class AMPInstance:
                 self.AMP_userinfo = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser) #This gets my AMP User Information
                 self.AMP_UserID = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser,True) #This gets my AMP User ID
                 self.getRoleIds(True) #This checks for Super Admins role and discord_bot role
-                # print('Bot Role ID:',self.AMP_BotRoleID)
-                # print('Super Admin?',self.super_AdminID in self.AMP_userinfo['result']['Roles'])
-                # print('Bot Role?', self.AMP_BotRoleID not in self.AMP_userinfo['result']['Roles']) 
-                # print('InstanceID:', instanceID)
 
                 #Bot role doesn't exists, but we have Super Admin!
                 if self.AMP_BotRoleID == None and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
@@ -366,11 +359,15 @@ class AMPInstance:
         self.IP = self.DB_Server.IP
         self.Whitelist = self.DB_Server.Whitelist
         self.Donator = self.DB_Server.Donator
-        self.Console_Flag = self.DB_Server.Console_Flag #This should be default to True
+        self.Console_Flag = self.DB_Server.Console_Flag #This should default to True
         self.Console_Filtered = self.DB_Server.Console_Filtered
         self.Discord_Console_Channel = self.DB_Server.Discord_Console_Channel
         self.Discord_Chat_Channel = self.DB_Server.Discord_Chat_Channel
+        self.Discord_Chat_Prefix = self.DB_Server.Discord_Chat_Prefix
+        self.Discord_Event_Channel = self.DB_Server.Discord_Event_Channel
         self.Discord_Role = self.DB_Server.Discord_Role
+        self.Avatar_url = self.DB_Server.Avatar_url
+        
 
     def server_check(self):
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
@@ -498,7 +495,7 @@ class AMPInstance:
                 if flag_reg != None:
                     if flag_reg.group():
                         continue 
-
+        #!TODO! Move this code out into some other Start function and handle it properly.
                 #!TODO! This may change when and IF AMP adds a better table value for unique Server types!
                 if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
                     name = str(self.AMPHandler.AMP_Modules[instance["DisplayImageSource"]]).split("'")[1]
@@ -523,6 +520,7 @@ class AMPInstance:
     def ConsoleUpdate(self)-> dict:
         """Returns `{'ConsoleEntries':[{'Contents': 'String','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`\n
         Will post all updates from previous API call of console update"""
+        self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetUpdates', parameters)
         return result
@@ -530,9 +528,10 @@ class AMPInstance:
     def ConsoleMessage_withUpdate(self,msg:str)-> dict:
         """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
         #parameters = {'message': ' '.join(msg)}
+        self.Login()
         parameters = {'message': msg}
         self.CallAPI('Core/SendConsoleMessage', parameters)
-        time.sleep(0.5)
+        time.sleep(.2)
         update = self.ConsoleUpdate()
         return update
 
@@ -805,11 +804,9 @@ class AMPInstance:
             for role in roles:
                 if roles[role] == 'discord_bot':
                     self.AMP_BotRoleID = role
-                    #print('AMP Bot Role',self.AMP_BotRoleID,role)
 
                 if roles[role] == 'Super Admins':
                     self.super_AdminID = role
-                    #print('Super Admin',self.super_AdminID,role)
                 
             if self.AMP_BotRoleID == None:
                 return False
@@ -888,11 +885,11 @@ class AMPInstance:
         """Base Funcion for AMP.check_Whitelist `default return is FALSE`"""
         return False
 
-    def send_message(self,message):
+    def send_message(self,message,prefix:str=None):
         """Base Function for Discord Chat Messages to AMP ADS"""
         return
 
-    def discord_message(self,user):
+    def discord_message(self,db_user=None, user:str=None):
         """Base Function for customized discord messages"""
         return False
 
@@ -918,8 +915,10 @@ class AMPConsole:
         self.console_message_lock = threading.Lock()
 
         self.console_chat_messages = []
-        self.console_chat_messages_list = []
         self.console_chat_message_lock = threading.Lock()
+
+        self.console_event_messages = []
+        self.console_event_message_lock = threading.Lock()
 
         self.logger.dev(f'**SUCCESS** Setting up {self.AMPInstance.FriendlyName} Console')
         self.console_init()
@@ -947,6 +946,8 @@ class AMPConsole:
 
                     else:
                         self.logger.warning(f'**ATTENTION** Server: {self.AMPInstance.FriendlyName} ADS is not currently Running, unable to Start Console Thread.')
+                        self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
+                        self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
 
                 else: #If we can't find the proper module; lets load the Generic.
                     if self.AMPInstance.ADS_Running: #This is the Instance's ADS 
@@ -960,6 +961,8 @@ class AMPConsole:
 
                     else:
                         self.logger.warning(f'**ATTENTION** Server: {self.AMPInstance.FriendlyName} ADS is not currently Running, unable to Start Console Thread.')
+                        self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
+                        self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
 
             except Exception as e:
                 self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.AMPHandler.AMP_Console_Modules['Generic']
@@ -990,20 +993,16 @@ class AMPConsole:
                 self.logger.dev(f"Console Channel: {self.AMPInstance.Discord_Console_Channel} Chat Channel: {self.AMPInstance.Discord_Chat_Channel}")
 
                 #This should handle server events(such as join/leave/disconnects)
-                #print('Console Events')
                 if self.console_events(entry):
                     continue
 
                 #This will vary depending on the server type. 
                 # I don't want to filter out the chat message here though. Just send it to two different places!
-                #print('Console Chat')
                 if self.console_chat(entry):
                     continue
                 
                 #This will filter any messages such as errors or mods loading, etc..
-                #print('Console Filter')
                 if self.console_filter(entry):
-                    #print(f"Filtered message {entry}")
                     continue
                 
                 if len(entry['Contents']) > 1500:
@@ -1056,7 +1055,6 @@ class AMPConsole:
         """This will handle all player chat messages from AMP to Discord"""
         #**EXAMPLE** Name: ARK_-_Lost_Island DisplayImageSource: steam:346110 Console Entry: 
         #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message'}
-
         #Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
             #print('Found a Chat message')
@@ -1075,7 +1073,8 @@ class AMPConsole:
         return False
 
     def console_events(self,message):
-        """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!"""
+        """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!
+        ALL events go to `self.console_event_messages` """
         return False
 
 

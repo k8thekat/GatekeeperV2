@@ -19,6 +19,7 @@
    02110-1301, USA. 
 
 '''
+import pathlib
 import AMP as AMP
 
 DisplayImageSources = ['steam:892970']
@@ -29,7 +30,9 @@ class AMPValheim(AMP.AMPInstance):
         
         super().__init__(instanceID,serverdata,Index,Handler=Handler)
         self.Console = AMPValheimConsole(AMPInstance = self)
-
+        
+        if self.Avatar_url == None:
+            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12MfKGnDG1FxZ9kiWboD-ga4twaPLm-Et'
 
 class AMPValheimConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPValheim):
