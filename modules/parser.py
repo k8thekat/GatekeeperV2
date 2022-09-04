@@ -26,7 +26,6 @@ class Parser():
     def __init__(self):
         import logging
         self.logger = logging.getLogger()
-        self.logger.info('Setting Up the Parser...')
 
         #We can swap these out to allow people to set them via the DB for more in-depth filtering
         #self.symbol_reg = "[,./':;&\.\-\?()]"
@@ -46,6 +45,7 @@ class Parser():
         self.DB = self.DBHandler.DB
 
         self.isSteam = False
+        self.logger.dev('Setting Up the Parser...')
 
     def ParseIGNServer(self,messages):
         msg_split = messages.split(' ')
@@ -54,7 +54,6 @@ class Parser():
         name = None
         pos = -1
         for entry in msg_split:
-            #print('msg entry',entry)
             pos += 1
             flag_server = re.search(self.server_reg, entry.lower())
             flag_ign = re.search(self.ign_reg,entry.lower())
