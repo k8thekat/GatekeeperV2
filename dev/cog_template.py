@@ -125,7 +125,12 @@ class Cog_Template(commands.Cog):
         print('cog init test')
 
     @commands.hybrid_command()
-    #@app_commands.guilds(discord.Object(id=...))
+    #This limits the command to sync to a specific guild.
+    @app_commands.guilds(discord.Object(id=...)) 
+    #This limits the command to sync to a specific guild (same as above). But shows the command globally.
+    @utils.guild_check(guild_id=None) 
+    #This will autocomplete the command with some premade lists inside of utils.py. You can make your own, see utils.py -> Autocomplete template
+    @app_commands.autocomplete() 
     async def cmd(self, ctx, param: int):
         #So if ctx.interaction is None will tell you whether they invoked it via prefix or slash
         #i.e. you can call ctx.defer(), which will defer a slash invocation but do nothing in a prefix invocation

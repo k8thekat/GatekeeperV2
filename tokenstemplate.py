@@ -11,7 +11,5 @@ AMPAuth = ''
 #AMPurl is the local URL to your web gui (eg. http://192.168.3.500:8080)
 AMPUser = ''
 AMPPassword = ''
-
 AMPurl = ''
 
-AMPurl = ''

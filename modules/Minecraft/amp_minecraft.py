@@ -40,7 +40,6 @@ class AMPMinecraft(AMP.AMPInstance):
         
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12Gd4qUO1aLsYoQBqMR0JPPdkUOSAX94r'
-
          
     def setup_AMPpermissions(self):
         """Sets the Permissions for Minecraft Modules"""
@@ -55,7 +54,7 @@ class AMPMinecraft(AMP.AMPInstance):
             self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return True
 
-    def name_Conversion(self,name): 
+    def name_Conversion(self, name): 
         """Converts an IGN to a UUID/Name Table \n
         `returns 'uuid'` else returns `None`, multiple results return `None`"""
         url = 'https://api.mojang.com/profiles/minecraft'
@@ -73,17 +72,19 @@ class AMPMinecraft(AMP.AMPInstance):
         else:
             return minecraft_user[0]['id'] #returns [{'id': 'uuid', 'name': 'name'}] 
 
-    def name_History(self,mc_user_uuid):
+    def name_History(self, mc_user_uuid):
         """Requires `user_UUID` WTF Does this even return? Possible a Dictionary List?"""
         url = f'https://api.mojang.com/user/profiles/{mc_user_uuid}/names'
         post_req = requests.get(url)
         return post_req.json()[-1]
 
-   
-    def addWhitelist(self,User:str):
+    def addWhitelist(self, discord_user:discord.Member):
         """Adds a User to the Whitelist File *Supports UUID or IGN*"""
         self.Login()
-        result = self.ConsoleMessage_withUpdate(f'whitelist add {User}')
+        db_user = self.DB.GetUser(discord_user.name)
+        if db_user.MC_IngameName == None:
+            return False
+        result = self.ConsoleMessage_withUpdate(f'whitelist add {db_user.MC_IngameName}')
         msg_to_send = []
         for message in result['ConsoleEntries']:
             msg_to_send.append(message['Contents'])
@@ -97,10 +98,9 @@ class AMPMinecraft(AMP.AMPInstance):
         self.Login()
         parameters = {}
         result = self.CallAPI(f'{self.APIModule}/GetWhitelist',parameters)
-        #print(result)
         return result['result']
 
-    def removeWhitelist(self,User:str):
+    def removeWhitelist(self, User:str):
         """Removes a User from the Whitelist File *Supports UUID or IGN*"""
         self.Login()
         result = self.ConsoleMessage_withUpdate(f'whitelist remove {User}')
@@ -112,29 +112,56 @@ class AMPMinecraft(AMP.AMPInstance):
             self.Console.console_message_lock.release()
         return msg_to_send
 
-    def check_Whitelist(self,user_UUID):
+    def check_Whitelist(self, discord_user:discord.Member):
         """Checks if the User is already in the whitelist file.
         Returns `True` if the UUID is found."""
+        db_user = self.DB.GetUser(discord_user.name)
+        if db_user.MC_UUID == None:
+            return False
+       
         self.Login()
         server_whitelist = self.getWhitelist()
         for entry in server_whitelist:
-            if user_UUID == entry['uuid']:
+            if db_user.MC_UUID == entry['uuid'].replace('-',''):
                 return True
 
-    def getHeadbyUUID(self,UUID:str):
+    def whitelist_intake(self, discord_user:discord.Member, user_name:str):
+        """Handles checking the User is in the Database, and if not, adding them to the Database.
+        Returns False if UUID/IGN not found, <db_user> if found."""
+        #Try to find the DB user first.
+        db_user = self.DB.GetUser(discord_user.name)
+        user_uuid = self.name_Conversion(user_name)
+        if db_user != None:    
+            #Check if the UUID and IGN are in the DB.
+            if db_user.MC_UUID == None and db_user.MC_IngameName == None:
+                #Updates User info in the Database with all the required information.
+                if user_uuid != None:
+                    db_user.MC_UUID = user_uuid
+                    db_user.MC_IngameName = user_name
+                    return True
+                else:
+                    return False
+            else:
+                #This assumes the UUID and IGN are set in the DB
+                return True
+        else:
+            #Somehow the user isnt in the DB.
+            return False
+
+    def getHeadbyUUID(self, UUID:str):
         """Gets a Users Player Head via UUID"""
         #DOESNT WORK FOR AVATAR ICONS.. DONT USE IT!
         MChead = 'https://mc-heads.net/head/' + UUID
         return MChead
 
-    def banUserID(self,ID:str):
+    def banUserID(self, ID:str):
         """Bans a User from the Server"""
         self.Login()
         parameters = {'id': ID}
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
     
-    def send_message(self, message:discord.Message, prefix:str=None):
+    def Chat_Message(self, message:discord.Message, prefix:str=None):
         """Sends a customized message via tellraw through the console."""
         self.Login()
         # Colors:
@@ -149,7 +176,7 @@ class AMPMinecraft(AMP.AMPInstance):
         else:
             self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"blue"}},{{"text":" <{message.author.name}>: {message.content}","color":"white"}}]')
 
-    def discord_message(self,db_user:DBUser=None, user:str=None):
+    def Chat_Message_formatter(self, db_user:DBUser=None, user:str=None):
         """Handles returning customized discord message data for Minecraft Servers only."""
 
         if db_user != None and db_user.MC_IngameName != None and db_user.MC_UUID != None:
@@ -162,14 +189,17 @@ class AMPMinecraft(AMP.AMPInstance):
             return user, self.getHeadbyUUID(user_uuid)
 
         else:
-            print('We failed to format')
+            self.logger.error('We failed to format the Chat Message.')
             return False
 
+    def Broadcast_Message(self, message, prefix: str = None):
+        """Used to Send a Broadcast Message to the Server"""
+        self.Login()
+        self.ConsoleMessage(f'say <{prefix}> :{message}')
 
 class AMPMinecraftConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPMinecraft):
         super().__init__(AMPInstance)
-
 
     def console_filter(self, message):
         """This is what SHOULD be displayed if we filter the console!"""
@@ -181,7 +211,7 @@ class AMPMinecraftConsole(AMP.AMPConsole):
             if message['Type'] == 'Chat':
                 return False
             #This list will be used to capture output that I want. These are best for partial finds.
-            message_finder_list = ['Unkown command.', 'players online.','Staff','?','Help']
+            message_finder_list = ['Unkown command.', 'players online:','Staff','?','Help', 'left the game', 'joined the game', 'lost connection:']
             for entry in message_finder_list:
                 if message['Contents'].find(entry) != -1:
                     #print(f"Found {entry} in {message['Contents']}")
@@ -201,13 +231,22 @@ class AMPMinecraftConsole(AMP.AMPConsole):
     
     def console_events(self, message):
         """ALWAYS RETURN FALSE! ALL events go to `console_event_messages`"""
-        if message['Contents'].endswith('has joined the game!'):
+        #Join Event
+        if message['Contents'].endswith('has joined the game'):
             self.console_event_message_lock.acquire()
             self.console_event_messages.append(message['Contents'])
             self.console_event_message_lock.release()
             return False
 
-        if message['Contents'].endswith('has left the game!'):
+        #Leave Event
+        if message['Contents'].endswith('has left the game'):
+            self.console_event_message_lock.acquire()
+            self.console_event_messages.append(message['Contents'])
+            self.console_event_message_lock.release()
+            return False
+        
+        #Achievements
+        if message['Contents'].find('has made the advancement'):
             self.console_event_message_lock.acquire()
             self.console_event_messages.append(message['Contents'])
             self.console_event_message_lock.release()

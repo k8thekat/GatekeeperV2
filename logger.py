@@ -26,9 +26,7 @@ from haggis import logs
 from logging.handlers import TimedRotatingFileHandler
 import pathlib
 
-
 def init(args):
-    
     logginglevel = logging.INFO
 
     #To Enable debug logging level (ewwwwww.....)
@@ -43,7 +41,7 @@ def init(args):
     #This level is for development purpose; a little more information in key spots without the debug annoyance.
     dev_level = 15
     dev_label = 'DEV'
-    logs.add_logging_level(dev_label,dev_level)
+    logs.add_logging_level(dev_label, dev_level)
     if args.dev:
         logginglevel = logging.DEV
 
@@ -54,7 +52,6 @@ def init(args):
     if args.command:
         logginglevel = logging.COMMAND
     
-
     logging.basicConfig(level=logginglevel, format='%(asctime)s [%(threadName)s] [%(levelname)s]  %(message)s', 
                         datefmt='%m/%d/%Y %I:%M:%S %p',
                         handlers = [logging.StreamHandler(sys.stdout),

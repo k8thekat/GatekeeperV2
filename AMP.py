@@ -34,7 +34,6 @@ from datetime import datetime, timezone
 import logging
 import threading
 import importlib.util
-import traceback
 import os
 import discord
 import re
@@ -44,9 +43,8 @@ import DB
 #import utils
 Handler = None
 
-
 class AMPHandler():
-    def __init__(self,client:discord.Client,args:Namespace):
+    def __init__(self, args:Namespace):
         self.args = args
         self.logger = logging.getLogger()
         self._cwd = pathlib.Path.cwd()
@@ -89,6 +87,7 @@ class AMPHandler():
             self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
     
     def get_AMP_instance_names(self):
+        """This only works for ONLINE/EXISTING Instances. Anything offline wont show up."""
         for server in self.AMP_Instances:
             if self.AMP_Instances[server].DisplayName != None:
                 self.AMP_Instances_Names.append(self.AMP_Instances[server].DisplayName)
@@ -160,7 +159,7 @@ class AMPHandler():
 
                         # self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
                         # self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
-                        #!TODO! This may change in the future. Depends on the table update.
+                        #!ATTENTION! This may change in the future. Depends on the table update.
                         for DIS in getattr(class_module,f'DisplayImageSources'):
                             self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
                             self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
@@ -174,16 +173,15 @@ class AMPHandler():
         except Exception as e:
             self.logger.error(f'**ERROR** {self.name} Loading AMP Module ** - File Not Found {e}')
                     
-def getAMPHandler(client:discord.Client = None,args:bool=False)-> AMPHandler:
+def getAMPHandler(args:bool=False)-> AMPHandler:
     global Handler
     if Handler == None:
-        Handler = AMPHandler(client=client, args=args)
+        Handler = AMPHandler(args= args)
     return Handler
-
 
 class AMPInstance:
     """Base class for AMP"""
-    def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
+    def __init__(self, instanceID=0, serverdata={}, Index=0, default_console=False, Handler=None):
         self.logger = logging.getLogger()
         #self.script_dir = pathlib.Path(__file__).parent.absolute()
 
@@ -344,13 +342,14 @@ class AMPInstance:
         return True
 
     def attr_update(self):
-        """This will update AMP Instance attributes."""
-        #Need to call this every so often. Possibly anytime I get instance information/update instance information
+        """This will update AMP Instance attributes.\n
+        Need to call this every so often. Possibly anytime I get instance information/update instance information"""
         self.logger.dev(f'Updating Server Attributes - Instance Running: {self.Running}')
         self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
 
         if self.Running:
-            server_status = self.server_check() #Using this to see if the API fails to set the server status (offline/online) NOT THE INSTANCE STATUS! Thats self.Running!!
+            #Using this to see if the API fails to set the server status (offline/online) NOT THE INSTANCE STATUS! Thats self.Running!!
+            server_status = self.server_check() 
             self.logger.dev(f'{self.FriendlyName} ADS Running: {server_status}')
             self.ADS_Running = server_status 
 
@@ -368,7 +367,6 @@ class AMPInstance:
         self.Discord_Role = self.DB_Server.Discord_Role
         self.Avatar_url = self.DB_Server.Avatar_url
         
-
     def server_check(self):
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!"""
         Success = self.Login()
@@ -384,7 +382,6 @@ class AMPInstance:
         if self.SessionID == 0:
             if self.InstanceID in self.AMPHandler.SessionIDlist:
                 self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
-                #return func(*args, **kargs)
                 return
 
             self.logger.dev(f'AMPInstance Logging in {self.InstanceID}')
@@ -413,10 +410,9 @@ class AMPInstance:
                 return False
         return True
 
-    def CallAPI(self,APICall,parameters):
-        #global SuccessfulConnection
+    def CallAPI(self, APICall, parameters):
+        """This is the main API Call function"""
         self.logger.dev(f'Function {APICall} was called with {parameters} by {self.InstanceID}')
-
 
         if self.SessionID != 0:
             parameters['SESSIONID'] = self.SessionID
@@ -482,7 +478,6 @@ class AMPInstance:
         self.Login()
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstances',parameters) 
-        #pprint(result)
         serverlist = {}
         if len(result["result"][0]['AvailableInstances']) != 0:
 
@@ -496,7 +491,7 @@ class AMPInstance:
                     if flag_reg.group():
                         continue 
         #!TODO! Move this code out into some other Start function and handle it properly.
-                #!TODO! This may change when and IF AMP adds a better table value for unique Server types!
+                #!ATTENTION! This may change when and IF AMP adds a better table value for unique Server types!
                 if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
                     name = str(self.AMPHandler.AMP_Modules[instance["DisplayImageSource"]]).split("'")[1]
                     self.logger.dev(f'Loaded __{name}__ for {instance["FriendlyName"]}')
@@ -514,10 +509,9 @@ class AMPInstance:
         else:
             InstancesFound = False
             self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
-            time.sleep(30)
-            
+            time.sleep(30)     
 
-    def ConsoleUpdate(self)-> dict:
+    def ConsoleUpdate(self) -> dict:
         """Returns `{'ConsoleEntries':[{'Contents': 'String','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`\n
         Will post all updates from previous API call of console update"""
         self.Login()
@@ -525,9 +519,8 @@ class AMPInstance:
         result = self.CallAPI('Core/GetUpdates', parameters)
         return result
 
-    def ConsoleMessage_withUpdate(self,msg:str)-> dict:
+    def ConsoleMessage_withUpdate(self, msg:str) -> dict:
         """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
-        #parameters = {'message': ' '.join(msg)}
         self.Login()
         parameters = {'message': msg}
         self.CallAPI('Core/SendConsoleMessage', parameters)
@@ -535,7 +528,7 @@ class AMPInstance:
         update = self.ConsoleUpdate()
         return update
 
-    def ConsoleMessage(self,msg:str):
+    def ConsoleMessage(self, msg:str):
         """Basic Console Message"""
         self.Login()
         parameters = {'message': msg}
@@ -570,7 +563,7 @@ class AMPInstance:
         self.CallAPI('Core/Kill', parameters)
         return
 
-    def getStatus(self,running_check:bool=False,users_only:bool=False)-> tuple:
+    def getStatus(self, running_check:bool=False, users_only:bool=False) -> tuple:
         """AMP Instance Metrics \n
         CPU is percentage based <tuple>
         """
@@ -602,7 +595,7 @@ class AMPInstance:
         self.Metrics = result['Metrics']
         return tps,Users,cpu,Memory,Uptime
     
-    def getUserList(self)-> list:
+    def getUserList(self) -> list:
         """Returns a List of connected users."""
         self.Login()
         parameters = {}
@@ -612,13 +605,13 @@ class AMPInstance:
             user_list.append(result['result'][user])
         return user_list
 
-    def getSchedule(self)-> dict:
+    def getSchedule(self) -> dict:
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetScheduleData', parameters)
         return result['result']['PopulatedTriggers']
   
-    def setFriendlyName(self,name:str,description:str) -> str:
+    def setFriendlyName(self, name:str, description:str) -> str:
         """This is used to change an Instance's Friendly Name and or Description. Retains all previous settings. \n
         `This requires the instance to be Offline!`"""
         self.Login()
@@ -645,7 +638,7 @@ class AMPInstance:
         pprint(result)
         return result
 
-    def copyFile(self,source,destination):
+    def copyFile(self, source:str, destination:str):
         self.Login()
         parameters = {
             'Origin' : source,
@@ -654,7 +647,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/CopyFile', parameters)
         return
 
-    def renameFile(self,original,new):
+    def renameFile(self, original:str, new:str):
         self.Login()
         parameters = {
             'Filename' : original,
@@ -663,7 +656,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/RenameFile', parameters)
         return
 
-    def getDirectoryListing(self,directory):
+    def getDirectoryListing(self, directory:str) -> list:
         self.Login()
         parameters = {
             'Dir' : directory
@@ -671,7 +664,7 @@ class AMPInstance:
         result = self.CallAPI('FileManagerPlugin/GetDirectoryListing',parameters)
         return result
   
-    def getFileChunk(self,name,position,length):
+    def getFileChunk(self, name:str, position:int, length:int):
         self.Login()
         parameters = {
             'Filename' : name,
@@ -681,7 +674,7 @@ class AMPInstance:
         result = self.CallAPI('FileManagerPlugin/GetFileChunk',parameters)
         return result
 
-    def writeFileChunk(self,filename:str,position:int,data:str):
+    def writeFileChunk(self,filename:str, position:int, data:str):
         self.Login()
         parameters = {
             'Filename' : filename,
@@ -691,7 +684,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/WriteFileChunk', parameters)
         return
 
-    def endUserSession(self,sessionID:str):
+    def endUserSession(self, sessionID:str):
         """Ends specified User Session"""
         self.Login()
         parameters = {
@@ -700,21 +693,21 @@ class AMPInstance:
         self.CallAPI('Core/EndUserSession', parameters)
         return
 
-    def getActiveAMPSessions(self)-> dict:
+    def getActiveAMPSessions(self) -> dict:
         """Returns currently active AMP Sessions"""
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetActiveAMPSessions', parameters)
         return result
 
-    def getInstanceStatus(self)-> dict:
+    def getInstanceStatus(self) -> dict:
         """Returns AMP Instance Status"""
         self.Login()
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstanceStatuses', parameters)
         return result
 
-    def trashDirectory(self,dirname:str):
+    def trashDirectory(self, dirname:str):
         """Moves a directory to trash, files must be trashed before they can be deleted."""
         self.Login()
         parameters = {
@@ -723,7 +716,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/TrashDirectory',parameters)
         return 
 
-    def trashFile(self,filename:str):
+    def trashFile(self, filename:str):
         """Moves a file to trash, files must be trashed before they can be deleted."""
         self.Login()
         parameters = {
@@ -732,7 +725,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/TrashFile',parameters)
         return
     
-    def emptyTrash(self,trashdir:str):
+    def emptyTrash(self, trashdir:str):
         """Empties a trash bin for the AMP Instance"""
         self.Login()
         parameters = {
@@ -741,7 +734,7 @@ class AMPInstance:
         self.CallAPI('FileManagerPlugin/EmptyTrash',parameters)
         return
 
-    def takeBackup(self,title:str,description:str,sticky:bool=False):
+    def takeBackup(self, title:str, description:str, sticky:bool=False):
         """Takes a backup of the AMP Instance; default `sticky` is False!"""
         self.Login()
         parameters = {
@@ -753,7 +746,7 @@ class AMPInstance:
         print(result)
         return
 
-    def getAMPUserInfo(self,name:str,IdOnly=False):
+    def getAMPUserInfo(self, name:str, IdOnly=False):
         """Gets AMP user info. if IdOnly is True; returns AMP User ID only!"""
         self.Login()
         parameters = {
@@ -764,7 +757,7 @@ class AMPInstance:
             return result['result']['ID']
         return result
 
-    def CurrentSessionHasPermission(self,PermissionNode:str):
+    def CurrentSessionHasPermission(self, PermissionNode:str):
         """Gets current Sessions permission spec"""
         self.Login()
         parameters = {
@@ -777,7 +770,7 @@ class AMPInstance:
 
         return result
 
-    def getAMPRolePermissions(self,RoleID:str):
+    def getAMPRolePermissions(self, RoleID:str):
         """Gets full permission spec for Role (returns permission nodes)"""
         self.Login()
         parameters = {
@@ -793,7 +786,7 @@ class AMPInstance:
         result = self.CallAPI('Core/GetPermissionsSpec', parameters)
         return result
 
-    def getRoleIds(self,set_roleID= False):
+    def getRoleIds(self, set_roleID=False):
         """Gets a List of all Roles, if set_roleID is true; it checks for `discord_bot` and `Super Admins`. Sets them to self.AMP_BotRoleID and self.super_AdminID"""
         self.Login()
         parameters = {}
@@ -816,7 +809,7 @@ class AMPInstance:
 
         return result['result']
 
-    def createRole(self,name:str,AsCommonRole=False):
+    def createRole(self, name:str, AsCommonRole=False):
         """Creates a AMP User role"""
         self.Login()
         parameters = {
@@ -827,7 +820,7 @@ class AMPInstance:
         pprint(result)
         return result
 
-    def getRole(self,Roleid:str):
+    def getRole(self, Roleid:str):
         """Gets the AMP Role"""
         self.Login()
         parameters = {
@@ -836,7 +829,7 @@ class AMPInstance:
         result = self.CallAPI('Core/GetRole', parameters)
         return result
     
-    def setAMPUserRoleMembership(self,UserID,RoleID,isMember:bool):
+    def setAMPUserRoleMembership(self, UserID:str, RoleID:str, isMember:bool):
         """ Sets the AMP Users Role Membership"""
         self.Login()
         parameters = {
@@ -847,7 +840,7 @@ class AMPInstance:
         result = self.CallAPI('Core/SetAMPUserRoleMembership',parameters)
         return result
 
-    def setAMPRolePermissions(self,RoleID,PermissionNode:str,Enabled:bool):
+    def setAMPRolePermissions(self, RoleID:str, PermissionNode:str, Enabled:bool):
         """Sets the AMP Role permission Node eg `Core.RoleManagement.DeleteRoles`"""
         self.Login()
         parameters = {
@@ -861,9 +854,9 @@ class AMPInstance:
         return result
 
     #These are GENERIC Methods below this point ---------------------------------------------------------------------------
-    def addWhitelist(self,user):
+    def addWhitelist(self, discord_user:discord.Member):
         """Base Function for AMP.addWhitelist"""
-        return user
+        return False
 
     def getWhitelist(self):
         """Base Function for AMP.getWhitelist"""
@@ -873,28 +866,42 @@ class AMPInstance:
         """Base Function for AMP.removeWhitelist"""
         return user
 
-    def name_Conversion(self,user):
+    def whitelist_intake(self, discord_user:discord.Member, user_name:str):
+        """Base Function for AMP.whitelist_intake"""
+        #Try to find the DB user first.
+        db_user = self.DB.GetUser(discord_user.name)
+        if db_user == None:
+            #Basic Add of user to DB.
+            self.DB.AddUser(DiscordID=discord_user.id, DiscordName=discord_user.name) 
+        else:
+            return True
+  
+    def name_Conversion(self):
         """Base Function for AMP.name_Conversion"""
-        return user
+        return None
 
-    def name_History(self,user):
+    def name_History(self, user):
         """Base Function for AMP.name_History"""
         return user
 
-    def check_Whitelist(self,user_id:str):
+    def check_Whitelist(self, db_user):
         """Base Funcion for AMP.check_Whitelist `default return is FALSE`"""
         return False
 
-    def send_message(self,message,prefix:str=None):
+    def Chat_Message(self, message, prefix:str=None):
         """Base Function for Discord Chat Messages to AMP ADS"""
         return
 
-    def discord_message(self,db_user=None, user:str=None):
+    def Chat_Message_formatter(self, db_user=None, user:str=None):
         """Base Function for customized discord messages"""
         return False
 
+    def Broadcast_Message(self, message, prefix:str=None):
+        """Base Function for Broadcast Messages to AMP ADS"""
+        return
+
 class AMPConsole:
-    def __init__(self, AMPInstance = AMPInstance):
+    def __init__(self, AMPInstance=AMPInstance):
         self.logger = logging.getLogger()
 
         self.AMPInstance = AMPInstance
@@ -905,7 +912,6 @@ class AMPConsole:
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
         self.DB_Server = self.DB.GetServer(InstanceID = self.AMPInstance.InstanceID)
-
 
         self.console_thread = None
         self.console_thread_running = False
@@ -922,7 +928,6 @@ class AMPConsole:
 
         self.logger.dev(f'**SUCCESS** Setting up {self.AMPInstance.FriendlyName} Console')
         self.console_init()
-
 
     def console_init(self):
         """This starts our console threads..."""
@@ -968,7 +973,6 @@ class AMPConsole:
                 self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.AMPHandler.AMP_Console_Modules['Generic']
                 self.logger.critical(f'**ERROR** Failed to Start the Console for {self.AMPInstance.FriendlyName}...with {e}')
 
-
     def console_parse(self):
         """This handles AMP Console Updates; turns them into bite size messages and sends them to Discord"""
         time.sleep(5)
@@ -987,10 +991,10 @@ class AMPConsole:
                 if entry_time < last_entry_time:
                     last_entry_time = entry_time
                     continue
-
                 
                 self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} DisplayImageSource: {self.AMPInstance.DisplayImageSource} Console Entry: {entry}')
-                self.logger.dev(f"Console Channel: {self.AMPInstance.Discord_Console_Channel} Chat Channel: {self.AMPInstance.Discord_Chat_Channel}")
+                self.logger.dev(f'Console Filtered: {self.AMPInstance.Console_Filtered} Chat Prefix: {self.DB_Server.Discord_Chat_Prefix}')
+                self.logger.dev(f"Console Channel: {self.AMPInstance.Discord_Console_Channel} Chat Channel: {self.AMPInstance.Discord_Chat_Channel} Event Channel: {self.AMPInstance.Discord_Event_Channel}")
 
                 #This should handle server events(such as join/leave/disconnects)
                 if self.console_events(entry):
@@ -1003,8 +1007,14 @@ class AMPConsole:
                 
                 #This will filter any messages such as errors or mods loading, etc..
                 if self.console_filter(entry):
+                    self.logger.dev(f'Filtered Message {entry}')
                     continue
                 
+                #This will add the Servers Discord_Chat_Prefix to the beginning of any of the messages.
+                #Its done down here to prevent breaking of any exisiting filtering.
+                if self.DB_Server.Discord_Chat_Prefix != None:
+                    entry['Contents'] = self.DB_Server.Discord_Chat_Prefix + ":" + entry['Contents']
+
                 if len(entry['Contents']) > 1500:
                     index_hunt = entry['Contents'].find(';')
                     if index_hunt == -1:
@@ -1046,21 +1056,25 @@ class AMPConsole:
                     
             self.console_message_list = []
     
+    def console_filter(self, message):
+        """Controls what will be sent to the Discord Console Channel via AMP Console."""
+        if not self.AMPInstance.Console_Filtered:
+            return False
+        else:
+            return True
 
-    def console_filter(self,message):
-        """This will filter depending on the console_filter setting and handle what to send to Discord."""
-        return False
-
-    def console_chat(self,message):
+    def console_chat(self, message):
         """This will handle all player chat messages from AMP to Discord"""
-        #**EXAMPLE** Name: ARK_-_Lost_Island DisplayImageSource: steam:346110 Console Entry: 
         #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message'}
         #Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
-            #print('Found a Chat message')
-
+      
             #Removed the odd character for color idicators on text
             message['Contents'] = message['Contents'].replace('�','')
+
+            #Appends the Servers Discord Chat Prefix if it exists.
+            if self.DB_Server.Discord_Chat_Prefix != None:
+                    message['Contents'] = self.DB_Server.Discord_Chat_Prefix + ":" + message['Contents']
 
             self.console_chat_message_lock.acquire()
             self.console_chat_messages.append(message)
@@ -1072,7 +1086,7 @@ class AMPConsole:
             return True
         return False
 
-    def console_events(self,message):
+    def console_events(self, message):
         """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!
         ALL events go to `self.console_event_messages` """
         return False

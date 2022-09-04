@@ -51,7 +51,7 @@ class AMPFactorio(AMP.AMPInstance):
             self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return True
 
-    def send_message(self, message:discord.Message):
+    def Chat_Message(self, message:discord.Message):
         #See https://wiki.factorio.com/Rich_text
         self.ConsoleMessage(f'[color=blue]"[Discord]"[/color] [color=default]<{message.author.name}>: {message.content}[/color]')
 
