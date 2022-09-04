@@ -42,7 +42,6 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
    
-    print('context command node',str(context.command).replace(" ","."))
     author = context
     if type(context) != discord.Member:
         author = context.author
@@ -56,6 +55,7 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
     #This handles Custom Permissions for people with the flag set.
     #print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
+        print('context command node',str(context.command).replace(" ","."))
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
         #print(perm_node)
