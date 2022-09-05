@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-4.0.2'
+Version = 'beta-4.0.3'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -40,14 +40,11 @@ class Gatekeeper(commands.Bot):
         self.DBHandler = DB.getDBHandler()
         self.DB = DB.getDBHandler().DB
         self.DBConfig = self.DB.GetConfig() 
-        self.guild_id = self.DBConfig.GetSetting('Guild_ID')
+        self.guild_id = int(self.DBConfig.GetSetting('Guild_ID'))
 
         self.Bot_Version = self.DBConfig.GetSetting('Bot_Version')
         if self.Bot_Version == None:
             self.DBConfig.SetSetting('Bot_Version', Version)
-
-        elif self.Bot_Version != Version:
-            self.update_loop.start()
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = AMP.getAMPHandler().AMP
@@ -65,6 +62,9 @@ class Gatekeeper(commands.Bot):
         self.uBot = utils.botUtils(self)
 
     async def setup_hook(self):
+        if self.Bot_Version != Version:
+            self.update_loop.start()
+
         import loader
         Handler = loader.Handler(self)
         await Handler.module_auto_loader()
@@ -78,13 +78,16 @@ class Gatekeeper(commands.Bot):
         client.tree.copy_global_to(guild=join_guild)
         client.logger.info(f'Syncing Commands via on_guild_join locally to guild: {join_guild.name} {await client.tree.sync(guild=join_guild)}')
     
-    @tasks.loop(seconds=1, count=1)
+    @tasks.loop(seconds= 30)
     async def update_loop(self):
-        self.logger.info(f'Updating Bot Version to {Version}')
-        if client.wait_until_ready():
-            client.tree.copy_global_to(guild= client.get_guild(client.guild_id))
-            await client.tree.sync(guild= client.get_guild(client.guild_id))
-            self.logger.info(f'Syncing Commands via update_loop to guild: {client.get_guild(client.guild_id).name} {await client.tree.sync(guild=client.get_guild(client.guild_id))}')
+        self.logger.info(f'Waiting to Update Bot Version to {Version}...')
+        await client.wait_until_ready()
+        self.logger.info(f'Currently Updatting Bot Version to {Version}...')
+        self.DBConfig.SetSetting('Bot_Version', Version)
+        client.tree.copy_global_to(guild= client.get_guild(client.guild_id))
+        await client.tree.sync(guild= client.get_guild(client.guild_id))
+        self.logger.info(f'Syncing Commands via update_loop to guild: {client.get_guild(client.guild_id).name} {await client.tree.sync(guild=client.get_guild(client.guild_id))}')
+        self.update_loop.stop()
 
 client = Gatekeeper(Version=Version)
     
