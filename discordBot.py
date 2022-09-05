@@ -19,6 +19,7 @@
    02110-1301, USA. 
 
 '''
+from __future__ import annotations
 import discord
 from discord import app_commands
 from discord.ext import commands,tasks
@@ -31,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-4.0.1'
+Version = 'beta-4.0.2'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
