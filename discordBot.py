@@ -32,15 +32,18 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-4.1.0'
+Version = 'beta-4.1.1'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
         self.logger = logging.getLogger()
         self.DBHandler = DB.getDBHandler()
         self.DB = DB.getDBHandler().DB
-        self.DBConfig = self.DB.GetConfig() 
-        self.guild_id = int(self.DBConfig.GetSetting('Guild_ID'))
+        self.DBConfig = self.DB.GetConfig()
+
+        self.guild_id = None 
+        if self.DBConfig.GetSetting('Guild_ID') != None:
+            self.guild_id = int(self.DBConfig.GetSetting('Guild_ID'))
 
         self.Bot_Version = self.DBConfig.GetSetting('Bot_Version')
         if self.Bot_Version == None:
