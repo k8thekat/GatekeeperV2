@@ -49,7 +49,6 @@ class DB_User(commands.Cog):
         self.dBot = utils.discordBot(client)
         self.pBot = utils.botPerms()
 
-        self.uBot.sub_command_handler('bot',self.db_bot_settings)
         self.uBot.sub_command_handler('bot',self.db_bot_donator)
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.replace("db","DB")}')
@@ -206,20 +205,6 @@ class DB_User(commands.Cog):
         DB_user = self.DB.GetUser(cur_user.id)
         print('DB User Role', DB_user.Role)
         await context.send(cur_user)
-
-    @commands.hybrid_command(name='settings')
-    @utils.role_check()
-    async def db_bot_settings(self, context:commands.Context):
-        """Displays currently set Bot settings"""
-        self.logger.command(f'{context.author.name} used Bot Settings...')
-    
-        self.DBConfig = self.DB.GetConfig()
-        dbsettings_list = self.DBConfig.GetSettingList()
-        settings_list = []
-        for setting in dbsettings_list:
-            config = self.DBConfig.GetSetting(setting)
-            settings_list.append({f'{setting.capitalize()}': f'{str(config)}'})
-        await context.send(embed=self.uBot.bot_settings_embed(context, settings_list))
 
     @commands.hybrid_command(name='donator')
     @utils.role_check()

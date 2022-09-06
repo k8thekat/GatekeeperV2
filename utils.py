@@ -731,18 +731,7 @@ class botUtils():
             for value in settings:
                 key_value = list(value.values())[0]
                 key = list(value.keys())[0]
-
-                if key == 'Server_info_display':
-                    continue
-
-                if key == 'Whitelist_wait_time':
-                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value} Minutes', inline=False)
-                    continue
-
-                if key_value == '0' or key_value == '1':
-                    key_value = bool(key_value)
-                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
-                    continue
+                #print(key, key_value)
 
                 if key == 'Whitelist_emoji_pending' or key == 'Whitelist_emoji_done':
                     if key_value != 'None':
@@ -750,24 +739,41 @@ class botUtils():
                         embed.add_field(name=f'{key.replace("_"," ")}', value=emoji, inline=True)
                     else:
                         embed.add_field(name=f'{key.replace("_"," ")}', value='None', inline=True)
-                    continue
 
-                if key == 'Permission':
+                if key == 'Whitelist_wait_time':
+                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value} Minutes', inline=False)
+
+                if key.lower() == 'permissions':
                     embed.add_field(name='Permissions:', value=f'{key_value}', inline=True)
 
-                if key == 'Db_version':
+                if key.lower() == 'db_version':
                     embed.add_field(name='SQL Database Version:', value=f'{key_value}', inline=True)
 
-                if key == 'Moderator_role_id':
-                    key_value = self.roleparse(key_value,context,context.guild.id)
-                    embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
-                    continue
+                if key.lower() == 'bot_version':
+                    embed.add_field(name='Gatekeeper Version:', value=f'{key_value}', inline=True)
 
-                if key_value.isnumeric() and len(key_value) > 10:
-                    key_value = self.channelparse(key_value,context,context.guild.id)
-                    if key_value != None:
-                        embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'<#{key_value.id}>',inline=False)
-                    continue
+                if key.lower() == 'guild_id':
+                    if self._client != None:
+                        key_value = f'**{self._client.get_guild(int(key_value)).name}**'
+                        if key_value == None:
+                            key_value = 'None'
+                        embed.add_field(name='Guild ID:', value=f'{key_value}', inline=False)
+
+                if key.lower() == 'moderator_role_id':
+                    key_value = self.roleparse(key_value,context,context.guild.id)
+                    if key_value == None:
+                        key_value = 'None'
+                    embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
+                    
+                if key.lower() == 'whitelist_channel':
+                    key_value = f'<#{self.channelparse(key_value,context,context.guild.id).id}>'
+                    if key_value == None:
+                        key_value = 'None'
+                    embed.add_field(name='Whitelist Channel', value=f'{key_value}',inline=False)
+
+                if key_value == '0' or key_value == '1':
+                    key_value = bool(key_value)
+                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
 
             return embed
 

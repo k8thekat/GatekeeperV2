@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-4.0.3'
+Version = 'beta-4.1.0'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -59,7 +59,7 @@ class Gatekeeper(commands.Bot):
         intents.message_content = True
         prefix = '$'
         super().__init__(intents= intents, command_prefix= prefix)
-        self.uBot = utils.botUtils(self)
+        self.uBot = utils.botUtils(client=self)
 
     async def setup_hook(self):
         if self.Bot_Version != Version:
@@ -126,6 +126,19 @@ async def bot_permissions(context:commands.Context, permission:str):
     client.DBConfig.Permissions = permission
     await context.send(f'Looks like we set Bot Permissions to {permission}!')
 
+@main_bot.command(name='settings')
+@utils.role_check()
+async def bot_settings(context:commands.Context):
+    """Displays currently set Bot settings"""
+    client.logger.command(f'{context.author.name} used Bot Settings...')
+
+    dbsettings_list = client.DBConfig.GetSettingList()
+    settings_list = []
+    for setting in dbsettings_list:
+        config = client.DBConfig.GetSetting(setting)
+        settings_list.append({f'{setting.capitalize()}': f'{str(config)}'})
+    await context.send(embed=client.uBot.bot_settings_embed(context, settings_list))
+
 @main_bot.command(name='test')
 @utils.role_check()
 @utils.guild_check(guild_id=602285328320954378)
@@ -174,13 +187,18 @@ async def bot_embed_auto_update(context:commands.Context, flag:str):
     """Toggles Auto Updating of Embeds On or Off. (Only for `/server Display`)"""
     client.logger.command(f'{context.author.name} used Bot Display Auto...')
     
-    client.DBConfig.SetSetting('Embed_Auto_Update', flag)
     if flag.lower() == 'true':
-        await context.send(f'All set! The bot will Auto Update the embeds from `/server Display` every minute.')
+        print('before',client.DBConfig.Embed_auto_update,type(client.DBConfig.Embed_auto_update))
+        client.DBConfig.SetSetting('Embed_Auto_Update', True)
+        print('after',client.DBConfig.Embed_auto_update,type(client.DBConfig.Embed_auto_update))
+        print('get after',client.DBConfig.GetSetting('Embed_Auto_Update'),type(client.DBConfig.GetSetting('Embed_Auto_Update')))
+
+        return await context.send(f'All set! The bot will Auto Update the embeds from `/server Display` every minute.')
     if flag.lower() == 'false':
-        await context.send(f"Well, I guess I won't update the embeds anymore.")
+        client.DBConfig.SetSetting('Embed_Auto_Update', False)
+        return await context.send(f"Well, I guess I won't update the embeds anymore.")
     else:
-        await context.send('Hey! You gotta pick `true` or `false`.')
+        return await context.send('Hey! You gotta pick `True` or `False`.')
 
 @main_bot.command(name='ping')
 @utils.role_check()

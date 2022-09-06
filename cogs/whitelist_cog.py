@@ -58,8 +58,6 @@ class Whitelist(commands.Cog):
         self.failed_whitelist = []
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
         self.whitelist_emoji_message = '' 
-        self.whitelist_emoji_pending = False
-        self.whitelist_emoji_done = False
 
         self.update_loop.start()
         self.logger.dev('Whitelist Module Update Loop Running:' + str(self.update_loop.is_running()))
@@ -151,29 +149,6 @@ class Whitelist(commands.Cog):
                 self.WL_wait_list.pop(index)
                 self.logger.info(f'Removed {member.name} from Whitelist Wait List.')
         return member
-
-    @commands.Cog.listener('on_reaction_add')
-    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.User):
-        """Called when a message has a reaction added to it. Similar to on_message_edit(), if the message is not found in the internal message cache, then this event will not be called. Consider using on_raw_reaction_add() instead."""
-        self.logger.dev(f'Reaction Add {self.name}: {user} Reaction: {reaction}')
-
-        #This is for setting the Whitelist_Emoji_pending after using the command!
-        if reaction.message.id == self.whitelist_emoji_message:
-            #This is for pending whitelist requests
-            if self.whitelist_emoji_pending:
-                self.DBConfig.Whitelist_emoji_pending = reaction.emoji.id
-                self.whitelist_emoji_pending = False
-                emoji = self._client.get_emoji(reaction.emoji.id)
-                await reaction.message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {emoji}')
-
-            #This is for completed whitelist requests
-            if self.whitelist_emoji_done:
-                self.DBConfig.Whitelist_emoji_done = reaction.emoji.id
-                self.whitelist_emoji_done = False
-                emoji = self._client.get_emoji(reaction.emoji.id)
-                await reaction.message.edit(content = f'Woohoo! Set your **Whitelist Done Emoji** to {emoji}')
-
-        return reaction,user
 
     #All DBConfig Whitelist Specific function settings --------------------------------------------------------------
     @commands.hybrid_group(name='whitelist')
@@ -275,15 +250,21 @@ class Whitelist(commands.Cog):
         """This sets the Whitelist pending emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Pending Emoji...')
       
-        flag = 'pending Whitelist requests!'
-        await context.send('Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!')
-        channel = self._client.get_channel(context.channel.id)
-        messages = [message async for message in channel.history(limit=5)]
-        for message in messages:
-            if flag in message.content:
-                self.whitelist_emoji_message = messages[0].id
-
-        self.whitelist_emoji_pending = True
+        message = await context.send('Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!')
+        
+        def check(reaction:discord.Reaction, user:discord.Member):
+            if self._client.get_emoji(reaction.emoji.id) != None:
+                if user == context.author:
+                    self.DBConfig.SetSetting('Whitelist_emoji_pending',reaction.emoji.id)
+                    return True
+            else:
+                raise Exception('Emoji not found!')
+        try:
+            reaction, user = await self._client.wait_for('reaction_add', check=check)
+            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}')
+        except Exception as e:
+            self.logger.error(f'Error: {e}')
+            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!')    
 
     @db_bot_whitelist.command(name='done_emoji')
     @utils.role_check()
@@ -291,15 +272,21 @@ class Whitelist(commands.Cog):
         """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Done Emoji...')
 
-        flag = 'completed Whitelist requests!'
-        await context.send('Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!')
-        channel = self._client.get_channel(context.channel.id)
-        messages = [message async for message in channel.history(limit=5)]
-        for message in messages:
-            if flag in message.content:
-                self.whitelist_emoji_message = messages[0].id
+        message = await context.send('Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!')
 
-        self.whitelist_emoji_done = True
+        def check(reaction:discord.Reaction, user:discord.Member):
+            if self._client.get_emoji(reaction.emoji.id) != None:
+                if user == context.author:
+                    self.DBConfig.SetSetting('Whitelist_emoji_done',reaction.emoji.id)
+                    return True
+            else:
+                raise Exception('Emoji not found!')
+        try:
+            reaction, user = await self._client.wait_for('reaction_add', check=check)
+            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}')
+        except Exception as e:
+            self.logger.error(f'Error: {e}')
+            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!')      
 
     async def on_message_whitelist(self, message:discord.Message, context:commands.Context):
         """This handles on_message whitelist requests."""

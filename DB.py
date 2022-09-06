@@ -688,6 +688,8 @@ class DBConfig:
 
     def __setattr__(self, name, value):
         if name in self._ConfigNameToID:
+            if type(value) == bool:
+                value = int(value)
             super().__setattr__(name, value)
             self._db._UpdateConfig(self._ConfigNameToID[name], name, value)
 
