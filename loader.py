@@ -57,8 +57,9 @@ class Handler():
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
         #Just to make it easier; always load the Generic Module as a base.
         await self._client.load_extension('modules.Generic.generic')
-        self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **modules.Generic.generic**')
+        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **modules.Generic.generic**')
         loaded.append('Generic')
+
         try:
             dir_list = self._cwd.joinpath('modules').iterdir()
 
@@ -74,10 +75,10 @@ class Handler():
                     for DIS in getattr(class_module,f'DisplayImageSources'):
                         self.Cog_Modules[DIS] = script
                     
-                    self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **{module_name}**')
+                    self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **{module_name}**')
                     
         except Exception as e:
-            self.logger.error(f'**ERROR** {self.name} Loading Cog Module ** - File Not Found {e}')
+            self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module ** - File Not Found {e}')
                     
         for instance in self.AMPInstances:
             DisplayImageSource = self.AMPInstances[instance].DisplayImageSource
@@ -86,13 +87,13 @@ class Handler():
                 cog = (".").join(path.as_posix().split("/")[-3:])[:-3]
                 try:
                     await self._client.load_extension(cog)
-                    self.logger.info(f'**SUCCESS** {self.name} Loading Cog Module **{path.stem}**')
+                    self.logger.info(f'**SUCCESS** {self.name} Loading Server Cog Module **{path.stem}**')
 
                 except discord.ext.commands.errors.ExtensionAlreadyLoaded:
                     continue
                 
                 except Exception as e:
-                    self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{path.stem}** - {e}')
+                    self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module **{path.stem}** - {e}')
      
         self.logger.info(f'**All Server Modules Loaded**')
 

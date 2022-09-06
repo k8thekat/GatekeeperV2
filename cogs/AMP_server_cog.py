@@ -56,8 +56,9 @@ class Server(commands.Cog):
         
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
-        if self.DBConfig.GetSetting('Server_Info_Display') != None:
+        if self.DBConfig.GetSetting('Embed_Auto_Update') == True:
             self.server_display_update.start()
+            self.logger.dev(f'Server Embed Display Update is Running: {self.server_display_update.is_running()}')
 
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self, member:discord.Member):
@@ -79,8 +80,12 @@ class Server(commands.Cog):
         if self._client.is_ready():
             if not self.DBConfig.GetSetting('Embed_Auto_Update'):
                 return
-            self.logger.dev('Updating Server Info Display Embeds')
+            self.logger.info('Updating Server Display Embeds')
             server_embeds = self.DB.GetServerEmbeds()
+            if len(server_embeds) == 0:
+                self.logger.error('No Server Embeds to Update')
+                self.server_display_update.stop()
+                return
             message_list = []
             for embed in server_embeds:
                 discord_guild = self._client.get_guild(int(embed['GuildID']))
@@ -94,10 +99,15 @@ class Server(commands.Cog):
             for message in message_list:
                 if len(embed_list[start:stop]) == 0:
                     return
-                await message.edit(embeds=embed_list[start:stop]) #0,10 // 10,20 // 20,30
+                try:
+                    await message.edit(embeds=embed_list[start:stop])
+                except discord.errors.NotFound:
+                    self.logger.error('Embed Messages were deleted, removing from DB and stopping the loop.')
+                    self.DB.DelServerEmebed(discord_guild.id, discord_channel.id)
+                    self.server_display_update.stop()
                 await asyncio.sleep(5)
-                start += 10 # 10 // 20 //
-                stop += 10 # 20 // 30 //
+                start += 10 
+                stop += 10 
 
     @commands.hybrid_group(name='server')
     @utils.role_check()
