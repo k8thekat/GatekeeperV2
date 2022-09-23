@@ -55,7 +55,7 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
     #This handles Custom Permissions for people with the flag set.
     #print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
-        print('context command node',str(context.command).replace(" ","."))
+        logger.dev('context command node',str(context.command).replace(" ","."))
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
         #print(perm_node)
@@ -70,7 +70,7 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
 
     #This is the final check before we attempt to use the "DEFAULT" permissions setup.
     if DBConfig.GetSetting('Moderator_role_id') == None:
-        await context.send(f'Please have an Adminstrator run `/bot moderator (role)` or consider setting up Custom Permissons.')
+        await context.send(f'Please have an Adminstrator run `/bot moderator (role)` or consider setting up Custom Permissons.', ephemeral=True)
         logger.error(f'DBConfig Moderator role has not been set yet!')
         return False
 
@@ -97,7 +97,7 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
         
     else:
         logger.command(f'Permission Check Failed on {author}')
-        await context.send('You do not have permission to use that command...')
+        await context.send('You do not have permission to use that command...', ephemeral=True)
         return False
 
 def role_check():
@@ -111,7 +111,7 @@ def guild_check(guild_id:int=None):
         if context.guild.id == guild_id:
             return True
         else:
-            await context.send('You do not have permission to use that command...')
+            await context.send('You do not have permission to use that command...', ephemeral=True)
             return False
     return commands.check(predicate)
       
@@ -152,6 +152,7 @@ async def autocomplete_discord_users(interaction:discord.Interaction, current:st
         choice_list.append(user.name)
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
 
+#This is my Template for Autocomplete
 async def autocomplete_template(interaction:discord.Interaction, current:str, choice_list:list=None) -> list[app_commands.Choice[str]]:
     """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
@@ -239,7 +240,6 @@ class discordBot():
         Supports `reason`(Optional)"""
 
         self.botLogger.dev('Remove Users Discord Role Called...')
-        print(type(user),type(role))
         await user.remove_roles(role,reason)
 
     async def delMessage(self, message:discord.Message, delay:float=None):
@@ -295,22 +295,6 @@ class discordBot():
         else:
             emoji = reaction_id
             return await message.add_reaction(emoji)
-
-    async def cog_load(self, context:commands.Context, cog:str):
-        try:
-            self._client.load_extension(name= cog)
-        except Exception as e:
-            await context.send(f'**ERROR** Loading Extension {cog} - {e}')
-        else:
-            await context.send(f'**SUCCESS** Loading Extension {cog}')
-        
-    async def cog_unload(self, context:commands.Context, cog:str):
-        try:
-            self._client.unload_extension(name= cog)
-        except Exception as e:
-            await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}')
-        else:
-            await context.send(f'**SUCCESS** Un-Loading Extension {cog}')
 
 class botUtils():
         def __init__ (self, client:commands.Bot=None):
@@ -611,7 +595,7 @@ class botUtils():
                     status = 'Offline'
                     Users = None
                     User_list = None
-                    if server.Running and server.ADS_Running:
+                    if server.Running and server._ADScheck() and server.ADS_Running:
                         Users = server.getStatus(users_only= True)
                         if len(server.getUserList()) > 1:
                             User_list = (', ').join(server.getUserList())
@@ -627,9 +611,9 @@ class botUtils():
                     if server.DisplayName != None:
                         server_name = db_server.DisplayName
 
-                    nicknames = db_server.Nicknames
-                    if len(db_server.Nicknames) == 0:
-                        nicknames = None
+                    nicknames = None
+                    if len(db_server.Nicknames) != 0:
+                        nicknames = (", ").join(db_server.Nicknames)
 
                     embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= db_server.Description, color=embed_color)
                     #This is for future custom avatar support.
@@ -643,7 +627,7 @@ class botUtils():
                     embed.add_field(name='**Whitelist Open**:', value= str(bool(db_server.Whitelist)), inline= True)
                     embed.add_field(name='**Nicknames**:' , value= str(nicknames) ,inline=True)
                     if Users != None:
-                        embed.add_field(name=f'**Player Limit**:', value= f'{Users[0]}/{Users[1]}',inline=True)
+                        embed.add_field(name=f'**Players**:', value= f'{Users[0]}/{Users[1]}',inline=True)
                     else:
                         embed.add_field(name='**Player Limit**:', value= str(Users), inline= True)
                     embed.add_field(name='**Players Online**:', value=str(User_list), inline=False)
@@ -654,6 +638,8 @@ class botUtils():
         async def server_status_embed(self, context:commands.Context, server:AMP.AMPInstance, TPS=None, Users=None, CPU=None, Memory=None, Uptime=None, Users_Online=None) -> discord.Embed:
             """This is the Server Status Embed Message"""
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+            if server.Running:
+                server._ADScheck()
             if server.ADS_Running:
                 server_status = 'Online'
             else:

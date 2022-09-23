@@ -20,6 +20,7 @@
 '''
 import os
 from pprint import pprint
+import asyncio
 
 import utils
 import AMP
@@ -38,9 +39,6 @@ class AMP_Cog(commands.Cog):
         self.AMPHandler = AMP.getAMPHandler()
         self.AMPInstances = self.AMPHandler.AMP_Instances
 
-        self.AMPInstances_Console_Channels = []
-        self.AMPInstances_Chat_Channels = []
-
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
@@ -53,10 +51,13 @@ class AMP_Cog(commands.Cog):
         self.logger.dev('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
        
         self.amp_server_console_chat_messages_send.start()
-        self.logger.dev('AMP_Cog Console Chat Message Handler Running:' + str(self.amp_server_console_chat_messages_send.is_running()))
+        self.logger.dev('AMP_Cog Console Chat Message Handler Running: ' + str(self.amp_server_console_chat_messages_send.is_running()))
 
         self.amp_server_console_event_messages_send.start()
-        self.logger.dev('AMP_Cog Console Event Message Handler Running:' + str(self.amp_server_console_event_messages_send.is_running()))
+        self.logger.dev('AMP_Cog Console Event Message Handler Running: ' + str(self.amp_server_console_event_messages_send.is_running()))
+
+        self.amp_server_instance_check.start()
+        self.logger.dev('AMP_Cog Instance Check Event Loop: ' + str(self.amp_server_instance_check.is_running()))
         
     @commands.Cog.listener('on_message')
     async def on_message(self, message:discord.Message):
@@ -68,6 +69,9 @@ class AMP_Cog(commands.Cog):
 
         for amp_server in self.AMPInstances:
             self.AMPServer = self.AMPInstances[amp_server]
+            if not self.AMPServer.Running:
+                continue
+            self.AMPServer._ADScheck()
 
             #Check and see if our Discord Console Channel matches the current message.id
             if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
@@ -83,7 +87,7 @@ class AMP_Cog(commands.Cog):
             #Check and see if our Discord Chat channel matches the message.id
             if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):
                 
-                #If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This us usually a USER sending a message..
+                #If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This is usually a USER sending a message..
                 if message.webhook_id == None:
                     #This fetch's a users prefix from the bot_perms.json file.
                     author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
@@ -106,6 +110,17 @@ class AMP_Cog(commands.Cog):
                         self.AMPServer.Chat_Message(message)
                        
         return message
+
+    # @tasks.loop(minutes=1)
+    # async def amp_server_attribute_update(self):
+    #     self.logger.dev('Updating AMP Server Attributes')
+    #     self.AMPHandler.AMP._updateInstanceAttributes()
+
+    @tasks.loop(minutes=5)
+    async def amp_server_instance_check(self):
+        """Checks for new AMP Instances every Minute."""
+        self.logger.dev('Checking for any new AMP Instances...')
+        self.AMPHandler.AMP._instanceValidation()
 
     @tasks.loop(seconds=1)
     async def amp_server_console_messages_send(self):

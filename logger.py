@@ -26,7 +26,7 @@ from haggis import logs
 from logging.handlers import TimedRotatingFileHandler
 import pathlib
 
-def init(args):
+def init(args=None):
     logginglevel = logging.INFO
 
     #To Enable debug logging level (ewwwwww.....)
