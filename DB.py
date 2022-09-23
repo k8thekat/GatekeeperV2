@@ -52,7 +52,6 @@ class DBHandler():
         #Always update this value when changing Tables!
         self.DB_Version = DB_Version
 
-
         #This should ONLY BE TRUE on new Database's going forward. 
         #self.DBConfig.SetSetting('DB_Version', 1.6)
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
@@ -793,6 +792,11 @@ class DBUpdate:
             self.DBConfig.DeleteSetting('Server_Info_Display')
             self.DBConfig.DeleteSetting('Auto_Display')
             self.DBConfig.SetSetting('DB_Version', '1.7')
+        
+        # if 1.8 > Version:
+        #     self.logger.info('**ATTENTION** Updating DB to Version 1.8')
+        #     self.server_hide_column()
+        #     self.DBConfig.SetSetting('DB_Version', '1.8')
 
     def user_roles(self):
         try:
@@ -853,6 +857,13 @@ class DBUpdate:
     def whitelist_reply_table(self):
         try:
             SQL = 'create table WhitelistReply (ID integer primary key, Message text)'
+            self.DB._execute(SQL, ())
+        except:
+            return
+    
+    def server_hide_column(self):
+        try:
+            SQL = 'alter table servers add column Hidden integer default 0'
             self.DB._execute(SQL, ())
         except:
             return

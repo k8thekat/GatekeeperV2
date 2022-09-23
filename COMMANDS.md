@@ -31,7 +31,9 @@ ___
 - `/bot restart` - Restarts the Bot.
 - `/bot status` - Replies with **AMP version** and if setup is complete, **DB version** and if setup is complete and **Displays Bot version information**.
     - **TIP**: This information is useful when reporting bugs/errors on Github!
-- `/bot sync (reset,local)` - Sync functionality for Gatekeeperv2
+- `/bot sync (reset, local)` - Sync functionality for Gatekeeperv2
+    - `reset` `(true/false)` if `True` will clear all commands from the Command Tree and then re-sync's the command tree.
+    - `local` `(true/false)` if `True` makes the sync or reset happen to the `guild` the command is used in.
 - `/bot donator (role)` - Sets the Donator Role for Donator Only AMP Server access.
     - **TIP**: This will prevent people without the role from requesting whitelist to Donator only Servers.
 - `/bot embed auto_update (flag)` - Allows the bot to automatically update the `/server display` embed messages.
@@ -86,6 +88,8 @@ ___
 ### <u>Server Commands</u>: 
 - `/server display` - Lists all AMP Servers in Embeds with current information.
     - **TIP**: Those embeds get updated every minute! So use the command as a "Status" style channel and pin them!
+- `/server update` - Updates the current list of AMP servers. *(This is also done every 5 minutes)*
+    - **TIP**: This is used when creating a new Instance and needing to update the bots listings.
 - `/server start (server)` - Starts the specified dedicated server.
     - **TIP**: `server` supports server nicknames that are set via `/server nickname add` command.
 - `/server stop (server)` - Stops the specified AMP Dedicated server.

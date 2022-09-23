@@ -34,13 +34,11 @@ class DB_Server(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
-
-        self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
+        self.logger = logging.getLogger() #Point all print/logging statments here!
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP#Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
-        self.AMP_Instance_Names = self.AMPHandler.AMP_Instances_Names
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
@@ -51,7 +49,7 @@ class DB_Server(commands.Cog):
 
     async def autocomplete_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for AMP Instance Names"""
-        choice_list = self.AMP_Instance_Names
+        choice_list = self.AMPHandler.get_AMP_instance_names()
         return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
 
     async def autocomplete_db_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
@@ -63,23 +61,26 @@ class DB_Server(commands.Cog):
     @utils.role_check()
     async def db_server(self, context:commands.Context):
         if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...')
+            await context.send('Invalid command passed...', ephemeral=True)
 
     @db_server.command(name='cleanup')
     @utils.role_check()
     async def db_server_cleanup(self, context:commands.Context):
-        """This is used to remove un-used DBServer entries and update names of existing servers."""
+        """This is used to remove un-used DBServer entries."""
         self.logger.command(f'{context.author.name} used Database Clean-Up in progress...')
-    
+
+        amp_instance_keys = self.AMPInstances.keys()
         db_server_list = self.DB.GetAllServers()
+        found_server = False
         for server in db_server_list:
-            if server.InstanceID not in self.AMPInstances:
-                db_server = self.DB.GetServer(InstanceID=server.InstanceID)
+            db_server = self.DB.GetServer(Name= server)
+            if db_server != None and db_server.InstanceID not in amp_instance_keys:
                 db_server.delServer()
-            if server.InstanceID in self.AMPInstances:
-                for instance in self.AMPInstances:
-                    if self.AMPInstances[instance].InstanceID == server.InstanceID:
-                        server.FriendlyName = self.AMPInstances[instance].FriendlyName
+                found_server = True
+                await context.send(f'Removing Server: **{db_server.InstanceName}** from the DB', ephemeral= True)
+            
+        if not found_server:
+            await context.send('Hmm, it appears you don\'t have any Servers to cleanup..', ephemeral= True)
 
     @db_server.command(name='test')
     @utils.role_check()
@@ -88,8 +89,8 @@ class DB_Server(commands.Cog):
     @app_commands.autocomplete(replacement_server= autocomplete_servers)
     async def db_server_test(self, context:commands.Context, server:str, replacement_server:str):
         self.logger.command('Test Function for DB_Server')
-        print(server,replacement_server)
-        await context.send('Test Function for DB_Server used...')
+      
+        await context.send('Test Function for DB_Server used...', ephemeral=True)
 
     @db_server.command(name='swap')
     @utils.role_check()

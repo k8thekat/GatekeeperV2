@@ -37,3 +37,10 @@ class AMPCsgo(AMP.AMPInstance):
 class AMPCsgoConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPCsgo):
         super().__init__(AMPInstance)
+
+    
+    def console_filter(self, message):
+        print()
+
+    def console_events(self, message):
+        print()

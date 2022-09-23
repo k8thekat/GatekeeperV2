@@ -24,3 +24,5 @@ discordBot.db
 discordBot copy.db
 dev/Patreon development.txt
 discordBot copy.db
+dev/guildhandler.py
+discordBot v1.5.db
