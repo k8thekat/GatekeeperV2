@@ -21,7 +21,6 @@
 '''
 import sys
 import subprocess
-import re
 import argparse
 
 class Setup:
@@ -30,21 +29,18 @@ class Setup:
         parser = argparse.ArgumentParser(description='AMP Discord Bot')
         parser.add_argument('-token', help='Bypasse tokens validation check.',required= False, action="store_true")
         parser.add_argument('-super', help='This leaves AMP Super Admin role intact, use at your own risk.', required= False, action="store_true")
-        #parser.add_argument('guildID', help='Set to your Discord Server ID for local Sync', nargs='?', default=None)
 
         # All the args below are used for development purpose.
         parser.add_argument('-dev', help='Enable development print statments.',required= False, action="store_true")
         parser.add_argument('-command', help='Enable command usage print statements.', required= False, action="store_true")
         parser.add_argument('-discord', help='Disables Discord Intigration (used for testing)',required= False, action="store_false")
         parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
-        #parser.add_argument('-setup', help='***NOT IN USE*** First time setup of AMP and DB', required= False, action="store_false")
         self.args = parser.parse_args()
-        import logging 
-        self.logger = logging.getLogger()
 
         self.pip_install()
 
         #Custom Logger functionality.
+        import logging 
         import logger
         logger.init(self.args)
         self.logger = logging.getLogger()
@@ -55,7 +51,6 @@ class Setup:
 
         if not self.args.discord:
             self.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
-
 
         #This sets up our SQLite Database!
         import DB
@@ -71,7 +66,6 @@ class Setup:
         self.AMP = self.AMPHandler.AMP
         self.logger.info(f'AMP Connected: {self.AMP.AMPHandler.SuccessfulConnection}')
 
-
     def pip_install(self):
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r','requirements.txt'])
 
@@ -79,6 +73,6 @@ Start = Setup()
 
 #This has to be called outside of the init; its blocking and will cause issues inside of the Setup.init()
 if Start.args.discord:
-    import discordBot 
+    import discordBot
     discordBot.client_run()
     

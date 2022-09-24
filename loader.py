@@ -35,11 +35,9 @@ import AMP
 loop = asyncio.new_event_loop()
 loaded = []
 
-
-
 class Handler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
-    def __init__(self,client:commands.Bot):
+    def __init__(self, client:commands.Bot):
         self._client = client
 
         self._cwd = pathlib.Path.cwd()
@@ -54,33 +52,33 @@ class Handler():
         self.Cog_Modules = {}
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()} ')
-        #await self.cog_auto_loader()
         
     async def module_auto_loader(self):
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
         #Just to make it easier; always load the Generic Module as a base.
         await self._client.load_extension('modules.Generic.generic')
-        self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **modules.Generic.generic**')
+        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **modules.Generic.generic**')
         loaded.append('Generic')
+
         try:
             dir_list = self._cwd.joinpath('modules').iterdir()
+
             for folder in dir_list:
                 file_list = folder.glob('cog_*.py')
+
                 for script in file_list:
                     module_name = script.name[4:-3].capitalize()
-                    #print(script)
                     spec = importlib.util.spec_from_file_location(module_name, script)
                     class_module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(class_module)
-                    #if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
+
                     for DIS in getattr(class_module,f'DisplayImageSources'):
-                        #print(DIS,script)
                         self.Cog_Modules[DIS] = script
                     
-                    self.logger.dev(f'**SUCCESS** {self.name} Loading Cog Module **{module_name}**')
+                    self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **{module_name}**')
                     
         except Exception as e:
-            self.logger.error(f'**ERROR** {self.name} Loading Cog Module ** - File Not Found {e}')
+            self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module ** - File Not Found {e}')
                     
         for instance in self.AMPInstances:
             DisplayImageSource = self.AMPInstances[instance].DisplayImageSource
@@ -89,15 +87,14 @@ class Handler():
                 cog = (".").join(path.as_posix().split("/")[-3:])[:-3]
                 try:
                     await self._client.load_extension(cog)
-                    self.logger.info(f'**SUCCESS** {self.name} Loading Cog Module **{path.stem}**')
+                    self.logger.info(f'**SUCCESS** {self.name} Loading Server Cog Module **{path.stem}**')
 
                 except discord.ext.commands.errors.ExtensionAlreadyLoaded:
                     continue
                 
                 except Exception as e:
-                    self.logger.error(f'**ERROR** {self.name} Loading Cog Module **{path.stem}** - {e}')
-    
-                        
+                    self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module **{path.stem}** - {e}')
+     
         self.logger.info(f'**All Server Modules Loaded**')
 
     async def cog_auto_loader(self):

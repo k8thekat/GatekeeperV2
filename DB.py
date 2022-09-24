@@ -37,7 +37,7 @@ def dump_to_json(data):
     return json.dumps(data)
 
 Handler = None
-DB_Version = 1.6
+DB_Version = 1.7
 
 class DBHandler():
     def __init__(self):
@@ -46,12 +46,14 @@ class DBHandler():
         self.DB = Database(Handler = self)
         self.DBConfig = self.DB.GetConfig()
         self.SuccessfulDatabase = True
+        self.Bot_Version = ''
+        self.bot_sync_required = False
 
         #Always update this value when changing Tables!
         self.DB_Version = DB_Version
 
         #This should ONLY BE TRUE on new Database's going forward. 
-        #self.DBConfig.SetSetting('DB_Version', 1.5)
+        #self.DBConfig.SetSetting('DB_Version', 1.6)
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
             DBUpdate(self.DB, 1.0)
             return
@@ -85,7 +87,6 @@ def getDBHandler() -> DBHandler:
 
 class Database:
     def __init__(self, Handler=None):
-        
         self.DBExists = False
 
         db_file = pathlib.Path("discordBot.db")
@@ -143,6 +144,18 @@ class Database:
                         Role text collate nocase
                         )""")
 
+        cur.execute("""create table ServerEmbed (
+                        ID integer primary key,
+                        Discord_Guild_ID text nocase,
+                        Discord_Channel_ID text nocase,
+                        Discord_Message_ID text nocase
+                        )""")
+
+        cur.execute("""create table WhitelistReply (
+                        ID integer primary key,
+                        Message text
+                        )""")
+
         cur.execute("""create table Log (
                         ID integer primary key,
                         Log text not null,
@@ -156,6 +169,7 @@ class Database:
                         )""")
 
         self._db.commit()
+
         #Any Default Config Settings should go here during INIT.
         #Still keep the ones in Update; just in case existing DBs need updating.
         self._AddConfig('DB_Version', DB_Version)
@@ -168,7 +182,8 @@ class Database:
         self._AddConfig('Auto_Whitelist', False)
         self._AddConfig('Whitelist_Emoji_Pending', None)
         self._AddConfig('Whitelist_Emoji_Done', None)
-        self._AddConfig('Auto_Display', True)
+        self._AddConfig('Embed_Auto_Update', True)
+        self._AddConfig('Bot_Version', )
 
     def _execute(self, SQL, params):
         Retry = 0
@@ -219,14 +234,10 @@ class Database:
         jdata = dump_to_json({"Type": "UserUpdate", "UserID": dbuser.ID, "Field": entry, "Value": args[entry]})
         self._logdata(jdata)
 
-    def AddServer(self, InstanceID:str, InstanceName:str=None, DisplayName:str=None, Description:str=None, IP:str=None, Whitelist:bool=False, Donator:bool=False, Console_Flag:bool=True, Console_Filtered:bool=True, Discord_Console_Channel:str=None, Discord_Chat_Channel:str=None, Discord_Role:str=None, Discord_Chat_Prefix: str= None):
-        #try:
-        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, DisplayName=DisplayName, Description=Description, IP=IP, Whitelist=Whitelist, Donator=Donator, Console_Flag=Console_Flag, Console_Filtered=Console_Filtered, Discord_Console_Channel=Discord_Console_Channel, Discord_Chat_Channel=Discord_Chat_Channel, Discord_Role=Discord_Role, Discord_Chat_Prefix=Discord_Chat_Prefix)
-        #except:
-            #return None
-
+    def AddServer(self, InstanceID:str, InstanceName:str=None): 
+        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName)
+    
     def GetServer(self, InstanceID: str = None, Name: str = None):
-        # print(InstanceID,Name)
         if not InstanceID and not Name:
             return None
 
@@ -251,8 +262,22 @@ class Database:
 
         cur.close()
         return ret
+    
+    def GetAllServers(self):
+        """Gets all Servers current in the DB"""
+        serverlist = []
+        SQLArgs = []
+        
+        (rows, cur) = self._fetchall("Select ID from Servers", tuple(SQLArgs))
+        for entry in rows:
+            Server = DBServer(self, ID=entry["ID"])
+            serverlist.append(Server.InstanceName)
+
+        cur.close()
+        return serverlist
 
     def GetUser(self, value:str):
+        """Finds a User using either DiscordID, DiscordName, MC_InGameName, MC_UUID, or SteamID."""
         #find the user
         (row, cur) = self._fetchone(f"select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?", (value,value,value,value,value))
         if not row:
@@ -290,6 +315,54 @@ class Database:
         cur.close()
         return ret
 
+    def GetAllWhitelistReplies(self):
+        """Gets all Whitelist Replies currently in the DB"""
+        whitelist_replies = []
+        SQLArgs = []
+        
+        (rows, cur) = self._fetchall("Select ID, Message from WhitelistReply order by ID", tuple(SQLArgs))
+        for entry in rows:
+            #reply = {'ID' : entry["ID"], 'Message' : entry["Message"]}
+            #reply = {entry["Message"]}
+            whitelist_replies.append(entry['Message'])
+
+        cur.close()
+        return whitelist_replies
+
+    def AddWhitelistReply(self, Message:str=None):
+        """Adds a Whitelist Reply to the DB"""
+        self._execute("insert into WhitelistReply(Message) values(?)", (Message,))
+        return 
+
+    def DeleteWhitelistReply(self, Message:str=None):
+        """Deletes a Whitelist Reply from the DB"""
+        self._execute("delete from WhitelistReply where Message=?", (Message,))
+        return
+       
+    def AddServerEmbed(self, Discord_Guild_ID:int, Discord_Channel_ID:int, Discord_Message_List:list[int]):
+        """Adds a Server Embed to the DB"""
+        self._execute("delete from ServerEmbed where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
+        for message_id in Discord_Message_List:
+            self._execute("insert into ServerEmbed(Discord_Guild_ID, Discord_Channel_ID, Discord_Message_ID) values(?,?,?)", (Discord_Guild_ID, Discord_Channel_ID, message_id))
+        return
+
+    def DelServerEmebed(self, Discord_Guild_ID:int, Discord_Channel_ID:int):
+        """Delete a Server Embed for a specific channel in the DB"""
+        self._execute("delete from ServerEmbed where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
+        return
+
+    def GetServerEmbeds(self) -> list[dict]:
+        """Gets a Server Embed from the DB
+        `{"GuildID": entry["Discord_Guild_ID"], "ChannelID": entry["Discord_Channel_ID"], "MessageID": entry["Discord_Message_ID"]}`"""
+        SQL = "Select * from ServerEmbed order by ID"
+        SQLArgs = []
+        (rows, cur) = self._fetchall(SQL, tuple(SQLArgs))
+        ret = []
+        for entry in rows:
+            ret.append({"GuildID": entry["Discord_Guild_ID"], "ChannelID": entry["Discord_Channel_ID"], "MessageID": entry["Discord_Message_ID"]})
+        cur.close()
+        return ret
+
     def _AddConfig(self, Name, Value):
         self._execute("Insert into config(Name, Value) values(?, ?)", (Name, Value))
         (ret, cur) = self._fetchone("Select ID from Config where Name=?", (Name,))
@@ -315,7 +388,7 @@ class Database:
         jdata = dump_to_json({"Type": "UpdateConfig", "Name": Name, "Value": Value})
         self._logdata(jdata)
 
-    def GetLog(self, AfterTime: datetime.datetime = None, BeforeTime: datetime.datetime = None, StartingID: int = None, Limit: int = 100):
+    def GetLog(self, AfterTime:datetime.datetime=None, BeforeTime:datetime.datetime=None, StartingID:int=None, Limit:int=100):
         SQL = "Select L.ID, L.Log, L.LogDate from Log L"
         Params = []
         if StartingID or AfterTime or BeforeTime:
@@ -484,7 +557,10 @@ class DBUser:
         self._db._UpdateUser(self, **{name: value})
 
 class DBServer:
-    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Chat_Prefix: str= None, Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True):
+    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, 
+    DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, 
+    Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Chat_Prefix: str= None, Discord_Event_Channel: str = None,
+    Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True, Avatar_url: str = None):
         # set defaults
         Params = locals()
         Params.pop("self")
@@ -553,11 +629,11 @@ class DBServer:
         if (name in ["ID", "Nicknames"]) or (name[0] == "_"):
             return
 
-        elif name in ["Whitelist", "Donator"]:
-            # conver to bool
+        elif name in ["Whitelist", "Donator", "Console_Flag", "Console_Filtered"]:
+            # convert to bool
             value = bool(value)
     
-        elif name in ["Discord_Console_Channel", "Discord_Chat_Channel"]:
+        elif name in ["Discord_Console_Channel", "Discord_Chat_Channel", "Discord_Event_Channel", "Discord_Role"]:
             if value is not None:
                 value = int(value)
 
@@ -589,13 +665,6 @@ class DBServer:
         jdata = dump_to_json({"Type": "DeleteServerNickname", "ServerID": self.ID, "Nickname": Nickname})
         self._db._logdata(jdata)
 
-    def GetAllServers(self):
-        serverlist = []
-        (rows, cur) = self._db._fetchall("Select ID from Servers")
-        for entry in rows:
-            serverlist.append(DBServer(ID=entry["ID"]))
-        return serverlist
-
     def delServer(self):
         self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
         self._db._execute("delete from Servers where ID=?", (self.ID,))
@@ -618,6 +687,8 @@ class DBConfig:
 
     def __setattr__(self, name, value):
         if name in self._ConfigNameToID:
+            if type(value) == bool:
+                value = int(value)
             super().__setattr__(name, value)
             self._db._UpdateConfig(self._ConfigNameToID[name], name, value)
 
@@ -662,9 +733,9 @@ class DBConfig:
         self._db._DeleteConfig(self._ConfigNameToID[name], name)
         super().__delattr__(name)
         self._ConfigNameToID.pop(name)
-
+    
 class DBUpdate:
-    def __init__(self,DB:Database,Version:float=None):
+    def __init__(self, DB:Database, Version:float=None):
         self.logger = logging.getLogger(__name__)
         self.DB = DB
         self.DBConfig = self.DB.GetConfig()
@@ -709,9 +780,23 @@ class DBUpdate:
             self.server_Discord_Chat_prefix()
             self.server_Discord_event_channel()
             self.server_Avatar_url()
-            self.DBConfig.AddSetting('Server_Info_Display', None)
-            self.DBConfig.AddSetting('Auto_Display', True)
+            #self.DBConfig.AddSetting('Server_Info_Display', None)
+            #self.DBConfig.AddSetting('Auto_Display', True)
             self.DBConfig.SetSetting('DB_Version', '1.6')
+        
+        if 1.7 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.7')
+            self.DBConfig.AddSetting('Embed_Auto_Update', True)
+            self.server_embeds_table()
+            self.whitelist_reply_table()
+            self.DBConfig.DeleteSetting('Server_Info_Display')
+            self.DBConfig.DeleteSetting('Auto_Display')
+            self.DBConfig.SetSetting('DB_Version', '1.7')
+        
+        # if 1.8 > Version:
+        #     self.logger.info('**ATTENTION** Updating DB to Version 1.8')
+        #     self.server_hide_column()
+        #     self.DBConfig.SetSetting('DB_Version', '1.8')
 
     def user_roles(self):
         try:
@@ -762,5 +847,23 @@ class DBUpdate:
         except:
             return
 
-
-  
+    def server_embeds_table(self):
+        try:
+            SQL = 'create table ServerEmbed (ID integer primary key, Discord_Guild_ID text nocase, Discord_Channel_ID text nocase, Discord_Message_ID text)'
+            self.DB._execute(SQL, ())
+        except:
+            return
+    
+    def whitelist_reply_table(self):
+        try:
+            SQL = 'create table WhitelistReply (ID integer primary key, Message text)'
+            self.DB._execute(SQL, ())
+        except:
+            return
+    
+    def server_hide_column(self):
+        try:
+            SQL = 'alter table servers add column Hidden integer default 0'
+            self.DB._execute(SQL, ())
+        except:
+            return
