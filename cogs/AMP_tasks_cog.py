@@ -90,31 +90,12 @@ class AMP_Cog(commands.Cog):
                 #If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This is usually a USER sending a message..
                 if message.webhook_id == None:
                     #This fetch's a users prefix from the bot_perms.json file.
-                    author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
+                    #author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
+                    author_prefix = 'MOD'
                     #This calls the generic AMP Function; each server will handle this differently
-                    self.AMPServer.Chat_Message(message,prefix= author_prefix)
-                else:
-                    try:
-                        cur_webhook = await self._client.fetch_webhook(message.webhook_id)
-                    except:
-                        return message
-
-                    #Make sure the webhook ISNT our own; if it is continue.
-                    if cur_webhook.name[:-5] == self.AMPServer.FriendlyName:
-                        continue
-                    #This ignores ANY Webhooks that are sending Event messages.
-                    if cur_webhook.name == f'{self.AMPServer.FriendlyName} Events':
-                        continue
-                    #Check to make sure the server is running
-                    if self.AMPServer.ADS_Running:
-                        self.AMPServer.Chat_Message(message)
+                    self.AMPServer.Chat_Message(message.content, author_prefix= author_prefix, author= message.author.name)
                        
         return message
-
-    # @tasks.loop(minutes=1)
-    # async def amp_server_attribute_update(self):
-    #     self.logger.dev('Updating AMP Server Attributes')
-    #     self.AMPHandler.AMP._updateInstanceAttributes()
 
     @tasks.loop(minutes=5)
     async def amp_server_instance_check(self):
@@ -220,6 +201,16 @@ class AMP_Cog(commands.Cog):
     async def amp_server_console_chat_messages_send(self):
         """This handles IN game chat messages and sends them to discord."""
         if self._client.is_ready():
+            AMPChatChannels = {}
+            for amp_server in self.AMPInstances:
+                AMPServer = self.AMPInstances[amp_server]
+
+                if AMPServer.Discord_Chat_Channel == None:
+                    continue
+                if AMPServer.Discord_Chat_Channel not in AMPChatChannels:
+                    AMPChatChannels[AMPServer.Discord_Chat_Channel] = []
+                AMPChatChannels[AMPServer.Discord_Chat_Channel].append(AMPServer)
+
             Sent_Data = True
             while(Sent_Data):
                 Sent_Data = False
@@ -247,20 +238,22 @@ class AMP_Cog(commands.Cog):
                     self.logger.debug(f'*AMP Chat Message* webhooks {webhook_list}')
                     chat_webhook = None
                     for webhook in webhook_list:
-                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Chat":
-                            self.logger.debug(f'*AMP Chat Message* found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
+                        if webhook.name == f"{AMPServer_Chat.FriendlyName} Chat":
+                            self.logger.debug(f'*AMP Chat Message* found an old webhook, reusing it {AMPServer_Chat.FriendlyName}')
                             chat_webhook = webhook
                             break
 
                     if chat_webhook == None:
-                        self.logger.dev(f'*AMP Chat Message* creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
-                        chat_webhook = await channel.create_webhook(name=f'{self.AMPInstances[amp_server].FriendlyName} Chat')
-
-                    
-                        
+                        self.logger.dev(f'*AMP Chat Message* creating a new webhook for {AMPServer_Chat.FriendlyName}')
+                        chat_webhook = await channel.create_webhook(name=f'{AMPServer_Chat.FriendlyName} Chat')
+    
                     author = None
                     author_db = self.DB.GetUser(message['Source'])
                     author_prefix = None
+
+                    if AMPServer_Chat.Discord_Chat_Prefix != None:
+                        contents = self.uBot.message_formatter(f"\x01[{AMPServer_Chat.Discord_Chat_Prefix}]\x02 : {message['Contents']}")
+                    contents = message['Contents']
 
                     #If we have a DB user, lets try to send customized message.
                     if author_db != None:
@@ -271,37 +264,50 @@ class AMP_Cog(commands.Cog):
                             author_prefix = self.bPerms.permissions[author_db.Role]['prefix']
 
                         #This can return false to land into the else:
-                        if AMPServer_Chat.Chat_Message_formatter(db_user= author_db):
+                        if AMPServer_Chat.get_IGN_Avatar(db_user= author_db):
                             self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration with DB Information')
-                            name, avatar = AMPServer_Chat.Chat_Message_formatter(db_user= author_db)
+                            name, avatar = AMPServer_Chat.get_IGN_Avatar(db_user= author_db)
+                            webhook_username = name
 
                             #Lets attempt to use a Prefix set inside of bot_perms.json
                             if author_prefix:
-                                await chat_webhook.send(contents = f'[{author_prefix}]{message["Contents"]}', username=name, avatar_url=avatar)
-                                continue
+                                if AMPServer_Chat.Discord_Chat_Prefix:
+                                    server_prefix = self.uBot.message_formatter(f'\x01[{AMPServer_Chat.Discord_Chat_Prefix}]\x02')
+                                    message['Contents'] = f'{server_prefix}{author_prefix}: {message["Contents"]}'
+                                else:
+                                    message['Contents'] = f'{author_prefix}: {message["Contents"]}'
+                                await chat_webhook.send(contents= message['Contents'], username= name, avatar_url= avatar)
+                                
                             else:
-                                await chat_webhook.send(message['Contents'], username=name, avatar_url=avatar)
-                                continue
-
+                                await chat_webhook.send(contents, username=name, avatar_url=avatar)
+                                
                         #This will use discord Information after finding them in the DB, for there Display name and Avatar if possible.
-                        if author != None:
+                        elif author != None:
                             self.logger.dev('*AMP Chat Message** sending a message with discord information')
-                            await chat_webhook.send(message['Contents'], username=author.name, avatar_url=author.avatar)
-                            continue
-
+                            webhook_username = author.name
+                            await chat_webhook.send(contents, username=author.name, avatar_url=author.avatar)
+                            
                     #This fires if we cant find a DB user and the Discord User
                     else:
                         #This can return False to land into the pass through else:
-                        if AMPServer_Chat.Chat_Message_formatter(user= message['Source']):
+                        if AMPServer_Chat.get_IGN_Avatar(user= message['Source']):
                             self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration without DB information')
-                            name, avatar = AMPServer_Chat.Chat_Message_formatter(user= message['Source'])
-                            await chat_webhook.send(message['Contents'], username=name, avatar_url=avatar)
-                            continue
+                            name, avatar = AMPServer_Chat.get_IGN_Avatar(user= message['Source'])
+                            webhook_username = name
+                            await chat_webhook.send(contents, username=name, avatar_url=avatar)
+                            
                         #This just sends the message as is with default information from the bot.
                         else:
                             self.logger.dev('**AMP Chat Message** sending message as is without changes.')
-                            await chat_webhook.send(message['Contents'], username= message['Source'], avatar_url=self.AMPInstances[amp_server].Avatar_url)
-                            continue
+                            webhook_username = message['Source']
+                            await chat_webhook.send(contents, username= message['Source'], avatar_url=self.AMPInstances[amp_server].Avatar_url)
+                            
+                    if str(chat_webhook.channel.id) in AMPChatChannels:
+                        for Server in AMPChatChannels[str(chat_webhook.channel.id)]:
+                            if author_prefix:
+                                Server.Chat_Message(message= Server.Chat_Message_Formatter(message['Contents']), author_prefix= author_prefix, author= webhook_username , server_prefix= Server.Discord_Chat_Prefix)
+                                continue
+                            Server.Chat_Message(message= Server.Chat_Message_Formatter(message['Contents']), author= webhook_username , server_prefix= Server.Discord_Chat_Prefix)
 
 async def setup(client:commands.Bot):
     await client.add_cog(AMP_Cog(client))

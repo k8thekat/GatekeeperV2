@@ -931,11 +931,15 @@ class AMPInstance:
         """Base Funcion for AMP.check_Whitelist `default return is None`"""
         return None
 
-    def Chat_Message(self, message, prefix:str=None):
+    def Chat_Message(self, message:str, author:str=None, prefix:str=None):
         """Base Function for Discord Chat Messages to AMP ADS"""
         return
 
-    def Chat_Message_formatter(self, db_user=None, user:str=None):
+    def Chat_Message_Formatter(self, message:str):
+        """Base Function for Server Chat Message Formatter"""
+        return message
+
+    def get_IGN_Avatar(self, db_user=None, user:str=None):
         """Base Function for customized discord messages"""
         return False
 
@@ -1046,6 +1050,10 @@ class AMPConsole:
                 self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} DisplayImageSource: {self.AMPInstance.DisplayImageSource} Console Entry: {entry}')
                 self.logger.dev(f'Console Filtered: {self.AMPInstance.Console_Filtered} Chat Prefix: {self.DB_Server.Discord_Chat_Prefix}')
                 self.logger.dev(f"Console Channel: {self.AMPInstance.Discord_Console_Channel} Chat Channel: {self.AMPInstance.Discord_Chat_Channel} Event Channel: {self.AMPInstance.Discord_Event_Channel}")
+                #This will add the Servers Discord_Chat_Prefix to the beginning of any of the messages.
+                #Its done down here to prevent breaking of any exisiting filtering.
+                if self.DB_Server.Discord_Chat_Prefix != None:
+                    entry['Prefix'] = self.DB_Server.Discord_Chat_Prefix
 
                 #This should handle server events(such as join/leave/disconnects)
                 if self.console_events(entry):
@@ -1060,11 +1068,6 @@ class AMPConsole:
                 if self.console_filter(entry):
                     self.logger.dev(f'Filtered Message {entry}')
                     continue
-                
-                #This will add the Servers Discord_Chat_Prefix to the beginning of any of the messages.
-                #Its done down here to prevent breaking of any exisiting filtering.
-                if self.DB_Server.Discord_Chat_Prefix != None:
-                    entry['Contents'] = self.DB_Server.Discord_Chat_Prefix + ":" + entry['Contents']
 
                 if len(entry['Contents']) > 1500:
                     index_hunt = entry['Contents'].find(';')
@@ -1116,16 +1119,12 @@ class AMPConsole:
 
     def console_chat(self, message):
         """This will handle all player chat messages from AMP to Discord"""
-        #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message'}
+        #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message','Prefix': 'Discord_Chat_Prefix}
         #Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
       
             #Removed the odd character for color idicators on text
             message['Contents'] = message['Contents'].replace('�','')
-
-            #Appends the Servers Discord Chat Prefix if it exists.
-            if self.DB_Server.Discord_Chat_Prefix != None:
-                    message['Contents'] = self.DB_Server.Discord_Chat_Prefix + ":" + message['Contents']
 
             self.console_chat_message_lock.acquire()
             self.console_chat_messages.append(message)

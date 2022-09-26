@@ -184,7 +184,7 @@ class AMPMinecraft(AMP.AMPInstance):
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
     
-    def Chat_Message(self, message:discord.Message, prefix:str=None):
+    def Chat_Message(self, message:str, author_prefix:str=None, author:str=None, server_prefix:str=None):
         """Sends a customized message via tellraw through the console."""
         self.Login()
         # Colors:
@@ -194,12 +194,19 @@ class AMPMinecraft(AMP.AMPInstance):
         # Writing font is fairly simple. Use the basic /tellraw command, and write {"(insert font)":true}. The fonts you can use are:italic, underlined, and bold.
         # How To Use Both:
         # To use both font and color, write a comma between the variables. Ex: /tellraw {"color":"green","bold":"true"}
-        if prefix != None:
-            self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"blue"}},{{"text":" ({prefix}) ","color":"gold"}},{{"text":"<{message.author.name}>: {message.content}","color":"white"}}]')
-        else:
-            self.ConsoleMessage(f'tellraw @a [{{"text":"[Discord]","color":"blue"}},{{"text":" <{message.author.name}>: {message.content}","color":"white"}}]')
+        content = 'tellraw @a [{"text":"[Discord]","color":"blue"},'
+        if server_prefix != None:
+            content += f'{{"text":"({server_prefix})","color":"gold"}},'
+        if author_prefix != None:
+            content += f'{{"text":"({author_prefix})","color":"yellow"}},'
+        content += f'{{"text":"<{author}>: {message}","color":"white"}}]'
+        self.ConsoleMessage(content)
 
-    def Chat_Message_formatter(self, db_user:DBUser=None, user:str=None):
+    def Chat_Message_Formatter(self, message:str):
+        """Formats the message for Discord \n"""
+        return message
+
+    def get_IGN_Avatar(self, db_user:DBUser=None, user:str=None):
         """Handles returning customized discord message data for Minecraft Servers only."""
 
         if db_user != None and db_user.MC_IngameName != None and db_user.MC_UUID != None:

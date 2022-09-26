@@ -115,9 +115,9 @@ class Whitelist(commands.Cog):
                 await message.add_reaction(emoji)
        
         if self.DBConfig.GetSetting('Whitelist_Channel') is not None and message.author != self._client.user:
-            context = await self._client.get_context(message)
-            self.logger.dev(f'On Message Event for {self.name}')
             if message.channel.id == int(self.DBConfig.GetSetting('Whitelist_Channel')):  # This is AMP Specific; for handling whitelist requests to any server.
+                self.logger.dev(f'On Message Event for {self.name}')
+                context = await self._client.get_context(message)
                 await self.on_message_whitelist(message, context)
      
     @commands.Cog.listener('on_member_remove')

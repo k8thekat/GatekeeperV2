@@ -310,6 +310,22 @@ class botUtils():
             self.AMPInstances = self.AMPHandler.AMP_Instances
             self.AMPServer_Avatar_urls = []
 
+        def message_formatter(self, message:str):
+            """Formats the message for Discord \n
+            `Bold = \\x01, \\x02` \n
+            `Italic = \\x03, \\x04` \n
+            `Underline = \\x05, \\x06` \n"""
+            #Bold
+            message = message.replace('\x01', '**')
+            message = message.replace('\x02', '**')
+            #Italic
+            message = message.replace('\x03', '*')
+            message = message.replace('\x04', '*')
+            #Underline
+            message = message.replace('\x05', '__')
+            message = message.replace('\x06', '__')
+            return message
+
         async def validate_avatar(self, db_server:AMP.AMPInstance):
             """This checks the DB Server objects Avatar_url and returns the proper object type. \n
             Must be either `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
@@ -446,33 +462,33 @@ class botUtils():
             #Without a guild_ID its harder to parse members.
             if guild_id == None:
                 cur_member = self._client.get_user(int(parameter))
-                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
+                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             guild = self._client.get_guild(guild_id)
             #Discord ID catch
             if parameter.isnumeric():
                 cur_member = guild.get_member(int(parameter))
-                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
+                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #Profile Name Catch
             if parameter.find('#') != -1:
                 cur_member = guild.get_member_named(parameter)
-                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
+                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #Using @ at user and stripping
             if parameter.startswith('<@!') and parameter.endswith('>'):
                 user_discordid = parameter[3:-1]
                 cur_member = guild.get_member(int(user_discordid))
-                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
+                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #DiscordName/IGN Catch(DB Get user can look this up)
             cur_member = guild.get_member_named(parameter)
             if cur_member != None:
-                self.logger.debug(f'Found the Discord Member {cur_member.display_name}')
+                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
                 return cur_member
 
             #Display Name Lookup
@@ -484,7 +500,7 @@ class botUtils():
                             self.logger.error(f'**ERROR** Found multiple Discord Members: {parameter}, Returning None')
                             return None
 
-                        self.logger.debug(f'Found the Discord Member {member.display_name}')
+                        self.logger.dev(f'Found the Discord Member {member.display_name}')
                         cur_member = member
                 return cur_member
                 
@@ -503,7 +519,7 @@ class botUtils():
             #Lets check the DB First, this checks Nicknames and Display names.
             cur_server = self.DB.GetServer(Name = parameter)
             if cur_server != None:
-                self.logger.debug(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
+                self.logger.dev(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
                 #This converts the DB_Server object into our AMPInstance Object
                 cur_server = self.AMPInstances[cur_server.InstanceID]
                 return cur_server
@@ -511,7 +527,7 @@ class botUtils():
             #Since the DB came up empty; lets continue and try all AMPInstances Friendly Names!
             for server in self.AMPInstances:
                 var = self.AMPInstances[server].FriendlyName.lower().find(parameter.lower())
-                self.logger.debug(f'{var}{self.AMPInstances[server].FriendlyName}')
+                self.logger.dev(f'{var}{self.AMPInstances[server].FriendlyName}')
 
                 if var != -1: #When its FOUND an entry
                     if cur_server != None:
@@ -519,7 +535,7 @@ class botUtils():
                         #await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
                         return None
 
-                    self.logger.debug(f'Found the AMP Server {self.AMPInstances[server].FriendlyName}')
+                    self.logger.dev(f'Found the AMP Server {self.AMPInstances[server].FriendlyName}')
                     cur_server = self.AMPInstances[server]
 
             return cur_server #AMP instance object 

@@ -47,14 +47,18 @@ class AMPTemplate(AMP.AMPInstance):
             self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return True
 
-    def Chat_Message(self, message:discord.Message, prefix:str=None):
+    def Chat_Message(self, message:str, author:str=None, prefix:str=None):
         """Sends a message in a way to mimic that of in-game Chat Messages."""
         #This is where you place your code for sending messages in a format/way that mimics that of in game chat messages.
         #Some servers have build in commands via console commands; others may require more work.
         #Always make sure to login if it requires an AMP API call.
         self.Login()
-       
-    def Chat_Message_formatter(self, db_user:DBUser=None, user:str=None):
+    
+    def Chat_Message_Formatter(self, message:str):
+        """Any Special formatting for Messages to be sent to the Servers Chat"""
+        return message
+
+    def get_IGN_Avatar(self, db_user:DBUser=None, user:str=None):
         """Handles converting discord information into something unique for the server if needed."""
         #Anything like formatting or replacing a users display name to be attached to the Chat_message().
         return False
