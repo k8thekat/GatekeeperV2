@@ -514,7 +514,8 @@ class botUtils():
             #This is to handle Instance Names or Display Names with spaces, also removes quotes.
             if type(parameter) == tuple:
                 parameter = ' '.join(parameter)
-            parameter = parameter.replace(' ','_').replace("'",'').replace('"','')
+            #parameter = parameter.replace(' ','_').replace("'",'').replace('"','')
+            parameter = parameter.replace("'",'').replace('"','')
 
             #Lets check the DB First, this checks Nicknames and Display names.
             cur_server = self.DB.GetServer(Name = parameter)
