@@ -64,9 +64,7 @@ class AMP_Cog(commands.Cog):
         context = await self._client.get_context(message)
         if message.content.startswith(self._client.command_prefix):
             return message
-        if message.author != self._client.user:
-            self.logger.dev(f'On Message Event for {self.name}')
-
+            
         for amp_server in self.AMPInstances:
             self.AMPServer = self.AMPInstances[amp_server]
             if not self.AMPServer.Running:
@@ -74,7 +72,7 @@ class AMP_Cog(commands.Cog):
             self.AMPServer._ADScheck()
 
             #Check and see if our Discord Console Channel matches the current message.id
-            if self.AMPServer.Discord_Console_Channel == str(message.channel.id):
+            if self.AMPServer.Discord_Console_Channel == message.channel.id:
                 if message.author == self._client.user:
                     return
                 #Makes sure we are not responding to a webhook message (ourselves/bots/etc)
@@ -85,7 +83,7 @@ class AMP_Cog(commands.Cog):
                         return
 
             #Check and see if our Discord Chat channel matches the message.id
-            if self.AMPServer.Discord_Chat_Channel == str(message.channel.id):
+            if self.AMPServer.Discord_Chat_Channel == message.channel.id:
                 
                 #If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This is usually a USER sending a message..
                 if message.webhook_id == None:
@@ -117,7 +115,7 @@ class AMP_Cog(commands.Cog):
                     if AMPServer.Discord_Console_Channel == None:
                         continue
 
-                    channel = self._client.get_channel(int(AMPServer.Discord_Console_Channel))
+                    channel = self._client.get_channel(AMPServer.Discord_Console_Channel)
                     if channel == None:
                         continue
                     
@@ -134,21 +132,25 @@ class AMP_Cog(commands.Cog):
                     self.logger.debug(f'*AMP Console Message* webhooks {webhook_list}')
                     console_webhook = None
                     for webhook in webhook_list:
-                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Console":
-                            self.logger.debug(f'*AMP Console Message* found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
-                            console_webhook = webhook
+                        if webhook.name == f"{AMPServer.FriendlyName} Console":
+                            self.logger.debug(f'*AMP Console Message* found an old webhook, validating {AMPServer.FriendlyName} webhook')
+                            if webhook.channel_id == AMPServer.Discord_Console_Channel:
+                                console_webhook = webhook
+                            else:
+                                await webhook.edit(channel=AMPServer.Discord_Console_Channel)
+                                console_webhook = webhook
                             break
 
                     if console_webhook == None:
-                        self.logger.dev(f'*AMP Console Message* creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
-                        console_webhook = await channel.create_webhook(name=f'{self.AMPInstances[amp_server].FriendlyName} Console')
+                        self.logger.dev(f'*AMP Console Message* creating a new webhook for {AMPServer.FriendlyName}')
+                        console_webhook = await channel.create_webhook(name=f'{AMPServer.FriendlyName} Console')
 
                     if AMPServer.DisplayName is not None:  # Lets check for a Display name and use that instead.
                         self.logger.dev('*AMP Console Message* sending a message with displayname')
-                        await console_webhook.send(message, username=self.AMPInstances[amp_server].DisplayName, avatar_url=self.AMPInstances[amp_server].Avatar_url)
+                        await console_webhook.send(message, username= AMPServer.DisplayName, avatar_url= AMPServer.Avatar_url)
                     else:
                         self.logger.dev('*AMP Console Message* sending a message with friendlyname')
-                        await console_webhook.send(message, username=self.AMPInstances[amp_server].FriendlyName, avatar_url=self.AMPInstances[amp_server].Avatar_url)
+                        await console_webhook.send(message, username= AMPServer.FriendlyName, avatar_url= AMPServer.Avatar_url)
 
     @tasks.loop(seconds=1)
     async def amp_server_console_event_messages_send(self):
@@ -164,7 +166,7 @@ class AMP_Cog(commands.Cog):
                     if AMPServer_Event.Discord_Event_Channel == None:
                         continue
 
-                    channel = self._client.get_channel(int(AMPServer_Event.Discord_Event_Channel))
+                    channel = self._client.get_channel(AMPServer_Event.Discord_Event_Channel)
                     if channel == None:
                         continue
                     
@@ -181,21 +183,25 @@ class AMP_Cog(commands.Cog):
                     self.logger.debug(f'*AMP Console Message* webhooks {webhook_list}')
                     console_webhook = None
                     for webhook in webhook_list:
-                        if webhook.name == f"{self.AMPInstances[amp_server].FriendlyName} Events":
-                            self.logger.debug(f'*AMP Console Message* found an old webhook, reusing it {self.AMPInstances[amp_server].FriendlyName}')
-                            console_webhook = webhook
+                        if webhook.name == f"{AMPServer_Event.FriendlyName} Events":
+                            self.logger.debug(f'*AMP Console Message* found an old webhook, reusing it {AMPServer_Event.FriendlyName}')
+                            if webhook.channel_id == AMPServer_Event.Discord_Event_Channel:
+                                console_webhook = webhook
+                            else:
+                                await webhook.edit(channel= AMPServer_Event.Discord_Event_Channel)
+                                console_webhook = webhook
                             break
 
                     if console_webhook == None:
-                        self.logger.dev(f'*AMP Console Message* creating a new webhook for {self.AMPInstances[amp_server].FriendlyName}')
-                        console_webhook = await channel.create_webhook(name=f'{self.AMPInstances[amp_server].FriendlyName} Events')
+                        self.logger.dev(f'*AMP Console Message* creating a new webhook for {AMPServer_Event.FriendlyName}')
+                        console_webhook = await channel.create_webhook(name=f'{AMPServer_Event.FriendlyName} Events')
 
                     if AMPServer_Event .DisplayName is not None:  # Lets check for a Display name and use that instead.
                         self.logger.dev('*AMP Console Message* sending a message with displayname')
-                        await console_webhook.send(message, username=self.AMPInstances[amp_server].DisplayName, avatar_url=self.AMPInstances[amp_server].Avatar_url)
+                        await console_webhook.send(message, username= AMPServer_Event.DisplayName, avatar_url= AMPServer_Event.Avatar_url)
                     else:
                         self.logger.dev('*AMP Console Message* sending a message with friendlyname')
-                        await console_webhook.send(message, username=self.AMPInstances[amp_server].FriendlyName, avatar_url=self.AMPInstances[amp_server].Avatar_url)
+                        await console_webhook.send(message, username= AMPServer_Event.FriendlyName, avatar_url= AMPServer_Event.Avatar_url)
 
     @tasks.loop(seconds=1)
     async def amp_server_console_chat_messages_send(self):
@@ -221,7 +227,7 @@ class AMP_Cog(commands.Cog):
                     if AMPServer_Chat.Discord_Chat_Channel == None:
                         continue
 
-                    channel = self._client.get_channel(int(AMPServer_Chat.Discord_Chat_Channel))
+                    channel = self._client.get_channel(AMPServer_Chat.Discord_Chat_Channel)
                     if channel == None:
                         continue
                     
@@ -240,7 +246,11 @@ class AMP_Cog(commands.Cog):
                     for webhook in webhook_list:
                         if webhook.name == f"{AMPServer_Chat.FriendlyName} Chat":
                             self.logger.debug(f'*AMP Chat Message* found an old webhook, reusing it {AMPServer_Chat.FriendlyName}')
-                            chat_webhook = webhook
+                            if webhook.channel_id == AMPServer_Chat.Discord_Event_Channel:
+                                chat_webhook = webhook
+                            else:
+                                await webhook.edit(channel= AMPServer_Chat.Discord_Event_Channel)
+                                chat_webhook = webhook
                             break
 
                     if chat_webhook == None:
@@ -258,7 +268,7 @@ class AMP_Cog(commands.Cog):
                     #If we have a DB user, lets try to send customized message.
                     if author_db != None:
                         #This is for if we exist in the DB, but don't have proper DB information (MC IGN or similar)
-                        author = self._client.get_user(int(author_db.DiscordID)) 
+                        author = self._client.get_user(author_db.DiscordID) 
 
                         if author_db.Role in self.bPerms.permissions:
                             author_prefix = self.bPerms.permissions[author_db.Role]['prefix']
@@ -301,9 +311,13 @@ class AMP_Cog(commands.Cog):
                             self.logger.dev('**AMP Chat Message** sending message as is without changes.')
                             webhook_username = message['Source']
                             await chat_webhook.send(contents, username= message['Source'], avatar_url=self.AMPInstances[amp_server].Avatar_url)
-                            
-                    if str(chat_webhook.channel.id) in AMPChatChannels:
-                        for Server in AMPChatChannels[str(chat_webhook.channel.id)]:
+
+                    #This is the Chat Relay to seperate AMP Servers.
+                    if chat_webhook.channel.id in AMPChatChannels:
+                        for Server in AMPChatChannels[chat_webhook.channel.id]:
+                            #Dont re-send the Console Chat message we sent to Discord to the same server.
+                            if AMPServer_Chat.Discord_Chat_Channel == chat_webhook.channel.id:
+                                continue
                             if author_prefix:
                                 Server.Chat_Message(message= Server.Chat_Message_Formatter(message['Contents']), author_prefix= author_prefix, author= webhook_username , server_prefix= Server.Discord_Chat_Prefix)
                                 continue

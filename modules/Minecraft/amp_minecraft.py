@@ -242,7 +242,18 @@ class AMPMinecraftConsole(AMP.AMPConsole):
             if message['Type'] == 'Chat':
                 return False
             #This list will be used to capture output that I want. These are best for partial finds.
-            message_finder_list = ['Unkown command.', 'players online:','Staff','?','Help', 'left the game', 'joined the game', 'lost connection:','whitelisted players:']
+            message_finder_list = [
+                'Unkown command.', 
+                'players online:',
+                'Staff',
+                '?',
+                'Help', 
+                'left the game', 
+                'joined the game', 
+                'lost connection:',
+                'whitelisted players:',
+                'was slain by',
+                'game mode to']
             for entry in message_finder_list:
                 if message['Contents'].find(entry) != -1:
                     #print(f"Found {entry} in {message['Contents']}")
@@ -258,10 +269,12 @@ class AMPMinecraftConsole(AMP.AMPConsole):
             if message['Contents'].startswith('Removed') and message['Contents'].endswith('from the whitelist'):
                 return False
             else:
+                self.logger.dev(f'Filtered Message {message}')
                 return True
     
     def console_events(self, message):
         """ALWAYS RETURN FALSE! ALL events go to `console_event_messages`"""
+        event_list = ['tried to swim','has completed the challenge','has made the advancement']
         #Join Event
         if message['Contents'].endswith('has joined the game'):
             self.console_event_message_lock.acquire()
@@ -276,11 +289,13 @@ class AMPMinecraftConsole(AMP.AMPConsole):
             self.console_event_message_lock.release()
             return False
         
-        #Achievements
-        if message['Contents'].find('has made the advancement'):
-            self.console_event_message_lock.acquire()
-            self.console_event_messages.append(message['Contents'])
-            self.console_event_message_lock.release()
-            return False
+        #Event List Interations
+        for event in event_list:
+            if message['Contents'].find(event):
+                self.console_event_message_lock.acquire()
+                self.console_event_messages.append(message['Contents'])
+                self.console_event_message_lock.release()
+                return False
+
         else:
             return False

@@ -310,6 +310,10 @@ class botUtils():
             self.AMPInstances = self.AMPHandler.AMP_Instances
             self.AMPServer_Avatar_urls = []
 
+        def str_to_bool(self, parameter:str):
+            """Bool Converter"""
+            return parameter.lower() == 'true'
+            
         def message_formatter(self, message:str):
             """Formats the message for Discord \n
             `Bold = \\x01, \\x02` \n
@@ -429,16 +433,16 @@ class botUtils():
             returns `<channel>` object if True, else returns `None`
             **Note** Use context.guild.id"""
             self.logger.dev('Channel Parse Called...')
-
+           
             if guild_id == None:
-                channel = self._client.get_channel(int(parameter))
+                channel = self._client.get_channel(parameter)
                 self.logger.debug(f'Found the Discord Channel {channel}')
                 return channel
 
             guild = self._client.get_guild(guild_id)
             channel_list = guild.channels
-            if parameter.isnumeric():
-                channel = guild.get_channel(int(parameter))
+            if type(parameter) == int:
+                channel = guild.get_channel(parameter)
                 self.logger.debug(f'Found the Discord Channel {channel}')
                 return channel
             else:
@@ -578,14 +582,13 @@ class botUtils():
             embed.add_field(name='Filtered Console:', value= str(bool(db_server.Whitelist)), inline=True)
 
             if db_server.Discord_Console_Channel != None:
-                discord_channel = self.channelparse(db_server.Discord_Console_Channel,context,context.guild.id)
+                discord_channel = self.channelparse(db_server.Discord_Console_Channel, context, context.guild.id)
                 embed.add_field(name='Console Channel:', value= discord_channel.name, inline=False)
             else:
                 embed.add_field(name='Console Channel:', value= db_server.Discord_Console_Channel, inline=False)
 
-
             if db_server.Discord_Chat_Channel != None:
-                discord_channel = self.channelparse(db_server.Discord_Chat_Channel,context,context.guild.id)
+                discord_channel = self.channelparse(db_server.Discord_Chat_Channel, context, context.guild.id)
                 embed.add_field(name='Chat Channel:', value= discord_channel.name, inline=True)
             else:
                 embed.add_field(name='Chat Channel:', value= db_server.Discord_Chat_Channel, inline=True)
@@ -594,7 +597,7 @@ class botUtils():
                 discord_channel = self.channelparse(db_server.Discord_Event_Channel, context, context.guild.id)
                 embed.add_field(name='Event Channel:', value= discord_channel.name, inline=True)
             else:
-                embed.add_field(name='Event Channel:', value= db_server.Discord_Chat_Channel, inline=True)
+                embed.add_field(name='Event Channel:', value= db_server.Discord_Event_Channel, inline=True)
 
             if len(db_server.Nicknames) != 0:
                 embed.add_field(name='Nicknames:', value=(", ").join(db_server.Nicknames),inline=False)
@@ -655,8 +658,7 @@ class botUtils():
         async def server_status_embed(self, context:commands.Context, server:AMP.AMPInstance, TPS=None, Users=None, CPU=None, Memory=None, Uptime=None, Users_Online=None) -> discord.Embed:
             """This is the Server Status Embed Message"""
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-            if server.Running:
-                server._ADScheck()
+          
             if server.ADS_Running:
                 server_status = 'Online'
             else:

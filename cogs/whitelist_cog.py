@@ -50,11 +50,21 @@ class Whitelist(commands.Cog):
         self.dBot = utils.discordBot(client)
         self.Parser = Parser()
         self.bPerms = utils.botPerms()
+
+        self.Whitelist_Channel = None
         
         self.failed_whitelist = []
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
     
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
+
+    def __getattribute__(self, __name: str):
+        if __name == 'Whitelist_Channel':
+            db_get = self.DBConfig.GetSetting('Whitelist_Channel')
+            if db_get != None:
+                db_get = int(db_get)
+            return db_get
+        return super().__getattribute__(__name)
 
     def whitelist_reply_handler(self,message:str, context:commands.Context, server:AMP.AMPInstance=None) -> str:
         """Handles the reply message for the whitelist event\n
@@ -96,7 +106,7 @@ class Whitelist(commands.Cog):
         """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
         if message_before.author != self._client.user:
             #This handles edited whitelist requests!
-            if message_before in self.failed_whitelist and message_before.channel.id == self.DBConfig.GetSetting('Whitelist_Channel'):
+            if message_before in self.failed_whitelist and message_before.channel.id == self.Whitelist_Channel:
                 context = await self._client.get_context(message_before)
                 await self.on_message_whitelist(message_after,context)
 
@@ -114,8 +124,8 @@ class Whitelist(commands.Cog):
                 emoji = self._client.get_emoji(int(self.DBConfig.GetSetting('Whitelist_Emoji_Done')))
                 await message.add_reaction(emoji)
        
-        if self.DBConfig.GetSetting('Whitelist_Channel') is not None and message.author != self._client.user:
-            if message.channel.id == int(self.DBConfig.GetSetting('Whitelist_Channel')):  # This is AMP Specific; for handling whitelist requests to any server.
+        if self.Whitelist_Channel is not None and message.author != self._client.user:
+            if message.channel.id == self.Whitelist_Channel:  # This is AMP Specific; for handling whitelist requests to any server.
                 self.logger.dev(f'On Message Event for {self.name}')
                 context = await self._client.get_context(message)
                 await self.on_message_whitelist(message, context)
@@ -325,9 +335,9 @@ class Whitelist(commands.Cog):
             if db_server.Donator == True:
                 author_roles = []
                 for role in message.author.roles:
-                    author_roles.append(str(role.id))
+                    author_roles.append(role.id)
                     if self.DBConfig.GetSetting('Donator_Role')!= None:
-                        if self.DBConfig.GetSetting('Donator_role_id') not in author_roles:
+                        if int(self.DBConfig.GetSetting('Donator_role_id')) not in author_roles:
                             return await message.reply(f'*Waves* Hey **{server_name}** is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')#, ephemeral=True)
                     else:
                         return await message.reply(f'Well it appears that the Staff have not set a Donator Role yet, Please inform Staff of this error.')#, ephemeral=True)

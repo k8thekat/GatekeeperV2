@@ -215,7 +215,7 @@ class DB_User(commands.Cog):
         self.DBConfig = self.DB.GetConfig()
         discord_role = self.uBot.roleparse(role,context,context.guild.id)
         if discord_role != None:
-            self.DBConfig.SetSetting('Donator_role_id',str(discord_role.id))
+            self.DBConfig.SetSetting('Donator_role_id',discord_role.id)
             await context.send(f'You are all set! Donator Role is now set to {discord_role.name}', ephemeral=True)
         else:
             await context.send(f'Hey! I was unable to find the role {role}, Please try again.', ephemeral=True)

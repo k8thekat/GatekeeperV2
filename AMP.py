@@ -184,8 +184,12 @@ class AMPInstance:
         self.Index = Index
         self.serverdata = serverdata
         self.serverlist = {}
+
         self.InstanceID = instanceID
+        self.FriendlyName = None
+
         self.ADS_Running = False #This is for the ADS (Dedicated Server) not the Instance!
+
         self.Last_Update_Time = 0
         if instanceID == 0:
             self.Last_Update_Time_Mutex = threading.Lock()
@@ -223,17 +227,16 @@ class AMPInstance:
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
 
-            #This cleans up the friendly name making it easier to use.
-            self.FriendlyName = self.FriendlyName.replace(' ', '_')
-            
-            #This gets me the DB_Server object if it's not there; it adds the server.
-            self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
-            #Possible DB_Server Attributes = InstanceID, InstanceName, DisplayName, Description, IP, Whitelist, Donator, Console_Flag, Console_Filtered, Discord_Console_Channel, Discord_Chat_Channel, Discord_Role
-            if self.DB_Server == None:
-                self.DB_Server = self.DB.AddServer(InstanceID = self.InstanceID, InstanceName = self.FriendlyName)
-                self.logger.info(f'*SUCCESS** Added {self.FriendlyName} to the Database.')
-            else:
-                self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
+            if self.FriendlyName != None:
+                #This gets me the DB_Server object if it's not there; it adds the server.
+                self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
+                #Possible DB_Server Attributes = InstanceID, InstanceName, DisplayName, Description, IP, Whitelist, Donator, Console_Flag, Console_Filtered, Discord_Console_Channel, Discord_Chat_Channel, Discord_Role
+                if self.DB_Server == None:
+                    self.logger.dev(f'Adding Name: {self.FriendlyName} to the Database, Instance ID: {self.InstanceID}')
+                    self.DB_Server = self.DB.AddServer(InstanceID = self.InstanceID, InstanceName = self.FriendlyName)
+                    self.logger.info(f'*SUCCESS** Added {self.FriendlyName} to the Database.')
+                else:
+                    self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
 
         
             self.logger.dev(f"Name: {self.FriendlyName} // InstanceID: {self.InstanceID} // Module: {self.Module} // Port: {self.Port} // DisplayImageSource: {self.DisplayImageSource}")
@@ -1048,7 +1051,7 @@ class AMPConsole:
                     continue
                 
                 self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} DisplayImageSource: {self.AMPInstance.DisplayImageSource} Console Entry: {entry}')
-                self.logger.dev(f'Console Filtered: {self.AMPInstance.Console_Filtered} Chat Prefix: {self.DB_Server.Discord_Chat_Prefix}')
+                self.logger.dev(f'Console Filtered: {bool(self.AMPInstance.Console_Filtered)} Chat Prefix: {self.DB_Server.Discord_Chat_Prefix}')
                 self.logger.dev(f"Console Channel: {self.AMPInstance.Discord_Console_Channel} Chat Channel: {self.AMPInstance.Discord_Chat_Channel} Event Channel: {self.AMPInstance.Discord_Event_Channel}")
                 #This will add the Servers Discord_Chat_Prefix to the beginning of any of the messages.
                 #Its done down here to prevent breaking of any exisiting filtering.
@@ -1066,7 +1069,6 @@ class AMPConsole:
                 
                 #This will filter any messages such as errors or mods loading, etc..
                 if self.console_filter(entry):
-                    self.logger.dev(f'Filtered Message {entry}')
                     continue
 
                 if len(entry['Contents']) > 1500:
@@ -1113,6 +1115,7 @@ class AMPConsole:
     def console_filter(self, message):
         """Controls what will be sent to the Discord Console Channel via AMP Console."""
         if not self.AMPInstance.Console_Filtered:
+            self.logger.dev(f'Filtered Message {message}')
             return False
         else:
             return True

@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-4.2.0'
+Version = 'beta-4.2.1'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -281,7 +281,7 @@ async def bot_status(context:commands.Context):
 @utils.role_check()
 @app_commands.autocomplete(reset= utils.autocomplete_bool)
 @app_commands.autocomplete(local= utils.autocomplete_bool)
-async def bot_sync(context:commands.Context, reset:str='false', local:str='true'):
+async def bot_sync(context:commands.Context, local:str='true', reset:str='false'):
     """Syncs Bot Commands to the current guild this command was used in."""
     client.logger.command(f'{context.author.name} used Bot Sync Function...')
     await context.defer()

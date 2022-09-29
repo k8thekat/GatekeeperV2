@@ -68,7 +68,7 @@ class Server(commands.Cog):
         choice_list = ['Announcement','Broadcast','Maintenance','Info','Warning']
         return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
-    async def _serverCheck(self, context:commands.Context, server) -> AMP.AMPInstance:
+    async def _serverCheck(self, context:commands.Context, server, online_only:bool=True) -> AMP.AMPInstance:
         """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
         amp_server = self.uBot.serverparse(server,context,context.guild.id)
         
@@ -76,9 +76,12 @@ class Server(commands.Cog):
             await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
             return False
 
+        if online_only == False:
+            return amp_server
+
         if amp_server.Running and amp_server._ADScheck():
             return amp_server
-            
+        
         await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral=True)
         return False
 
@@ -96,9 +99,9 @@ class Server(commands.Cog):
                 return
             message_list = []
             for embed in server_embeds:
-                discord_guild = self._client.get_guild(int(embed['GuildID']))
-                discord_channel = discord_guild.get_channel(int(embed['ChannelID']))
-                discord_message = discord_channel.get_partial_message(int(embed['MessageID']))
+                discord_guild = self._client.get_guild(embed['GuildID'])
+                discord_channel = discord_guild.get_channel(embed['ChannelID'])
+                discord_message = discord_channel.get_partial_message(embed['MessageID'])
                 message_list.append(discord_message)
 
             embed_list = await self.uBot.server_display_embed(discord_guild)
@@ -159,7 +162,13 @@ class Server(commands.Cog):
                 else:
                     await discord_message.edit(content=f'Oops, it appears **{self.AMPInstances[amp_server].FriendlyName}** is not Online.')
 
-    @server.command(name='info')
+    @server.group(name='settings')
+    @utils.role_check()
+    async def server_settings(self, context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Please try your command again...', ephemeral=True)
+
+    @server_settings.command(name='info')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def amp_server_info(self, context:commands.Context, server):
@@ -167,7 +176,7 @@ class Server(commands.Cog):
         self.logger.command(f'{context.author.name} used AMP Server Info')
         await context.defer(ephemeral=True)
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             embed = await self.uBot.server_info_embed(amp_server, context)
             await context.send(embed=embed, ephemeral=True)
@@ -204,14 +213,20 @@ class Server(commands.Cog):
         """Starts the AMP Instance"""
         self.logger.command(f'{context.author.name} used AMP Server Started...')
 
-        amp_server = await self._serverCheck(context, server)
-        if amp_server:
+        amp_server = self.uBot.serverparse(server, context, context.guild.id)
+        if amp_server == None:
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
+
+        if amp_server.Running == False:
+            return await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral=True)
+
+        if not amp_server._ADScheck():
             amp_server.StartInstance()
             amp_server.ADS_Running = True
-            await context.send(f'Starting the AMP Instance **{server}**', ephemeral=True)
+            await context.send(f'Starting the AMP Dedicated Server **{server}**', ephemeral=True)
         else:
-            return
-    
+            return await context.send(f'Hmm it appears the server is already running..', ephemeral= True)
+      
     @server.command(name='stop')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
@@ -223,7 +238,7 @@ class Server(commands.Cog):
         if amp_server:
             amp_server.StopInstance()
             amp_server.ADS_Running = False
-            await context.send(f'Stopping the AMP Instance **{server}**', ephemeral=True)
+            await context.send(f'Stopping the AMP Dedicated Server **{server}**', ephemeral=True)
         else:
             return
 
@@ -238,7 +253,7 @@ class Server(commands.Cog):
         if amp_server:
             amp_server.RestartInstance()
             amp_server.ADS_Running = True
-            await context.send(f'Restarting the AMP Instance **{server}**', ephemeral=True)
+            await context.send(f'Restarting the AMP Dedicated Server **{server}**', ephemeral=True)
         else:
             return
     
@@ -253,7 +268,7 @@ class Server(commands.Cog):
         if amp_server:
             amp_server.KillInstance()
             amp_server.ADS_Running = False
-            await context.send(f'Killing the AMP Instance **{server}**', ephemeral=True)
+            await context.send(f'Killing the AMP Dedicated Server **{server}**', ephemeral=True)
         else:
             return
 
@@ -296,17 +311,14 @@ class Server(commands.Cog):
         self.logger.command(f'{context.author.name} used AMP Server Status...')
         await context.defer(ephemeral=True)
 
-        amp_server = await self._serverCheck(context, server)
-        if amp_server:
-            server_embed =  await self.uBot.server_status_embed(context,amp_server)
-            view = utils.StatusView()
-            utils.StartButton(amp_server, view, amp_server.StartInstance)
-            utils.StopButton(amp_server, view, amp_server.StopInstance).disabled = True
-            utils.RestartButton(amp_server, view, amp_server.RestartInstance).disabled = True
-            utils.KillButton(amp_server, view, amp_server.KillInstance).disabled = True
-            await context.send(embed= server_embed, view=view, ephemeral=True)
+        amp_server = self.uBot.serverparse(server, context, context.guild.id)
+        if amp_server == None:
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
 
-        if amp_server != None and amp_server.Running:
+        if amp_server.Running == False:
+            await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral=True)
+        
+        if amp_server._ADScheck():
             tps,Users,cpu,Memory,Uptime = amp_server.getStatus()
             Users_online = ', '.join(amp_server.getUserList())
             if len(Users_online) == 0:
@@ -318,8 +330,15 @@ class Server(commands.Cog):
             utils.RestartButton(server, view, amp_server.RestartInstance)
             utils.KillButton(server, view, amp_server.KillInstance)
             await context.send(embed= server_embed, view=view, ephemeral=True)
+
         else:
-            return
+            server_embed =  await self.uBot.server_status_embed(context,amp_server)
+            view = utils.StatusView()
+            utils.StartButton(amp_server, view, amp_server.StartInstance)
+            utils.StopButton(amp_server, view, amp_server.StopInstance).disabled = True
+            utils.RestartButton(amp_server, view, amp_server.RestartInstance).disabled = True
+            utils.KillButton(amp_server, view, amp_server.KillInstance).disabled = True
+            await context.send(embed= server_embed, view=view, ephemeral=True)
 
     @server.command(name='users')
     @utils.role_check()
@@ -350,7 +369,7 @@ class Server(commands.Cog):
     async def amp_server_nickname_add(self, context:commands.Context, server, nickname:str):
         self.logger.command(f'{context.author.name} used AMP Server Nickname Add...')
         
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             db_server = self.DB.GetServer(amp_server.InstanceID)
             naughty_words = ['server','ign','whitelist']
@@ -370,7 +389,7 @@ class Server(commands.Cog):
     async def amp_server_nickname_remove(self, context:commands.Context, server, nickname):
         self.logger.command(f'{context.author.name} used AMP Server Nickname remove...')
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             db_server = self.DB.GetServer(amp_server.InstanceID)
             if nickname not in db_server.Nicknames:
@@ -387,7 +406,7 @@ class Server(commands.Cog):
     async def amp_server_nickname_list(self, context:commands.Context, server):
         self.logger.command(f'{context.author.name} used AMP Server Nickname list...')
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             db_server = self.DB.GetServer(amp_server.InstanceID)
             nicknames = ("\n").join(db_server.Nicknames)
@@ -396,7 +415,7 @@ class Server(commands.Cog):
             return
             
     # This Section is DBServer Attributes -----------------------------------------------------------------------------------------------------
-    @server.command(name='avatar')
+    @server_settings.command(name='avatar')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def db_server_avatar_set(self, context:commands.Context, server, url:str):
@@ -407,7 +426,7 @@ class Server(commands.Cog):
         if not url.startswith('http://') or not url.startswith('https://'):
             return await context.send('Ooops, please provide a valid url. It must start with either `http://` or `https://`', ephemeral=True)
             
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             db_server = self.DB.GetServer(InstanceID= amp_server.InstanceID)
             db_server.Avatar_url = url
@@ -423,29 +442,32 @@ class Server(commands.Cog):
         else:
             return
 
-    @server.command(name='displayname')
+    @server_settings.command(name='displayname')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def db_server_displayname_set(self, context:commands.Context, server, name:str):
         """Sets the Display Name for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Display Name')
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).DisplayName = name
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f"Set **{server}** Display Name to `{name}`", ephemeral=True)
+            db_server = self.DB.GetServer(InstanceID= amp_server.InstanceID)
+            if db_server.setDisplayName(name) != False:
+                amp_server._setDBattr() #This will update the AMPInstance Attributes
+                await context.send(f"Set **{server}** Display Name to `{name}`", ephemeral=True)
+            else:
+                await context.send(f'The Display Name provided is not unique, this server or another server already has this name.', ephemeral=True)
         else:
             return
 
-    @server.command(name='description')
+    @server_settings.command(name='description')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def db_server_description(self, context:commands.Context, server, desc:str):
         """Sets the Description for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Description')
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             self.DB.GetServer(InstanceID= amp_server.InstanceID).Description = desc
             amp_server._setDBattr() #This will update the AMPInstance Attributes
@@ -453,14 +475,14 @@ class Server(commands.Cog):
         else:
             return
         
-    @server.command(name='ip')
+    @server_settings.command(name='ip')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def db_server_ip(self, context:commands.Context, server, ip:str):
         """Sets the IP for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server IP')
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             self.DB.GetServer(InstanceID= amp_server.InstanceID).IP = ip
             amp_server._setDBattr() #This will update the AMPInstance Attributes
@@ -468,22 +490,22 @@ class Server(commands.Cog):
         else:
             return
 
-    @server.command(name='donator')
+    @server_settings.command(name='donator')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     @app_commands.autocomplete(flag= utils.autocomplete_bool)
     async def db_server_donator(self, context:commands.Context, server, flag:str):
         """Sets the Donator Only flag for the provided server."""
-        server = self.uBot.serverparse(server,context,context.guild.id)
+        self.logger.command(f'{context.author.name} used Database Donator Flag')
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             flag_reg = re.search("(true|false)",flag.lower())
             if flag_reg == None:
                 return await context.send('Please use `true` or `false` for your flag.', ephemeral=True)
             
-            self.DB.GetServer(InstanceID= server.InstanceID).Donator = bool(flag)
-            server._setDBattr() #This will update the AMPConsole Attributes
+            self.DB.GetServer(InstanceID= server.InstanceID).Donator = self.uBot.str_to_bool(flag)
+            amp_server._setDBattr() #This will update the AMPConsole Attributes
             return await context.send(f"Set **{server}** Donator Only to `{flag.capitalize()}`", ephemeral=True) 
         else:
             return
@@ -506,9 +528,9 @@ class Server(commands.Cog):
         if discord_channel == None:
             return await context.send('Unable to find the provided channel, please try again.', ephemeral=True)
         
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Discord_Console_Channel = str(discord_channel.id)
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Discord_Console_Channel = discord_channel.id
             amp_server._setDBattr() #This will update the AMPConsole Attribute
             await context.send(f'Set **{server}** Console channel to `{discord_channel.name}`', ephemeral=True)
         else:
@@ -522,13 +544,13 @@ class Server(commands.Cog):
         """Sets the Console Filter"""
         self.logger.command(f'{context.author.name} used Database Server Console Filtered True...')
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             flag_reg = re.search("(true|false)",flag.lower())
             if flag_reg == None:
                 return await context.send('Please use `true` or `false` for your flag.', ephemeral=True)
 
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Console_Filtered = bool(flag)
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Console_Filtered = self.uBot.str_to_bool(flag)
             amp_server._setDBattr() #This will update the AMPConsole Attributes
             return await context.send(f'Set **{server}** Console Filtering to `{flag.capitalize()}`', ephemeral=True)
         else:
@@ -553,9 +575,9 @@ class Server(commands.Cog):
         if discord_channel == None:
             return await context.send('Unable to find the provided channel, please try again.', ephemeral=True)
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(amp_server.InstanceID).Discord_Chat_Channel = str(discord_channel.id)
+            self.DB.GetServer(amp_server.InstanceID).Discord_Chat_Channel = discord_channel.id
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f'Set **{server}** Chat channel to `{discord_channel.name}`', ephemeral=True)
 
@@ -577,13 +599,13 @@ class Server(commands.Cog):
         if discord_channel == None:
             return await context.send('Unable to find the provided channel, please try again.', ephemeral=True)
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(amp_server.InstanceID).Discord_Event_Channel = str(discord_channel.id)
+            self.DB.GetServer(amp_server.InstanceID).Discord_Event_Channel = discord_channel.id
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f'Set **{server}** Event channel to `{discord_channel.name}`', ephemeral=True)
 
-    @server.command(name='role')
+    @server_settings.command(name='role')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     @app_commands.autocomplete(role= utils.autocomplete_discord_roles)
@@ -595,24 +617,48 @@ class Server(commands.Cog):
         if discord_role == None:
             return await context.send('Unable to find the provided role, please try again.', ephemeral=True)
 
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(amp_server.InstanceID).Discord_Role = str(discord_role.id)
+            self.DB.GetServer(amp_server.InstanceID).Discord_Role = discord_role.id
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f'Set **{server}** Discord Role to `{discord_role.name}`', ephemeral=True)
 
-    @server.command(name='prefix')
+    @server_settings.command(name='prefix')
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def db_server_discord_prefix_set(self, context:commands.Context, server, server_prefix:str):
         """Sets the Discord Chat Prefix for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Discord Chat Prefix')
     
-        amp_server = await self._serverCheck(context, server)
+        amp_server = await self._serverCheck(context, server, False)
         if amp_server:
             self.DB.GetServer(amp_server.InstanceID).Discord_Chat_prefix = server_prefix
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f'Set **{server}** Discord Chat Prefix to `{server_prefix}`', ephemeral=True)
+
+
+    @server_settings.command(name='hidden')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    @app_commands.autocomplete(flag= utils.autocomplete_bool)
+    async def db_server_hidden(self, context:commands.Context, server, flag):
+        """Hides the server from Embed Display via `/server display`"""
+        self.logger.command(f'{context.author.name} used Database Server Hidden')
+
+        amp_server = await self._serverCheck(context, server, False)
+        if amp_server:
+            flag_reg = re.search("(true|false)",flag.lower())
+            if flag_reg == None:
+                return await context.send('Please use `true` or `false` for your flag.', ephemeral= True)
+            
+            self.DB.GetServer(InstanceID= server.InstanceID).Hidden = self.uBot.str_to_bool(flag)
+            amp_server._setDBattr() #This will update the AMPConsole Attributes
+            if flag.lower() == 'true':
+                return await context.send(f"The **{server}** will now be Hidden", ephemeral= True)
+            else:
+                return await context.send(f'The **{server}** will now be Shown', ephemeral= True)
+        else:
+            return
 
     #Whitelist Commands -----------------------------------------------------------------------------------------------------------------------
     @server.group(name='whitelist')

@@ -37,7 +37,7 @@ def dump_to_json(data):
     return json.dumps(data)
 
 Handler = None
-DB_Version = 1.7
+DB_Version = 1.8
 
 class DBHandler():
     def __init__(self):
@@ -53,7 +53,7 @@ class DBHandler():
         self.DB_Version = DB_Version
 
         #This should ONLY BE TRUE on new Database's going forward. 
-        #self.DBConfig.SetSetting('DB_Version', 1.6)
+        #self.DBConfig.SetSetting('DB_Version', 1.7)
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
             DBUpdate(self.DB, 1.0)
             return
@@ -112,9 +112,9 @@ class Database:
                         ID integer primary key,
                         InstanceID text not null unique collate nocase,
                         InstanceName text unique collate nocase,
-                        DisplayName text,
+                        DisplayName unique text,
                         Description text,
-                        IP text unique,
+                        IP text,
                         Whitelist integer not null,
                         Donator integer not null,
                         Console_Flag integer not null,
@@ -124,7 +124,8 @@ class Database:
                         Discord_Chat_Prefix text,
                         Discord_Event_Channel text nocase,
                         Discord_Role text collate nocase,
-                        Avatar_url text
+                        Avatar_url text,
+                        Hidden integer not null
                         )""")
 
         cur.execute("""create table ServerNicknames (
@@ -359,7 +360,7 @@ class Database:
         (rows, cur) = self._fetchall(SQL, tuple(SQLArgs))
         ret = []
         for entry in rows:
-            ret.append({"GuildID": entry["Discord_Guild_ID"], "ChannelID": entry["Discord_Channel_ID"], "MessageID": entry["Discord_Message_ID"]})
+            ret.append({"GuildID": int(entry["Discord_Guild_ID"]), "ChannelID": int(entry["Discord_Channel_ID"]), "MessageID": int(entry["Discord_Message_ID"])})
         cur.close()
         return ret
 
@@ -508,7 +509,7 @@ class DBUser:
                 raise Exception(f"Unable to locate User ID {ID}")
             cur.close()
             super().__setattr__("ID", int(self.ID))
-            super().__setattr__("DiscordID", int(self.DiscordID))
+            #super().__setattr__("DiscordID", int(self.DiscordID))
         else:
             #we should have a discord id
             if not DiscordID or DiscordID == 0:
@@ -544,6 +545,8 @@ class DBUser:
             jdata = dump_to_json({"Type": "AddUser", "UserID": self.ID})
             self._db._logdata(jdata)
 
+        super().__setattr__("DiscordID", int(self.DiscordID))
+
     def __setattr__(self, name: str, value):
         if (name == "ID") or (name[0] == "_"):
             return
@@ -572,10 +575,6 @@ class DBServer:
 
         if(self.ID is not None):
             super().__setattr__("ID", int(self.ID))
-        if(self.Discord_Console_Channel is not None):
-            super().__setattr__("Discord_Console_Channel", int(self.Discord_Console_Channel))
-        if(self.Discord_Chat_Channel is not None):
-            super().__setattr__("Discord_Chat_Channel", int(self.Discord_Chat_Channel))
 
         # if given a database and ID then look up our values
         if ID:
@@ -625,6 +624,15 @@ class DBServer:
             jdata = dump_to_json({"Type": "AddServer", "ServerID": self.ID, "InstanceID": InstanceID})
             self._db._logdata(jdata)
 
+        if(self.Discord_Console_Channel is not None):
+            super().__setattr__("Discord_Console_Channel", int(self.Discord_Console_Channel))
+        if(self.Discord_Chat_Channel is not None):
+            super().__setattr__("Discord_Chat_Channel", int(self.Discord_Chat_Channel))
+        if(self.Discord_Event_Channel is not None):
+            super().__setattr__("Discord_Event_Channel", int(self.Discord_Event_Channel))
+        if(self.Discord_Role is not None):
+            super().__setattr__("Discord_Role", int(self.Discord_Role))
+
     def __setattr__(self, name: str, value):
         if (name in ["ID", "Nicknames"]) or (name[0] == "_"):
             return
@@ -668,6 +676,14 @@ class DBServer:
     def delServer(self):
         self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
         self._db._execute("delete from Servers where ID=?", (self.ID,))
+
+    def setDisplayName(self, DisplayName: str):
+        try:
+            self._db._execute("update Servers set DisplayName=? where ID=?", (DisplayName, self.ID))
+        except:
+            return False
+        jdata = dump_to_json({"Type": "UpdateServerDisplayName", "ServerID": self.ID, "DisplayName": DisplayName})
+        self._db._logdata(jdata)
 
 class DBConfig:
     def __init__(self, db: Database = None):
@@ -793,10 +809,13 @@ class DBUpdate:
             self.DBConfig.DeleteSetting('Auto_Display')
             self.DBConfig.SetSetting('DB_Version', '1.7')
         
-        # if 1.8 > Version:
-        #     self.logger.info('**ATTENTION** Updating DB to Version 1.8')
-        #     self.server_hide_column()
-        #     self.DBConfig.SetSetting('DB_Version', '1.8')
+        if 1.8 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.8')
+            self.server_hide_column()
+            self.server_ip_constraint_update()
+            self.server_display_name_reset()
+            self.server_display_name_constraint_update()
+            self.DBConfig.SetSetting('DB_Version', '1.8')
 
     def user_roles(self):
         try:
@@ -862,8 +881,30 @@ class DBUpdate:
             return
     
     def server_hide_column(self):
+        """1.8 Update"""
         try:
             SQL = 'alter table servers add column Hidden integer default 0'
+            self.DB._execute(SQL, ())
+        except:
+            return
+
+    def server_ip_constraint_update(self):
+        try:
+            SQL = 'alter table servers drop constraint IP unique'
+            self.DB._execute(SQL, ())
+        except:
+            return
+
+    def server_display_name_reset(self):
+        try:
+            SQL= 'update Servers set DisplayName=InstanceName'
+            self.DB._execute(SQL, ())
+        except:
+            return
+
+    def server_display_name_constraint_update(self):
+        try:
+            SQL = "alter table Servers add constraint DisplayName unique"
             self.DB._execute(SQL, ())
         except:
             return

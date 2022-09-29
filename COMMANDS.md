@@ -39,7 +39,7 @@ ___
 - `/bot embed auto_update (flag)` - Allows the bot to automatically update the `/server display` embed messages.
     - **TIP**: Use the `/server display` command inplace of your "Server Info" or similar! 
 
-### <u>Whitelist Commands</u>:
+### <u>Bot Whitelist Commands</u>:
 - `/whitelist auto (flag)` - Allows the bot to automatically Whitelist a Users request.
     - **ATTENTION**: `flag` must be *True or False*. Default is False.
         - **TIP**: This will not instantly whitelist the user if whitelist waittime is not set to zero.
@@ -63,7 +63,7 @@ ___
 - `/whitelist reply remove` - Removes the selected message from the list of replies the bot can use during Whitelist handling.
 - `/whitelist reply list` - Lists all the currently available replies the bot can use during Whitelist handling.
 
-### <u>Server Database Commands</u>: 
+### <u>AMP Server Database Commands</u>: 
 - `/dbserver cleanup` - Removes any Database Server entries that are not in your AMP Instances list.
 - `/dbserver swap (server, replacement_server)` - Use this to switch an AMP instance with another AMP Instance in the Database.
 
@@ -85,7 +85,7 @@ ___
     - **ATTENTION**: This is early experimental, it may be inaccurate.
 
 
-### <u>Server Commands</u>: 
+### <u>AMP Server Commands</u>: 
 - `/server display` - Lists all AMP Servers in Embeds with current information.
     - **TIP**: Those embeds get updated every minute! So use the command as a "Status" style channel and pin them!
 - `/server update` - Updates the current list of AMP servers. *(This is also done every 5 minutes)*
@@ -96,53 +96,56 @@ ___
 - `/server restart (server)` - Restarts the specified AMP Dedicated server.
 - `/server kill (server)` - Kills the specified AMP Dedicated server. 
 - `/server msg (message)` - Sends a message to the console for the specified AMP Dedicated server.
-- `/server info (server)` - Displays information such as IP, Donator Only, Whitelist Open, Discord Role, Discord Chat/Console/Event Channels and Nicknames.
-- `/server backup (server)` - Creates a backup of the AMP Dedicated server.
+
+### <u>AMP Server Settings Commands</u>:
+- `/server settings info (server)` - Displays information such as IP, Donator Only, Whitelist Open, Discord Role, Discord Chat/Console/Event Channels and Nicknames.
+- `/server settings backup (server)` - Creates a backup of the AMP Dedicated server.
     - **ATTENTION**: Set's the Title to `<user> generated backup` where `<user>` is the command users Discord Name.
         - The Description gets set to the current Date and Time in UTC
-- `/server status (server)` - Displays a embedded message of the AMP Dedicated server with status information and buttons for start, stop, kill and restart. 
+- `/server settings status (server)` - Displays a embedded message of the AMP Dedicated server with status information and buttons for start, stop, kill and restart. 
     - **ATTENTION**: Everyone can see the buttons, but only people with proper permission can interact with the buttons.
     - **TIP**: To interact with the buttons the user must have the respective permisisons. See [Server Status Button Permissions](/PERMISSIONS.md#server-status-button-permissions).
-- `/server users (server)` - Displays a list of connected users on the AMP Dedicated server.
-- `/server displayname (server, name)` - Sets the display name of the AMP Dedicated server in the Database.
+- `/server settings users (server)` - Displays a list of connected users on the AMP Dedicated server.
+- `/server settings displayname (server, name)` - Sets the display name of the AMP Dedicated server in the Database.
     - **ATTENTION**: This is used and displayed when commands such as `/server status` and `/server list` are used in place of the Instance Name.
     - **TIP**: You can use the `display name` in place of any `server` paramater for commands.
-- `/server description (server, description)` - Sets the description of the AMP Dedicated server in the Database.
+- `/server settings description (server, description)` - Sets the description of the AMP Dedicated server in the Database.
     - **ATTENTION**: This is only used and displayed when commands such as `/server status` and `/server list`.
-- `/server IP (server, IP)` - Sets the IP of the AMP Dedicated server in the Database.
+- `/server settings IP (server, IP)` - Sets the IP of the AMP Dedicated server in the Database.
     - **ATTENTION**: This is only used and displayed when commands such as `/server status` and `/server list`.
     - **TIP**: `IP` is what you want your players to use to connect to the server!
-- `/server role (server, role)` - Sets the role of the AMP Dedicated Server in the Database.
+- `/server settings role (server, role)` - Sets the role of the AMP Dedicated Server in the Database.
     - **ATTENTION**: This is the Discord Role the bot will give the User when requesting whitelist on said AMP Dedicated Server.
     - **TIP**: `role` can be a Discord Role ID or Discord Role Name.
-- `/server prefix (server, prefix)` - Set a prefix to be displayed on Chat messages IN-game from other servers.
+- `/server settings prefix (server, prefix)` - Set a prefix to be displayed on Chat messages IN-game from other servers.
     - **ATTENTION**: Any messages from Discord to a Server will be prefixed with `[DISCORD]`, otherwise if it comes from another AMP Server it will use the server's prefix.
-- `/server avatar (server, url)` - Sets the Avatar Icon for the specified AMP Dedicated Server.
+- `/server settings avatar (server, url)` - Sets the Avatar Icon for the specified AMP Dedicated Server.
     - **TIP**: Supports `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated. 
         - `url` Can be set to **None** so it displays the default/original Icon created.
-- `/server broadcast (type)` - Sends a message to every online AMP Dedicated Server.
+- `/server settings broadcast (type)` - Sends a message to every online AMP Dedicated Server.
     - `type` Can be picked as a Prefix to your message when sending the message to the server.
+- `/server settings hidden (flag)` - Hides or Shows the Servers embed when using `/server display`
 
-### <u>Donator Commands</u>:
+### <u>AMP Server Donator Commands</u>:
 - `/server donator (flag)` - Sets Donator Only Flag for the AMP Dedicated server to True
     - **ATTENTION**: This doesn't prevent players without the rank from connecting; only for auto whitelisting purposes.
 
-### <u>Console Commands</u>: 
+### <u>AMP Server Console Commands</u>: 
 - `/server console channel (server, channel)` - Sets the Discord Channel for the AMP Dedicated Server Console to output to.
     - **TIP**: You can type commands in the set channel similar to typing in AMP Console web GUI.
 - `/server console filter (server, flag)` - Set Console filtering for the AMP Dedicated server.
     - **TIP**: Setting this to True will still display login/disconnect events, achievements, chat messages, console commands and anything else deemed important.
     - `flag` supports *True or False*
 
-### <u>Chat Commands</u>: 
+### <u>AMP Server Chat Commands</u>: 
 - `/server chat channel (server, channel)` - Sets the Discord Channel for the AMP Dedicated server to output its chat messages to.
     - **TIP**: Discord Users can talk back and forth to in-game users as if they were playing too!
 
-### <u>Event Commands</u>:
+### <u>AMP Server Event Commands</u>:
 - `/server event channel (server, channel)`- Sets the Event Channel for the provided AMP Dedicated Server to output event type messages to.
     - **ATTENTION**: This is events such as join/leave and achievements. Currently experimental, some may be missed.
 
-### <u>Whitelist Commands</u>: 
+### <u>AMP Server Whitelist Commands</u>: 
 - `/server whitelist true (server)` - Sets the whitelist flag to `true` for the AMP Dedicated server.
     - **ATTENTION**: This is only for Whitelisting purposes with auto-whitelist. This will not prevent players from connecting.
 - `/server whitelist false (server)` - Sets the whitelist flag to false for the dedicated server.
@@ -151,9 +154,15 @@ ___
 - `/server whitelist remove (server,user)` - Removes the IGN from the AMP Dedicated server whitelist.
     - `user` only supports in-game names.
 
+### <u>AMP Server Nickname Commands</u>:
+- `/server nickname add (server, nickname)` - Adds the specified `nickname` to the servers lists of nicknames.
+    - **TIP**: These nicknames are searched for when doing Whitelist requests allowing more variance to find a specific server.
+- `/server nickname remove (server, nickname)` - Removes the specificed `nickname` from the servers list of nicknames.
+- `/server nickname list (server)` - Displays a list of the AMP Servers nicknames.
+
 ___
 
-### **Setting Server Nicknames**:
+### **Setting AMP Server Nicknames**:
 - First thing to remember is the Nickname must be **UNIQUE**. 
     - No two AMP Servers can have the same Nickname in their list of Nicknames.
 - These Nicknames will work during **auto-whitelist requests** allowing the bot to handle a variance of "Nicknames".
@@ -161,13 +170,7 @@ ___
     - **CAUTION**: Any SIMILARITIES between Server Nicknames will cause duplicate finds. See below.
         - *Example* - **Server 1**: `Vanilla MC` || **Server 2**: `Vanilla TDM` and you search for `Vanilla` would return multiple results.  
 
-### <u>Nickname Commands</u>:
-- `/server nickname add (server, nickname)` - Adds the specified `nickname` to the servers lists of nicknames.
-    - **TIP**: These nicknames are searched for when doing Whitelist requests allowing more variance to find a specific server.
-- `/server nickname remove (server, nickname)` - Removes the specificed `nickname` from the servers list of nicknames.
-- `/server nickname list (server)` - Displays a list of the AMP Servers nicknames.
-
-### **Interacting with your Server via Discord Channels**:
+### **Interacting with your AMP Server via Discord Channels**:
 - Set your Discord Console Channels and Discord Chat Channels per Server via
     - `/server console channel (server, channel)`
     - `/server chat channel (server, channel)`
