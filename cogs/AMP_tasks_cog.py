@@ -88,10 +88,10 @@ class AMP_Cog(commands.Cog):
                 #If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This is usually a USER sending a message..
                 if message.webhook_id == None:
                     #This fetch's a users prefix from the bot_perms.json file.
-                    #author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
-                    author_prefix = 'MOD'
+                    author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
+                    #author_prefix = 'MOD'
                     #This calls the generic AMP Function; each server will handle this differently
-                    self.AMPServer.Chat_Message(message.content, author_prefix= author_prefix, author= message.author.name)
+                    self.AMPServer.Chat_Message(message.content, author= message.author.name, author_prefix= author_prefix)
                        
         return message
 

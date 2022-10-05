@@ -934,7 +934,7 @@ class AMPInstance:
         """Base Funcion for AMP.check_Whitelist `default return is None`"""
         return None
 
-    def Chat_Message(self, message:str, author:str=None, prefix:str=None):
+    def Chat_Message(self, message:str, author:str=None, author_prefix:str=None):
         """Base Function for Discord Chat Messages to AMP ADS"""
         return
 
