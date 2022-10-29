@@ -363,7 +363,7 @@ class AMPInstance:
         self.Discord_Event_Channel = self.DB_Server.Discord_Event_Channel
         self.Discord_Role = self.DB_Server.Discord_Role
         self.Avatar_url = self.DB_Server.Avatar_url
-        
+        self.Hidden = self.DB_Server.Hidden
         
         #Default Banner Information.
         self.background_banner_path = 'resources/banners/AMP_Banner.jpg'
@@ -472,7 +472,7 @@ class AMPInstance:
         self.logger.debug('Server Check, Login Sucess: ' + str(Success))
         if Success:
             status = self.getStatus(running_check = True)
-            self.logger.dev(f'{self.FriendlyName} ADS Running: {status}')
+            self.logger.debug(f'{self.FriendlyName} ADS Running: {status}')
             self.ADS_Running = status
             return status
             
@@ -538,8 +538,8 @@ class AMPInstance:
             server = self.AMPHandler.AMP_Instances[instance]
             #Lets validate our ADS Running before we check for console threads.
         
-            self.logger.dev(f'{server.FriendlyName} Running: {server.Running} ADS_Running: {server.ADS_Running}')
-            self.logger.dev(f'Console Object: {server.Console} Console Thread: {server.Console.console_thread} Console Thread Running: {server.Console.console_thread_running}')
+            #self.logger.dev(f'{server.FriendlyName} Running: {server.Running} ADS_Running: {server.ADS_Running}')
+            #self.logger.dev(f'Console Object: {server.Console} Console Thread: {server.Console.console_thread} Console Thread Running: {server.Console.console_thread_running}')
 
             if server.Running and server._ADScheck() and server.ADS_Running:
                 #Lets check if the Console Thread is running now.

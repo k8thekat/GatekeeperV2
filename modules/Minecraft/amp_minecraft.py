@@ -201,8 +201,10 @@ class AMPMinecraft(AMP.AMPInstance):
         content = 'tellraw @a [{"text":"[Discord]","color":"blue"},'
         if server_prefix != None:
             content += f'{{"text":"({server_prefix})","color":"gold"}},'
+
         if author_prefix != None:
             content += f'{{"text":"({author_prefix})","color":"yellow"}},'
+            
         content += f'{{"text":"<{author}>: {message}","color":"white"}}]'
         self.ConsoleMessage(content)
 

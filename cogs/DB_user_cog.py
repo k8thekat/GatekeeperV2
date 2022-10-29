@@ -100,11 +100,12 @@ class DB_User(commands.Cog):
 
     @user.command(name='info')
     @utils.role_check()
-    async def user_info(self, context:commands.Context, user:str):
+    @app_commands.autocomplete(name = utils.autocomplete_discord_users)
+    async def user_info(self, context:commands.Context, name:str):
         """Displays the Discord Users Database information"""
         self.logger.command(f'{context.author.name} used User Information')
         
-        discord_user = self.uBot.userparse(user,context,context.guild.id)
+        discord_user = self.uBot.userparse(name,context,context.guild.id)
         if discord_user != None:
             db_user = self.DB.GetUser(str(discord_user.id))
             if db_user != None:
@@ -114,6 +115,7 @@ class DB_User(commands.Cog):
                
     @user.command(name='add')
     @utils.role_check()
+    @app_commands.autocomplete(discord_name = utils.autocomplete_discord_users)
     async def user_add(self, context:commands.Context, discord_name:str, mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
         """Adds the Discord Users information to the Database"""
         self.logger.command(f'{context.author.name} used User Add Function')
@@ -124,12 +126,13 @@ class DB_User(commands.Cog):
         discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
         if discord_user != None:
             self.DB.AddUser(DiscordID=discord_user.id, DiscordName=discord_user.name, MC_IngameName=mc_ign, MC_UUID=mc_uuid, SteamID=steamid)
-            await context.send(f'Added {discord_user.name} to the Database!', ephemeral=True)
+            await context.send(f'Added **{discord_user.name}** to the Database!', ephemeral=True)
         else:
             await context.send(f'Unable to find the {discord_name} you provided, please try again.', ephemeral=True)
             
     @user.command(name='update')
     @utils.role_check()
+    @app_commands.autocomplete(discord_name = utils.autocomplete_discord_users)
     async def user_update(self, context:commands.Context, discord_name:str, mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
         """Updated a Discord Users information in the Database"""
         self.logger.command(f'{context.author.name} used User Update Function')
@@ -155,7 +158,7 @@ class DB_User(commands.Cog):
                     if params[entry] != None:
                         setattr(db_user,db_params[entry],params[entry])
 
-                await context.send(f'We Updated the user {db_user.DiscordName}', ephemeral=True)
+                await context.send(f'We Updated the Database User: **{db_user.DiscordName}**', ephemeral=True)
             else:
                 await context.send('Looks like this user is not in the Database, please use `/user add`', ephemeral=True)
         else:
@@ -167,7 +170,7 @@ class DB_User(commands.Cog):
         """This will convert a Minecraft IGN to a UUID if it exists"""
         self.logger.command(f'{context.author.name} used User UUID Function')
 
-        await context.send(f'The UUID of {mc_ign} is: {self.uBot.name_to_uuid_MC(mc_ign)}', ephemeral=True)
+        await context.send(f'The UUID of **{mc_ign}** is: `{self.uBot.name_to_uuid_MC(mc_ign)}`', ephemeral=True)
 
     @user.command(name='steamid')
     @utils.role_check()
@@ -175,26 +178,27 @@ class DB_User(commands.Cog):
         """This will convert a Steam Display Name to a SteamID if it exists"""
         self.logger.command(f'{context.author.name} used User SteamID Function')
 
-        await context.send(f'The SteamID of {steam_name} is: {self.uBot.name_to_steam_id(steam_name)}', ephemeral=True)
+        await context.send(f'The SteamID of **{steam_name}** is: `{self.uBot.name_to_steam_id(steam_name)}`', ephemeral=True)
     
     @user.command(name='role')
     @utils.role_check()
     @app_commands.autocomplete(role= utils.autocomplete_permission_roles)
-    async def user_role(self, context:commands.Context, user:str, role:str):
+    @app_commands.autocomplete(discord_name = utils.autocomplete_discord_users)
+    async def user_role(self, context:commands.Context, discord_name:str, role:str):
         """Set a users Permission Role for commands."""
         self.logger.command(f'{context.author.name} used User Role Function')
 
-        discord_user = self.uBot.userparse(user,context,context.guild.id)
+        discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
         if discord_user == None:
-            await context.send(f'We failed to find the User: {user}, please make sure they are apart of the server..', ephemeral=True)
+            await context.send(f'We failed to find the User: {discord_name}, please make sure they are apart of the server..', ephemeral=True)
             return
 
         db_user = self.DB.GetUser(discord_user.id)
         if db_user != None:
             db_user.Role = role
-            await context.send(f"We set the User: {user} permission's role to {role}.", ephemeral=True)
+            await context.send(f"We set the User: **{discord_name}** permission's role to `{role}`.", ephemeral=True)
         else:
-            await context.send(f'We failed to find the User: {user}, please make sure they are in the DB.', ephemeral=True)
+            await context.send(f'We failed to find the User: {discord_name}, please make sure they are in the DB.', ephemeral=True)
 
     @user.command(name='test')
     @utils.role_check()
@@ -220,11 +224,6 @@ class DB_User(commands.Cog):
         else:
             await context.send(f'Hey! I was unable to find the role {role}, Please try again.', ephemeral=True)
     
-    @commands.hybrid_group(name='display')
-    @utils.role_check()
-    async def db_bot_display(self, context:commands.Context):
-        if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral=True)
 
     #!TODO! Allow DMs to update a Users information
     # @commands.command()
