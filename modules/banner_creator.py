@@ -171,7 +171,7 @@ class Banner_Generator():
         max_rgb = ImageColor.getrgb(self._font_Player_Limit_color_max)
         final_rgb = [0,0,0]
         players_online = random.randint(0,8)
-        if self.user_count[0] == 0:
+        if int(self.user_count[0]) == 0:
             return min_rgb
 
         for color in range(0,len(min_rgb)):
