@@ -269,33 +269,30 @@ class AMP_Cog(commands.Cog):
                     message_contents = message['Contents']
                     server_prefix = AMPServer_Chat.Discord_Chat_Prefix
 
-                   
                     db_author = self.DB.GetUser(author)
                     if db_author != None:
                         author_prefix = await self.bPerms.get_role_prefix(db_author.DiscordID)
 
                         if AMPServer_Chat.get_IGN_Avatar(db_user= db_author):
-                            print('Using AMP Server Information')
+                            self.logger.dev('Using AMP Server Information')
                             name, avatar = AMPServer_Chat.get_IGN_Avatar(db_user= db_author)
 
                         else:
                             discord_user = self._client.get_user(db_author.DiscordID) 
                             if discord_user != None:
-                                print('Using Discord Server Information')
+                                self.logger.dev('Using Discord Server Information')
                                 name, avatar = discord_user.name, discord_user.avatar
 
-                        
-                    
                     if db_author == None:
-                        print('Using Message Information')
+                        self.logger.dev('Using Message Information')
                         name, avatar = author, AMPServer_Chat.Avatar_url
 
                     if author_prefix != None:
-                        print('Adding Author Prefix to Name')
+                        self.logger.dev('Adding Author Prefix to Name')
                         name = f'[{author_prefix}] ' + name
                      
                     if server_prefix != None:
-                        print('Adding Server Prefix to Name')
+                        self.logger.dev('Adding Server Prefix to Name')
                         name = f'[{server_prefix}] - ' + name
 
                     await chat_webhook.send(content= message_contents, username= name, avatar_url= avatar)
