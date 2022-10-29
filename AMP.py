@@ -238,7 +238,6 @@ class AMPInstance:
                 else:
                     self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
 
-        
             self.logger.dev(f"Name: {self.FriendlyName} // InstanceID: {self.InstanceID} // Module: {self.Module} // Port: {self.Port} // DisplayImageSource: {self.DisplayImageSource}")
 
             #This sets all my DB_Server attributes.
@@ -351,6 +350,7 @@ class AMPInstance:
         """This is used to set/update the DB attributes for the AMP server"""
         self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
         self.DisplayName = self.DB_Server.DisplayName
+        self.Nicknames = self.DB_Server.Nicknames
         self.Description = self.DB_Server.Description
         self.IP = self.DB_Server.IP
         self.Whitelist = self.DB_Server.Whitelist
@@ -363,6 +363,11 @@ class AMPInstance:
         self.Discord_Event_Channel = self.DB_Server.Discord_Event_Channel
         self.Discord_Role = self.DB_Server.Discord_Role
         self.Avatar_url = self.DB_Server.Avatar_url
+        
+        
+        #Default Banner Information.
+        self.background_banner_path = 'resources/banners/AMP_Banner.jpg'
+        self.Banner = self.DB_Server.getBanner(self.background_banner_path)
         
     def _ADScheck(self):
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!
