@@ -32,7 +32,7 @@ import utils
 import AMP
 import DB
 
-Version = 'beta-4.2.1'
+Version = 'beta-4.2.2'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):

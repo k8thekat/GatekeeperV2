@@ -184,7 +184,7 @@ class AMPMinecraft(AMP.AMPInstance):
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
     
-    def Chat_Message(self, message:str, author_prefix:str=None, author:str=None, server_prefix:str=None):
+    def Chat_Message(self, message:str, author:str=None, author_prefix:str=None, server_prefix:str=None):
         """Sends a customized message via tellraw through the console."""
         self.Login()
         # Colors:
