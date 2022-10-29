@@ -26,3 +26,5 @@ dev/Patreon development.txt
 discordBot copy.db
 dev/guildhandler.py
 discordBot v1.5.db
+.vscode/settings.json
+.gitignore

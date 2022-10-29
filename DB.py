@@ -37,7 +37,8 @@ def dump_to_json(data):
     return json.dumps(data)
 
 Handler = None
-DB_Version = 1.8
+#!DB Version
+DB_Version = 1.9
 
 class DBHandler():
     def __init__(self):
@@ -131,7 +132,7 @@ class Database:
         cur.execute("""create table ServerNicknames (
                         ID integer primary key,
                         ServerID integer not null,
-                        Nickname text unique not null unique collate nocase,
+                        Nickname text unique not null collate nocase,
                         foreign key(ServerID) references Servers(ID)
                         )""")
 
@@ -150,6 +151,25 @@ class Database:
                         Discord_Guild_ID text nocase,
                         Discord_Channel_ID text nocase,
                         Discord_Message_ID text nocase
+                        )""")
+
+        cur.execute("""create table ServerBanners (
+                        ServerID integer not null,
+                        background_path text not null,
+                        blur_background_amount integer not null,
+                        color_header text,
+                        color_nickname text,
+                        color_body text,
+                        color_IP text,
+                        color_whitelist_open text,
+                        color_whitelist_closed text,
+                        color_donator text,
+                        color_status_online text,
+                        color_status_offline text,
+                        color_player_limit_min text,
+                        color_player_limit_max text,
+                        color_player_online text,
+                        foreign key(ServerID) references Servers(ID)
                         )""")
 
         cur.execute("""create table WhitelistReply (
@@ -184,6 +204,7 @@ class Database:
         self._AddConfig('Whitelist_Emoji_Pending', None)
         self._AddConfig('Whitelist_Emoji_Done', None)
         self._AddConfig('Embed_Auto_Update', True)
+        self._AddConfig('Banner_Type', '')
         self._AddConfig('Bot_Version', )
 
     def _execute(self, SQL, params):
@@ -226,6 +247,12 @@ class Database:
         entry = list(args.keys())[0]
         self._execute(f"Update servers set {entry}=? where ID=?", (args[entry], dbserver.ID))
         jdata = dump_to_json({"Type": "ServerUpdate", "ServerID": dbserver.ID, "Field": entry, "Value": args[entry]})
+        self._logdata(jdata)
+    
+    def _UpdateBanner(self, dbbanner, **args):
+        entry = list(args.keys())[0]
+        self._execute(f"Update ServerBanners set {entry}=? where ServerID=?", (args[entry], dbbanner.ServerID))
+        jdata = dump_to_json({"Type": "BannerUpdate", "ServerID": dbbanner.ServerID, "Field": entry, "Value": args[entry]})
         self._logdata(jdata)
 
     def _UpdateUser(self, dbuser, **args):
@@ -632,6 +659,7 @@ class DBServer:
             super().__setattr__("Discord_Event_Channel", int(self.Discord_Event_Channel))
         if(self.Discord_Role is not None):
             super().__setattr__("Discord_Role", int(self.Discord_Role))
+        
 
     def __setattr__(self, name: str, value):
         if (name in ["ID", "Nicknames"]) or (name[0] == "_"):
@@ -684,6 +712,9 @@ class DBServer:
             return False
         jdata = dump_to_json({"Type": "UpdateServerDisplayName", "ServerID": self.ID, "DisplayName": DisplayName})
         self._db._logdata(jdata)
+
+    def getBanner(self, background_path:str = None):
+        return DBBanner(self._db, self.ID, background_path)
 
 class DBConfig:
     def __init__(self, db: Database = None):
@@ -749,7 +780,69 @@ class DBConfig:
         self._db._DeleteConfig(self._ConfigNameToID[name], name)
         super().__delattr__(name)
         self._ConfigNameToID.pop(name)
-    
+ 
+class DBBanner:
+    def __init__(self, DB:Database, ServerID: int= None, background_path:str= None):
+        self.attr_list = {'_db': DB,
+                    'ServerID': int(ServerID),
+                    'background_path': background_path,
+                    'blur_background_amount': 2,
+                    'color_header': "#85c1e9",
+                    'color_nickname': "#f2f3f4",
+                    'color_body': "#f2f3f4",
+                    'color_IP': "#5dade2",
+                    'color_whitelist_open': "#f7dc6f",
+                    'color_whitelist_closed': "#cb4335",
+                    'color_donator': "#212f3c",
+                    'color_status_online': "#28b463",
+                    'color_status_offline': "#e74c3c",
+                    'color_player_limit_min': "#ba4a00",
+                    'color_player_limit_max': "#5dade2",
+                    'color_player_online': "#f7dc6f"}
+
+        for attr in self.attr_list:
+            super().__setattr__(attr, self.attr_list[attr])
+
+        (row, cur) = self._db._fetchone("Select * from ServerBanners where ServerID=?", (self.ServerID,))
+        if row:
+            for entry in row.keys():
+                super().__setattr__(entry, row[entry])
+
+            super().__setattr__('blur_background', bool(self.blur_background))
+        else:
+            # create the sql line
+            SQL = "insert into ServerBanners ("
+            SQLVars = []
+
+            for entry in self.attr_list:
+                if entry.startswith('_'):
+                    continue
+                SQL += entry + ","
+                SQLVars.append(self.attr_list[entry])
+
+
+            SQL = SQL[:-1] + ") values (" + ("?," * len(SQLVars))[:-1] + ")"
+            # create the tuple needed
+            SQLTuple = tuple(SQLVars)
+
+            # execute it
+            self._db._execute(SQL, SQLTuple)
+
+        cur.close()
+
+    def __setattr__(self, name: str, value):
+
+        if name == 'blur_background':
+            value = bool(value)
+
+        elif name == 'blur_background_amount':
+            value = int(value)
+
+        super().__setattr__(name, value)
+        
+        if name != 'attr_list':
+            self._db._UpdateBanner(self, **{name: value})
+       
 class DBUpdate:
     def __init__(self, DB:Database, Version:float=None):
         self.logger = logging.getLogger(__name__)
@@ -816,6 +909,11 @@ class DBUpdate:
             self.server_display_name_reset()
             self.server_display_name_constraint_update()
             self.DBConfig.SetSetting('DB_Version', '1.8')
+
+        if 1.9 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 1.9')
+            self.banner_table_creation()
+            self.DBConfig.SetSetting('DB_Version', '1.9')
 
     def user_roles(self):
         try:
@@ -905,6 +1003,13 @@ class DBUpdate:
     def server_display_name_constraint_update(self):
         try:
             SQL = "alter table Servers add constraint DisplayName unique"
+            self.DB._execute(SQL, ())
+        except:
+            return
+
+    def banner_table_creation(self):
+        try:
+            SQL = 'create table ServerBanners (ServerID integer not null, background_path text not null, blur_background_amount integer not null, color_header text, color_nickname text, color_body text,color_IP text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text,color_player_limit_min text,color_player_limit_max text,color_player_online text,foreign key(ServerID) references Servers(ID))'
             self.DB._execute(SQL, ())
         except:
             return

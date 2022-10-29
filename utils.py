@@ -27,15 +27,19 @@ import pathlib
 import aiohttp
 import sys
 import re
+import io
+import PIL
+from PIL import Image
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import Button,View
+from discord.ui import Button,View,Select,Modal,TextInput
 import asyncio
 
 import DB
 import AMP
+import modules.banner_creator as BC
 
 async def async_rolecheck(context:commands.Context, perm_node:str=None):
     DBHandler = DB.getDBHandler()
@@ -105,6 +109,16 @@ def role_check():
     #return commands.check(async_rolecheck(permission_node=perm))
     return commands.check(async_rolecheck)            
 
+def author_check(user_id:int=None):
+    """Checks if User ID matchs Context User ID"""
+    async def predicate(context:commands.Context):
+        if context.author.id == user_id:
+            return True
+        else:
+            await context.send('You do not have permission to use that command...', ephemeral=True)
+            return False
+    return commands.check(predicate)
+
 def guild_check(guild_id:int=None):
     """Use this before any commands to limit it to a certain guild usage."""
     async def predicate(context:commands.Context):
@@ -114,10 +128,15 @@ def guild_check(guild_id:int=None):
             await context.send('You do not have permission to use that command...', ephemeral=True)
             return False
     return commands.check(predicate)
-      
+
 async def permissions_autocomplete(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
     """This is for Default or Custom permission setting via /bot permissions"""
     types = ['Default', 'Custom']
+    return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
+
+async def embed_type_autocomplete(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+    """This is for Default or Custom permission setting via /bot permissions"""
+    types = ['Discord Embeds', 'Custom Images']
     return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
 
 async def autocomplete_bool(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
@@ -157,8 +176,8 @@ async def autocomplete_template(interaction:discord.Interaction, current:str, ch
     """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
-class CustomButton(Button):
-    """ utils.CustomButton(server,view,server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)"""
+class ServerButton(Button):
+    """Custom Start Button for when Servers are Offline."""
     def __init__(self, server:AMP.AMPInstance, view:discord.ui.View, function, label:str, callback_label:str, callback_disabled:bool, style=discord.ButtonStyle.green, context=None):
         super().__init__(label=label, style=style, custom_id=label)
         self.logger = logging.getLogger()
@@ -193,19 +212,19 @@ class CustomButton(Button):
         #server_embed = await self._view.update_view()
         await self._interaction.followup.edit_message(message_id=self._interaction.message.id, view=self._view)
 
-class StartButton(CustomButton):
+class StartButton(ServerButton):
     def __init__(self, server, view, function):
         super().__init__(server=server, view=view, function=function, label='Start', callback_label='Starting...', callback_disabled=True, style=discord.ButtonStyle.green)
 
-class StopButton(CustomButton):
+class StopButton(ServerButton):
     def __init__(self, server, view, function):
         super().__init__(server=server, view=view, function=function, label='Stop', callback_label='Stopping...', callback_disabled=True, style=discord.ButtonStyle.red)
 
-class RestartButton(CustomButton):
+class RestartButton(ServerButton):
     def __init__(self, server, view, function):
         super().__init__(server=server, view=view, function=function, label='Restart', callback_label='Restarting...', callback_disabled=True, style=discord.ButtonStyle.blurple)
 
-class KillButton(CustomButton):
+class KillButton(ServerButton):
     def __init__(self, server, view, function):
         super().__init__(server=server, view=view, function=function, label='Kill', callback_label='Killed...', callback_disabled=True, style=discord.ButtonStyle.danger)
     
@@ -220,6 +239,206 @@ class StatusView(View):
         """This Removes all the Buttons after timeout has expired"""
         self.stop()
 
+def banner_file_handler(image:Image.Image):
+    with io.BytesIO() as image_binary:
+        image.save(image_binary, 'PNG')
+        image_binary.seek(0)
+        return discord.File(fp=image_binary, filename='image.png')
+
+class Edited_DB_Banner():
+    """DB_Banner for Banner Editor"""
+    def __init__(self, db_banner:DB.DBBanner):
+        self._db_banner = db_banner
+
+        self.invalid_keys = ['_db','ServerID','background_path'] 
+        self.reset_db()
+
+    def save_db(self):
+        for key in self._db_banner.attr_list:
+            if key in self.invalid_keys:
+                continue
+
+            if getattr(self._db_banner, key) != getattr(self, key):
+                setattr(self._db_banner, key, getattr(self, key))
+
+        return self._db_banner
+    
+    def reset_db(self):
+        for key in self._db_banner.attr_list:
+            if key in self.invalid_keys:
+                continue
+            setattr(self, key, getattr(self._db_banner, key))
+        return self._db_banner
+    
+class Banner_Editor_View(View):
+    def __init__(self, amp_server: AMP.AMPInstance, db_banner: DB.DBBanner, banner_message: discord.Message, timeout=None):
+        self.logger = logging.getLogger()
+
+        self._original_db_banner = db_banner
+        self._edited_db_banner = Edited_DB_Banner(db_banner)
+        self._banner_message = banner_message #This is the message that the banner is attached to.
+        self._amp_server = amp_server
+        self._first_interaction = discord.Interaction
+        self._first_interaction_bool = True
+        
+        self._banner_editor_select = Banner_Editor_Select(custom_id= 'banner_editor', edited_db_banner= self._edited_db_banner, banner_message= self._banner_message, view= self, amp_server= self._amp_server)
+        super().__init__(timeout=timeout)
+        self.add_item(self._banner_editor_select)
+        self.add_item(Save_Banner_Button(banner_message= self._banner_message, edited_banner= self._edited_db_banner, server= self._amp_server))
+        self.add_item(Reset_Banner_Button(banner_message= self._banner_message, edited_banner= self._edited_db_banner, server= self._amp_server))
+        self.add_item(Cancel_Banner_Button(banner_message= self._banner_message))
+
+class Banner_Editor_Select(Select):
+    def __init__(self, edited_db_banner: Edited_DB_Banner, view: Banner_Editor_View, amp_server: AMP.AMPInstance, banner_message: discord.Message, custom_id:str= None, min_values:int= 1, max_values:int= 1, row:int= None, disabled:bool= False, placeholder:str= None):
+        self.logger = logging.getLogger()
+        self._banner_view = view
+
+        self._edited_db_banner = edited_db_banner
+        self._banner_message = banner_message
+
+        self._amp_server = amp_server
+        options = [
+            discord.SelectOption(label= "Blur Background Intensity", value= 'blur_background_amount'),
+            discord.SelectOption(label= "Header Font Color", value= 'color_header'),
+            discord.SelectOption(label= "Nickname Font Color", value= 'color_nickname'),
+            discord.SelectOption(label= "Body Font Color", value= 'color_body'),
+            discord.SelectOption(label= "IP Font Color", value= 'color_IP'),
+            discord.SelectOption(label= "Whitelist Open Font Color", value= 'color_whitelist_open'),
+            discord.SelectOption(label= "Whitelist Closed Font Color", value= 'color_whitelist_closed'),
+            discord.SelectOption(label= "Donator Font Color", value= 'color_donator'),
+            discord.SelectOption(label= "Server Online Font Color", value= 'color_status_online'),
+            discord.SelectOption(label= "Server Offline Font Color", value= 'color_status_offline'),
+            discord.SelectOption(label= "Player Limit Minimum Font Color", value= 'color_player_limit_min'),
+            discord.SelectOption(label= "Player Limit Maximum Font Color", value= 'color_player_limit_max'),
+            discord.SelectOption(label= "Players Online Font Color", value= 'color_player_online')
+            ]
+        super().__init__(custom_id=custom_id, placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, disabled=disabled, row=row)
+
+    async def callback(self, interaction: discord.Interaction):
+        if self.values[0] == 'blur_background_amount':
+            input_type = 'int'
+        else:
+            input_type = 'color'
+
+        self._banner_modal = Banner_Modal(input_type= input_type, title= f'{self.values[0].replace("_", " ")}', select_value= self.values[0], edited_db_banner= self._edited_db_banner, banner_message= self._banner_message, view= self._banner_view, amp_server= self._amp_server)
+        await interaction.response.send_modal(self._banner_modal)
+        
+        self._first_interaction = False
+
+class Banner_Modal(Modal):
+    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: discord.Message, amp_server: AMP.AMPInstance, timeout= None , custom_id= 'Banner Modal'):
+        self._edited_db_banner = edited_db_banner
+        self._banner_message = banner_message
+        self._banner_view = view
+
+        self._amp_server = amp_server
+
+        self._select_value = select_value #This is the Select Option Choice that was made.
+        self._input_type = input_type
+        super().__init__(title= title, timeout= timeout, custom_id= custom_id)
+
+        if self._input_type == 'color':
+            self._color_code_input = Banner_Color_Input(edited_db_banner= self._edited_db_banner, select_value= self._select_value, view= self._banner_view)
+            self.add_item(self._color_code_input)
+
+        if self._input_type == 'int':
+            self._int_code_input = Banner_Blur_Input(edited_db_banner= self._edited_db_banner, select_value= self._select_value, view= self._banner_view)
+            self.add_item(self._int_code_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if self._input_type == 'color':
+            if await self._color_code_input.callback() == False:
+                await interaction.response.send_message(content= f'Please provide a proper Hex color Code. {self._color_code_input._value}', ephemeral= True)
+                
+          
+        if self._input_type == 'int':
+            if await self._int_code_input.callback() == False:
+                await interaction.response.send_message(f'Please provide a Number only. {self._int_code_input.value}', ephemeral= True)
+                
+        else:
+            await interaction.response.defer()
+        await self._banner_message.edit(attachments= [banner_file_handler(BC.Banner_Generator(self._amp_server, self._edited_db_banner)._image_())], view= self._banner_view)
+ 
+class Banner_Color_Input(TextInput):
+    def __init__(self, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, select_value: str, label: str= "Enter your Hex color code below.", style= discord.TextStyle.short, placeholder: str= '#000000', default: str= '#ffffff', required= True, min_length= 3, max_length= 8):
+        self._edited_db_banner = edited_db_banner
+        self._select_value = select_value
+        self._banner_view = view
+        super().__init__(label= label, style= style, placeholder= placeholder, default= default, required= required, min_length= min_length, max_length= max_length)
+
+    async def callback(self):
+        #Remove the Hex code for validation.
+        self._value = self.value
+        if self._value[0] == '#':
+            self._value = self._value[1:]
+
+        #Validate if Hex Color Code.
+        if len(self._value) in [3,4,6,8] and re.search(f'([0-9a-f]{{{len(self._value)}}})$', self._value):
+            self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} # {self._value}')
+            setattr(self._edited_db_banner, self._select_value, '#' + self._value)
+            return True
+        else:
+            return False
+
+class Banner_Blur_Input(TextInput):
+    def __init__(self, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, select_value: str, label: str= "Blur Background Intensity", style= discord.TextStyle.short, placeholder= 'Enter a Number', default:int= 2, required= True, min_length= 1, max_length= 2):
+        self._edited_db_banner = edited_db_banner
+        self._select_value = select_value
+        self._banner_view = view
+        super().__init__(label= label, style= style, placeholder= placeholder, default= default, required= required, min_length= min_length, max_length= max_length)
+
+    async def callback(self):
+        if self.value.isalnum() and int(self.value) <= 99:
+            self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} {self.value}')
+            setattr(self._edited_db_banner, self._select_value, int(self.value[0]))
+            return True
+        else:
+            return False
+
+class Save_Banner_Button(Button):
+    """Saves the Banners current settings to the DB."""
+    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner,  style=discord.ButtonStyle.green):
+        super().__init__(label='Save', style=style, custom_id='Save_Button')
+        self.logger = logging.getLogger()
+        self._amp_server = server
+        self._banner_message = banner_message
+        self._edited_db_banner = edited_banner
+
+    async def callback(self, interaction):
+        """This is called when a button is interacted with."""
+        saved_banner = self._edited_db_banner.save_db()
+        await interaction.response.defer()
+        file = banner_file_handler(BC.Banner_Generator(self._amp_server, saved_banner)._image_())
+        await self._banner_message.edit(content='**Banner Settings have been saved.**', attachments= [file], view= None)
+
+class Reset_Banner_Button(Button):
+    """Resets the Banners current settings to the original DB."""
+    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner, style=discord.ButtonStyle.blurple):
+        super().__init__(label='Reset', style=style, custom_id='Reset_Button')
+        self.logger = logging.getLogger()
+        self._amp_server = server
+        self._banner_message = banner_message
+        self._edited_db_banner = edited_banner
+
+    async def callback(self, interaction):
+        """This is called when a button is interacted with."""
+        saved_banner = self._edited_db_banner.reset_db()
+        await interaction.response.defer()
+        file = banner_file_handler(BC.Banner_Generator(self._amp_server, saved_banner)._image_())
+        await self._banner_message.edit(content='**Banner Settings have been reset.**', attachments= [file])
+
+class Cancel_Banner_Button(Button):
+    """Cancels the Banner Settings View"""
+    def __init__(self, banner_message: discord.Message, style=discord.ButtonStyle.red):
+        super().__init__(label='Cancel', style=style, custom_id='Cancel_Button')
+        self.logger = logging.getLogger()
+        self._banner_message = banner_message
+
+    async def callback(self, interaction):
+        """This is called when a button is interacted with."""
+        await interaction.response.defer()
+        await self._banner_message.edit(content='**Banner Settings Editor has been Cancelled.**', attachments= [], view= None)
+    
 class discordBot():
     def __init__(self, client:commands.Bot):
         self.botLogger = logging.getLogger(__name__)
@@ -771,10 +990,12 @@ class botUtils():
                     embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
                     
                 if key.lower() == 'whitelist_channel':
-                    key_value = f'<#{self.channelparse(key_value,context,context.guild.id).id}>'
-                    if key_value == None:
-                        key_value = 'None'
-                    embed.add_field(name='Whitelist Channel', value=f'{key_value}',inline=False)
+                    channel = self.channelparse(key_value,context,context.guild.id)
+                    if channel != None:
+                        channel = f'<#{channel.id}>'
+                    else:
+                        channel = 'None'
+                    embed.add_field(name='Whitelist Channel', value=f'{channel}',inline=False)
 
                 if key_value == '0' or key_value == '1':
                     key_value = bool(key_value)

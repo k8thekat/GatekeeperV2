@@ -325,7 +325,9 @@ class Server(commands.Cog):
                 Users_online = 'None'
             server_embed = await self.uBot.server_status_embed(context, amp_server, tps, Users, cpu, Memory, Uptime, Users_online)
             view = utils.StatusView(context=context, amp_server= amp_server)
-            utils.CustomButton(amp_server, view, amp_server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)
+
+            view.add_item()
+            utils.ServerButton(amp_server, view, amp_server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)
             utils.StopButton(amp_server, view, amp_server.StopInstance)
             utils.RestartButton(server, view, amp_server.RestartInstance)
             utils.KillButton(server, view, amp_server.KillInstance)

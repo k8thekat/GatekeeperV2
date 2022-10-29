@@ -34,9 +34,7 @@ class Cog_Template(commands.Cog):
     def __init__ (self,client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
-
-        self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
+        self.logger = logging.getLogger() #Point all print/logging statments here!
 
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
@@ -57,6 +55,7 @@ class Cog_Template(commands.Cog):
 
         #Leave this commented out unless you need to create a sub-command.
         #self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
+        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
 
     @commands.Cog.listener('on_message')
     async def on_message(self,message:discord.Message):
