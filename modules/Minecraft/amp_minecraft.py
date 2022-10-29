@@ -34,9 +34,13 @@ class AMPMinecraft(AMP.AMPInstance):
     def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
         self.perms = ['Minecraft.*','Minecraft.InGameActions.*','-Minecraft.PluginManagement.*']
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
+
         
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
         self.Console = AMPMinecraftConsole(self)
+        
+        self.background_banner_path = 'resources/banners/Minecraft_banner.png'
+        self.Banner = self.DB_Server.getBanner(self.background_banner_path)
         
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12Gd4qUO1aLsYoQBqMR0JPPdkUOSAX94r'
@@ -273,25 +277,12 @@ class AMPMinecraftConsole(AMP.AMPConsole):
                 return True
     
     def console_events(self, message):
-        """ALWAYS RETURN FALSE! ALL events go to `console_event_messages`"""
-        event_list = ['tried to swim','has completed the challenge','has made the advancement']
-        #Join Event
-        if message['Contents'].endswith('has joined the game'):
-            self.console_event_message_lock.acquire()
-            self.console_event_messages.append(message['Contents'])
-            self.console_event_message_lock.release()
-            return False
-
-        #Leave Event
-        if message['Contents'].endswith('has left the game'):
-            self.console_event_message_lock.acquire()
-            self.console_event_messages.append(message['Contents'])
-            self.console_event_message_lock.release()
-            return False
-        
+        """ALWAYS RETURN FALSE! ALL events go to `.console_event_messages`"""
+        event_list = ['left the game', 'joined the game', 'tried to swim','completed the challenge','made the advancement', 'was slain by', 'fell off', 'was shot by']
         #Event List Interations
         for event in event_list:
-            if message['Contents'].find(event):
+            if message['Contents'].find(event) != -1:
+                self.logger.dev(f'**{self.AMPInstance.APIModule} Event Message Found {event}**')
                 self.console_event_message_lock.acquire()
                 self.console_event_messages.append(message['Contents'])
                 self.console_event_message_lock.release()

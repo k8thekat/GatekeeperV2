@@ -24,6 +24,7 @@ import io
 import logging
 import pathlib
 from PIL import Image
+import re
 
 import discord
 from discord import app_commands
@@ -71,28 +72,19 @@ class Cog_Template(commands.Cog):
             banners.append(entry.stem)
         return [app_commands.Choice(name=banner, value=banner) for banner in banners if current.lower() in banner.lower()]
 
-    def banner_file_handler(self, image:Image.Image):
-        with io.BytesIO() as image_binary:
-            image.save(image_binary, 'PNG')
-            image_binary.seek(0)
-            return discord.File(fp=image_binary, filename='image.png')
+    async def banner_editor(self, context:commands.Context, amp_server:AMP.AMPInstance, db_server_banner=None):
+        """Handles sending the banner."""
+        db_server = self.DB.GetServer(amp_server.InstanceID)
 
-    # def sync_func(one, two, three=None):
-    #     # do blocking stuff
-    #     return some_stuff
+        db_server_banner = db_server.getBanner()
+        #Send a message so we can have a message.id to eidt later.
+        sent_msg = await context.send('Creating Banner Editor...', ephemeral= True)
 
-    # async def async_func(whatever):
-    #     # obtain one, two, three from somewhere?
-    #     # supports args & kwargs
-    #     thing = functools.partial(sync_func, one, two, three=3)
-
-    #     # run_in_executor supports passing args directly, e.g.
-    #     # 'run_in_executor(None, func, one, two, three)' but using
-    #     # partial makes stuff a bit easier to read if you have a
-    #     # large amount of arguments you don't want to stack onto
-    #     # a single line.
-    #     some_stuff = await bot.loop.run_in_executor(None, thing)
-
+        #Create my View first
+        editor_view = utils.Banner_Editor_View(db_banner=db_server_banner, amp_server= amp_server, banner_message = sent_msg)
+        banner_file = utils.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
+        await sent_msg.edit(content= '**Banner Editor**', attachments= [banner_file], view= editor_view)
+   
     @commands.hybrid_group(name='banner')
     @utils.role_check()
     async def amp_banner(self, context:commands.Context):
@@ -102,22 +94,22 @@ class Cog_Template(commands.Cog):
     @amp_banner.command(name= 'test')
     @app_commands.autocomplete(server = autocomplete_servers)
     #@app_commands.autocomplete(path= autocomplete_banners)
+    @utils.author_check(144462063920611328)
     async def amp_banner_test(self, context:commands.Context, server):
+        """ Usage case is for test display of banners based upon the picked Server."""
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
             return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
-        #self._client.loop.run_in_executor(None, self.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_()))
-
-        await context.send(file= self.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_()))
-        #await context.send(file = discord.File(fp = 'H:\\VSC\\Projects\\Discord Bot\\resources\\Bot Permissions.png'))
+        await context.send(file= utils.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_()))
 
     @amp_banner.command(name='background')
     @app_commands.autocomplete(server= autocomplete_servers)
     @app_commands.autocomplete(image= autocomplete_banners)
-    async def amp_banner_set(self, context:commands.Context, server, image):
-
+    @utils.role_check()
+    async def amp_banner_image(self, context:commands.Context, server, image):
+        """Sets the Background Image for the selected Server."""
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
             return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
@@ -125,6 +117,17 @@ class Cog_Template(commands.Cog):
         db_server = self.DB.GetServer(amp_server.InstanceID)
         banner = db_server.getBanner()
         banner.backgound_path = image
+    
+    @amp_banner.command(name= 'settings')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def amp_banner_settings(self, context:commands.Context, server):
+        """Prompts the Banner Editor Menu"""
+        amp_server = self.uBot.serverparse(server, context, context.guild.id)
+        if amp_server == None:
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
+
+        await self.banner_editor(context, amp_server)
 
 async def setup(client):
     await client.add_cog(Cog_Template(client))

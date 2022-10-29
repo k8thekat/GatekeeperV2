@@ -21,23 +21,32 @@ ___
     - **ATTENTION**: Requires Discord Administrator to use!
     - **TIP**: Please see **[Permissions](/PERMISSIONS.md)** if you want `Custom` control over command usage.
 - `/bot settings` - Lists Bot settings such as channels and whitelist status.
-- `/bot roleid (role)` - Returns the role ID for the selected Discord Role.
-- `/bot channelid (channel)` - Returns the Channel ID for the selected Discord Channel
-- `/bot userid (user)` - Returns the User ID for the selected Discord User.
-- `/bot ping` - Pong!
-- `/bot load (path)` - Loads a specific Cog. *(eg. path = `/cogs/cog_template`)*
-- `/bot unload (cogname)` - Unloads a specific Cog. *(eg. name = `cog_template`)*
-- `/bot stop` - Stops the Bot.
-- `/bot restart` - Restarts the Bot.
-- `/bot status` - Replies with **AMP version** and if setup is complete, **DB version** and if setup is complete and **Displays Bot version information**.
-    - **TIP**: This information is useful when reporting bugs/errors on Github!
-- `/bot sync (reset, local)` - Sync functionality for Gatekeeperv2
-    - `reset` `(true/false)` if `True` will clear all commands from the Command Tree and then re-sync's the command tree.
-    - `local` `(true/false)` if `True` makes the sync or reset happen to the `guild` the command is used in.
 - `/bot donator (role)` - Sets the Donator Role for Donator Only AMP Server access.
     - **TIP**: This will prevent people without the role from requesting whitelist to Donator only Servers.
-- `/bot embed auto_update (flag)` - Allows the bot to automatically update the `/server display` embed messages.
+
+### <u>Bot Utils Commands</u>: 
+- `/bot utils ping` - Pong!
+- `/bot utils stop` - Stops the Bot.
+- `/bot utils restart` - Restarts the Bot.
+- `/bot utils status` - Replies with **AMP version** and if setup is complete, **DB version** and if setup is complete and **Displays Bot version information**.
+    - **TIP**: This information is useful when reporting bugs/errors on Github!
+- `/bot utils sync (reset, local)` - Sync functionality for Gatekeeperv2
+    - `reset` `(true/false)` if `True` will clear all commands from the Command Tree and then re-sync's the command tree.
+    - `local` `(true/false)` if `True` makes the sync or reset happen to the `guild` the command is used in.
+- `/bot utils roleid (role)` - Returns the role ID for the selected Discord Role.
+- `/bot utils channelid (channel)` - Returns the Channel ID for the selected Discord Channel
+- `/bot utils userid (user)` - Returns the User ID for the selected Discord User.
+- `/bot utils clear (channel, amount)` - Delete(s) the Specified amount of Messages Sent by the Bot.
+
+### <u>Bot Cog Commands</u>: 
+- `/bot cog load (path)` - Loads a specific Cog. *(eg. path = `/cogs/cog_template`)*
+- `/bot cog unload (cogname)` - Unloads a specific Cog. *(eg. name = `cog_template`)*
+- `/bot cog reload` - Reloads all currently loaded Cogs.
+
+### <u>Bot Embed Commands</u>: 
+- `/bot embed auto_update (flag)` - Allows the bot to automatically update the `/server display` Banner messages.
     - **TIP**: Use the `/server display` command inplace of your "Server Info" or similar! 
+- `/bot embed type (type)` - Select which type of Banner to display via `/server display`
 
 ### <u>Bot Whitelist Commands</u>:
 - `/whitelist auto (flag)` - Allows the bot to automatically Whitelist a Users request.
@@ -63,10 +72,6 @@ ___
 - `/whitelist reply remove` - Removes the selected message from the list of replies the bot can use during Whitelist handling.
 - `/whitelist reply list` - Lists all the currently available replies the bot can use during Whitelist handling.
 
-### <u>AMP Server Database Commands</u>: 
-- `/dbserver cleanup` - Removes any Database Server entries that are not in your AMP Instances list.
-- `/dbserver swap (server, replacement_server)` - Use this to switch an AMP instance with another AMP Instance in the Database.
-
 ### <u>User/Member Group Commands</u>: 
 - `/user info (user)` - Displays a Discord Users information and their Database information.
 - `/user add (user,mc_ign,mc_uuid,steamid)` - Adds a User to the Database with the provided arguments.
@@ -84,6 +89,9 @@ ___
 - `/user steamid (name)` - Looks up the Steam Display Name provided and returns the assosciated STEAM ID with it.
     - **ATTENTION**: This is early experimental, it may be inaccurate.
 
+### <u>AMP Server Database Commands</u>: 
+- `/dbserver cleanup` - Removes any Database Server entries that are not in your AMP Instances list.
+- `/dbserver swap (server, replacement_server)` - Use this to switch an AMP instance with another AMP Instance in the Database.
 
 ### <u>AMP Server Commands</u>: 
 - `/server display` - Lists all AMP Servers in Embeds with current information.
@@ -160,6 +168,9 @@ ___
 - `/server nickname remove (server, nickname)` - Removes the specificed `nickname` from the servers list of nicknames.
 - `/server nickname list (server)` - Displays a list of the AMP Servers nicknames.
 
+### <u>AMP Server Banner Commands</u>:
+- `/server banner settings (server)` - Prompts the Banner Editor View.
+- `/server banner background (server, background_image)` - Select the Background Image to be used as the Banner Image for the selected AMP Server.
 ___
 
 ### **Setting AMP Server Nicknames**:

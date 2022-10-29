@@ -20,19 +20,20 @@
 
 '''
 from __future__ import annotations
+import sys
+import logging
+
 import discord
 from discord import app_commands
 from discord.ext import commands,tasks
-import tokens
-import sys
-import logging
 
 #Custom scripts
 import utils
 import AMP
 import DB
+import tokens
 
-Version = 'beta-4.2.2'
+Version = 'beta-4.3.0'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -69,18 +70,16 @@ class Gatekeeper(commands.Bot):
             self.update_loop.start()
 
         import loader
-        Handler = loader.Handler(self)
-        await Handler.module_auto_loader()
-        await Handler.cog_auto_loader()
+        self.Handler = loader.Handler(self)
+        await self.Handler.module_auto_loader()
+        await self.Handler.cog_auto_loader()
     
+    def self_check(self, message: discord.Message):
+        return message.author == client.user
+
     async def on_ready(self):
         self.logger.info('Are you the Keymaster?...I am the Gatekeeper')
         
-    # async def on_guild_join(self, join_guild:discord.Guild):
-    #     self.DBConfig.SetSetting('Guild_ID',join_guild.id)
-    #     self.tree.copy_global_to(guild=join_guild)
-    #     self.logger.info(f'Syncing Commands via on_guild_join locally to guild: {join_guild.name} {await self.tree.sync(guild=join_guild)}')
-    
     @tasks.loop(seconds= 30)
     async def update_loop(self):
         self.logger.info(f'Waiting to Update Bot Version to {Version}...')
@@ -154,7 +153,13 @@ async def bot_settings(context:commands.Context):
         settings_list.append({f'{setting.capitalize()}': f'{str(config)}'})
     await context.send(embed=client.uBot.bot_settings_embed(context, settings_list), ephemeral=True)
 
-@main_bot.command(name='test')
+@main_bot.group(name='utils')
+@utils.role_check()
+async def bot_utils(context:commands.Context):
+    if context.invoked_subcommand is None:
+        await context.send('Invalid command passed...', ephemeral=True)
+
+@bot_utils.command(name='test')
 @utils.role_check()
 @utils.guild_check(guild_id=602285328320954378)
 async def bot_test(context:commands.Context):
@@ -162,56 +167,50 @@ async def bot_test(context:commands.Context):
     """Test Async Function..."""
     await context.send('Test Function Used', ephemeral=True)
 
-@main_bot.command(name='roleid')
+@bot_utils.command(name='clear')
+@app_commands.autocomplete(channel = utils.autocomplete_discord_channels)
+@utils.role_check()
+async def bot_utils_clear(context:commands.Context, channel, amount: app_commands.Range[int, 0, 100]= 25):
+    """Cleans up Messages sent by the Bot. Limit 100"""
+    client.logger.command(f'{context.author.name} used Bot Utils Clear...')
+
+    await context.defer()
+
+    discord_channel = client.uBot.channelparse(channel, context, context.guild.id)
+    if discord_channel == None:
+        return await context.send('Unable to find the provided channel, please try again.', ephemeral=True)
+
+    messages = await discord_channel.purge(limit= amount, check= client.self_check, bulk= False)
+    return await discord_channel.send(f'Cleaned up **{len(messages)} message(s)**. Wow, look at all this space!')
+
+@bot_utils.command(name='roleid')
 @utils.role_check()
 @app_commands.autocomplete(role= utils.autocomplete_discord_roles)
 async def bot_roleid(context:commands.Context, role:str):
     """Returns the role id for the specified role."""
-    client.logger.command(f'{context.author.name} used Bot Role ID...')
+    client.logger.command(f'{context.author.name} used Bot Utils Role ID...')
 
     await context.send(f'**{role}** has the role id of: {client.uBot.roleparse(parameter=role, context=context, guild_id=context.guild.id).id}', ephemeral=True)
 
-@main_bot.command(name='channelid')
+@bot_utils.command(name='channelid')
 @utils.role_check()
 @app_commands.autocomplete(channel= utils.autocomplete_discord_channels)
 async def bot_channelid(context:commands.Context, channel:str):
     """Returns the channel id for the specified channel."""
-    client.logger.command(f'{context.author.name} used Bot Channel ID...')
+    client.logger.command(f'{context.author.name} used Bot Utils Channel ID...')
     
     await context.send(f'**{channel}** has the channel id of: {client.uBot.channelparse(parameter=channel, context=context, guild_id=context.guild.id).id}', ephemeral=True)
 
-@main_bot.command(name='userid')
+@bot_utils.command(name='userid')
 @utils.role_check()
 @app_commands.autocomplete(user= utils.autocomplete_discord_users)
 async def bot_userid(context:commands.Context, user:str):
     """Returns the user id for the specified user."""
-    client.logger.command(f'{context.author.name} used Bot Channel ID...')
+    client.logger.command(f'{context.author.name} used Bot Utils User ID...')
 
     await context.send(f'**{user}** has the user id of: {client.uBot.userparse(parameter=user, context=context, guild_id=context.guild.id).id}', ephemeral=True)
 
-@main_bot.group(name='embed')
-@utils.role_check()
-async def bot_embed(context:commands.Context):
-    if context.invoked_subcommand is None:
-        await context.send('Invalid command passed...', ephemeral=True)
-
-@bot_embed.command(name='auto_update')
-@utils.role_check()
-@app_commands.autocomplete(flag= utils.autocomplete_bool)
-async def bot_embed_auto_update(context:commands.Context, flag:str):
-    """Toggles Auto Updating of Embeds On or Off. (Only for `/server Display`)"""
-    client.logger.command(f'{context.author.name} used Bot Display Auto...')
-    
-    if flag.lower() == 'true':
-        client.DBConfig.SetSetting('Embed_Auto_Update', True)
-        return await context.send(f'All set! The bot will Auto Update the embeds from `/server display` every minute.', ephemeral=True)
-    if flag.lower() == 'false':
-        client.DBConfig.SetSetting('Embed_Auto_Update', False)
-        return await context.send(f"Well, I guess I won't update the embeds anymore.", ephemeral=True)
-    else:
-        return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral=True)
-
-@main_bot.command(name='ping')
+@bot_utils.command(name='ping')
 @utils.role_check()
 async def bot_ping(context:commands.Context):
     """Pong..."""
@@ -219,34 +218,50 @@ async def bot_ping(context:commands.Context):
 
     await context.send(f'Pong {round(client.latency * 1000)}ms', ephemeral=True)
 
-@main_bot.command(name='load')
+@main_bot.group(name='cog')
+@utils.role_check()
+async def bot_cog(context:commands.Context):
+    """Cog Group Commands"""
+    if context.invoked_subcommand is None:
+        await context.send('Invalid command passed...', ephemeral=True)
+   
+@bot_cog.command(name='load')
 @utils.role_check()
 async def bot_cog_loader(context:commands.Context, cog:str):
-    """Use this function for loading a cog manually."""
+    """Loading a specific cog."""
     client.logger.command(f'{context.author.name} used Bot Cog Load Function...')
 
     try:
-        client.load_extension(name= cog)
+        await client.load_extension(name= cog)
     except Exception as e:
         await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}', ephemeral=True)
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension {cog}', ephemeral=True)
 
-@main_bot.command(name='unload')
+@bot_cog.command(name='unload')
 @utils.role_check()
 @app_commands.autocomplete(cog = autocomplete_loadedcogs)
 async def bot_cog_unloader(context:commands.Context, cog:str):
-    """Use this function to un-load a cog manually."""
+    """Un-load a specific cog."""
     client.logger.command(f'{context.author.name} used Bot Cog Unload Function...')
 
     try:
-        client.unload_extension(name=cog)
+        await client.unload_extension(name=cog)
     except Exception as e:
         await context.send(f'**ERROR** Un-Loading Extension {cog} - {e}', ephemeral=True)
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension {cog}', ephemeral=True)
 
-@main_bot.command(name='disconnect')
+@bot_cog.command(name='reload')
+@utils.role_check()
+async def bot_cog_reload(context:commands.Context):
+    """Reloads all loaded Cogs"""
+    client.logger.command(f'{context.author.name} used Bot Cog Reload Function...')
+
+    await client.Handler.cog_auto_loader(reload= True)
+    await context.send(f'**SUCCESS** Reloading All Extensions ', ephemeral=True)  
+
+@bot_utils.command(name='disconnect')
 @utils.role_check()
 async def bot_stop(context:commands.Context):
     """Closes the connection to Discord."""
@@ -255,7 +270,7 @@ async def bot_stop(context:commands.Context):
     await context.send('Disconnecting from the Server...', ephemeral=True)
     return await client.close()
 
-@main_bot.command(name='restart')
+@bot_utils.command(name='restart')
 @utils.role_check()
 async def bot_restart(context:commands.Context):
     """This is the Gatekeeper restart function\n"""
@@ -267,7 +282,7 @@ async def bot_restart(context:commands.Context):
     sys.stdout.flush()
     os.execv(sys.executable, ['python3'] + sys.argv)
 
-@main_bot.command(name='status')
+@bot_utils.command(name='status')
 @utils.role_check()
 async def bot_status(context:commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
@@ -277,7 +292,7 @@ async def bot_status(context:commands.Context):
     await context.send(f'**Gatekeeperv2 Version**: {Version} // **SQL Database Version**: {client.DBHandler.DB_Version}', ephemeral=True)
     await context.send(f'**AMP Connected**: {client.AMPHandler.SuccessfulConnection} // **SQL Database**: {client.DBHandler.SuccessfulDatabase}', ephemeral=True)
 
-@main_bot.command(name='sync')
+@bot_utils.command(name='sync')
 @utils.role_check()
 @app_commands.autocomplete(reset= utils.autocomplete_bool)
 @app_commands.autocomplete(local= utils.autocomplete_bool)
@@ -294,26 +309,55 @@ async def bot_sync(context:commands.Context, local:str='true', reset:str='false'
             #Local command tree reset
             client.tree.clear_commands(guild=context.guild)
             client.logger.command(f'Bot Commands Reset Locally and Sync\'d: {await client.tree.sync(guild=context.guild)}')
-            return await context.send('**WARNING** Resetting Gatekeeper Commands Locally...', ephemeral=True)
+            return await context.send('**WARNING** Resetting Gatekeeper Commands Locally...', ephemeral= True)
 
         elif context.author.id == 144462063920611328:
             #Global command tree reset
             client.tree.clear_commands(guild=None)
             client.logger.command(f'Bot Commands Reset Globall and Sync\'d: {await client.tree.sync(guild=None)}')
-            return await context.send('**WARNING** Resetting Gatekeeper Commands Globally...', ephemeral=True)
+            return await context.send('**WARNING** Resetting Gatekeeper Commands Globally...', ephemeral= True)
         else:
-            return await context.sned('**ERROR** You do not have permission to reset the commands.', ephemeral=True)
+            return await context.sned('**ERROR** You do not have permission to reset the commands.', ephemeral= True)
 
     if local.lower() == 'true':
         #Local command tree sync
         client.tree.copy_global_to(guild=context.guild)
         client.logger.command(f'Bot Commands Sync\'d Locally: {await client.tree.sync(guild=context.guild)}')
-        return await context.send(f'Successfully Sync\'d Gatekeeper Commands to {context.guild.name}...', ephemeral=True)
+        return await context.send(f'Successfully Sync\'d Gatekeeper Commands to {context.guild.name}...', ephemeral= True)
 
     elif context.author.id == 144462063920611328:
         #Global command tree sync
         client.logger.command(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild=None)}')
-        await context.send('Successfully Sync\'d Gatekeeper Commands Globally...', ephemeral=True)
+        await context.send('Successfully Sync\'d Gatekeeper Commands Globally...', ephemeral= True)
+
+@main_bot.group(name='embed')
+@utils.role_check()
+async def bot_embed(context:commands.Context):
+    if context.invoked_subcommand is None:
+        await context.send('Invalid command passed...', ephemeral=True)
+
+@bot_embed.command(name='auto_update')
+@utils.role_check()
+@app_commands.autocomplete(flag= utils.autocomplete_bool)
+async def bot_embed_auto_update(context:commands.Context, flag:str):
+    """Toggles Auto Updating of Embeds On or Off. (Only for `/server Display`)"""
+    client.logger.command(f'{context.author.name} used Bot Embed Display Auto...')
+    
+    if flag.lower() == 'true':
+        client.DBConfig.SetSetting('Embed_Auto_Update', True)
+        return await context.send(f'All set! The bot will Auto Update the embeds from `/server display` every minute.', ephemeral=True)
+    if flag.lower() == 'false':
+        client.DBConfig.SetSetting('Embed_Auto_Update', False)
+        return await context.send(f"Well, I guess I won't update the embeds anymore.", ephemeral=True)
+    else:
+        return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral=True)
+
+@bot_embed.command(name='type')
+@utils.role_check()
+@app_commands.autocomplete(type= utils.embed_type_autocomplete)
+async def bot_embed_type(context:commands.Context, type= 'Discord Embeds'):
+    """Selects which type of Server Banner(s) to Display, either Embeds or Images"""
+    client.logger.command(f'{context.author.name} used Bot Embed Type...')
     
 def client_run():
     client.logger.info('Gatekeeper v2 Intializing...')

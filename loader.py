@@ -97,7 +97,7 @@ class Handler():
      
         self.logger.info(f'**All Server Modules Loaded**')
 
-    async def cog_auto_loader(self):
+    async def cog_auto_loader(self, reload= False):
         """This will load all Cogs inside of the cogs folder needed for interaction with DB and AMP"""
         path = f'cogs' #This gets us to the folder for the module specific scripts to load via the cog.
         try:
@@ -107,7 +107,11 @@ class Handler():
                     cog = f'{path}.{script.name[:-3]}'
 
                     try:
-                        await self._client.load_extension(cog) 
+                        if reload:
+                            await self._client.reload_extension(cog)
+                        else:
+                            await self._client.load_extension(cog) 
+
                         self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
                         continue
 
