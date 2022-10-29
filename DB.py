@@ -204,7 +204,7 @@ class Database:
         self._AddConfig('Whitelist_Emoji_Pending', None)
         self._AddConfig('Whitelist_Emoji_Done', None)
         self._AddConfig('Embed_Auto_Update', True)
-        self._AddConfig('Banner_Type', '')
+        self._AddConfig('Banner_Type', )
         self._AddConfig('Bot_Version', )
 
     def _execute(self, SQL, params):

@@ -345,19 +345,28 @@ async def bot_embed_auto_update(context:commands.Context, flag:str):
     
     if flag.lower() == 'true':
         client.DBConfig.SetSetting('Embed_Auto_Update', True)
-        return await context.send(f'All set! The bot will Auto Update the embeds from `/server display` every minute.', ephemeral=True)
+        return await context.send(f'All set! The bot will Auto Update the embeds from `/server display` every minute.', ephemeral= True)
     if flag.lower() == 'false':
         client.DBConfig.SetSetting('Embed_Auto_Update', False)
-        return await context.send(f"Well, I guess I won't update the embeds anymore.", ephemeral=True)
+        return await context.send(f"Well, I guess I won't update the embeds anymore.", ephemeral= True)
     else:
-        return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral=True)
+        return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral= True)
 
 @bot_embed.command(name='type')
 @utils.role_check()
 @app_commands.autocomplete(type= utils.embed_type_autocomplete)
-async def bot_embed_type(context:commands.Context, type= 'Discord Embeds'):
+async def bot_embed_type(context:commands.Context, type:str):
     """Selects which type of Server Banner(s) to Display, either Embeds or Images"""
     client.logger.command(f'{context.author.name} used Bot Embed Type...')
+
+    if type.lower() == 'discord embeds':
+        client.DBConfig.SetSetting('Banner_Type', 'discord embeds')
+        await context.send('Look at me, using Discord Embeds.. psht..I mean they atleast work.', ephemeral= True)
+    if type.lower() == 'custom images':
+        client.DBConfig.SetSetting('Banner_Type', 'custom images')
+        await context.send('Looks like we are going to be using Custom Banner Images! Oooooh yea~', ephemeral= True)
+    else:
+        return await context.send('Hey, You gotta pick either `Discord Embeds` or `Custom Images`', ephemeral= True)
     
 def client_run():
     client.logger.info('Gatekeeper v2 Intializing...')

@@ -139,6 +139,10 @@ class Banner_Generator():
     def _word_wrap(self, text:str, text_font:ImageFont.ImageFont, text_size:int, limit:int, find_char:str, truncate:bool=True):
         """Custom Word Wrap. \n
         Returns a `list` when `truncate` is `False`"""
+        #No need to word wrap if the length is less than our cutoff.
+        if ImageFont.truetype(text_font, text_size).getlength(text) < limit:
+            return text
+
         if text.find(find_char) == -1:
             return None
 
@@ -226,7 +230,7 @@ class Banner_Generator():
     
     def _Server_NickNames(self):
         self._font_Nicknames_y = self._font_Header_text_height + 5
-        if len(self._Server.Nicknames) > 0:
+        if self._Server.Nicknames != None and len(self._Server.Nicknames) > 0:
             x,y = (50, self._font_Nicknames_y)
             text = "Nicknames: " + " , ".join(self._Server.Nicknames)
             text = self._word_wrap(text, self._font, self._font_Nickname_size, (self._banner_shadow_box_x - x), ',' , True )

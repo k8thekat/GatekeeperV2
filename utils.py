@@ -829,7 +829,7 @@ class botUtils():
                 server = self.AMPInstances[server]
     
                 db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-                if db_server != None:
+                if db_server != None and db_server.Hidden != 1:
 
                     status = 'Offline'
                     Users = None
