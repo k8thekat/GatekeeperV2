@@ -38,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 1.9
+DB_Version = 2.0
 
 class DBHandler():
     def __init__(self):
@@ -113,7 +113,7 @@ class Database:
                         ID integer primary key,
                         InstanceID text not null unique collate nocase,
                         InstanceName text unique collate nocase,
-                        DisplayName unique text,
+                        DisplayName text unique,
                         Description text,
                         IP text,
                         Whitelist integer not null,
@@ -204,8 +204,8 @@ class Database:
         self._AddConfig('Whitelist_Emoji_Pending', None)
         self._AddConfig('Whitelist_Emoji_Done', None)
         self._AddConfig('Embed_Auto_Update', True)
-        self._AddConfig('Banner_Type', )
-        self._AddConfig('Bot_Version', )
+        self._AddConfig('Banner_Type', 'Discord Embeds')
+        self._AddConfig('Bot_Version', None)
 
     def _execute(self, SQL, params):
         Retry = 0
@@ -590,7 +590,7 @@ class DBServer:
     def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, 
     DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Donator: bool = False, 
     Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Chat_Prefix: str= None, Discord_Event_Channel: str = None,
-    Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True, Avatar_url: str = None):
+    Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True, Avatar_url: str = None, Hidden: bool= False):
         # set defaults
         Params = locals()
         Params.pop("self")
@@ -808,7 +808,6 @@ class DBBanner:
             for entry in row.keys():
                 super().__setattr__(entry, row[entry])
 
-            super().__setattr__('blur_background', bool(self.blur_background))
         else:
             # create the sql line
             SQL = "insert into ServerBanners ("
@@ -832,10 +831,7 @@ class DBBanner:
 
     def __setattr__(self, name: str, value):
 
-        if name == 'blur_background':
-            value = bool(value)
-
-        elif name == 'blur_background_amount':
+        if name == 'blur_background_amount':
             value = int(value)
 
         super().__setattr__(name, value)
