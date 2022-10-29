@@ -117,19 +117,19 @@ class Server(commands.Cog):
                 self.logger.error(f'Display Messages were deleted, removing {discord_channel.name} Messages and stopping the loop.')
                 self.DB.DelServerEmebed(discord_guild.id, discord_channel.id)
 
-            self.server_display_update.stop()
+            #self.server_display_update.stop()
             await asyncio.sleep(5)
 
     @tasks.loop(minutes=1)
     async def server_display_update(self):
-        """This will handle the constant updating of Server Display Embeds"""
+        """This will handle the constant updating of Server Display Messages"""
         if self._client.is_ready():
             if not self.DBConfig.GetSetting('Embed_Auto_Update'):
                 return
-            self.logger.info('Updating Server Display Embeds')
+            self.logger.info('Updating Server Display Messages')
             server_embeds = self.DB.GetServerEmbeds()
             if len(server_embeds) == 0:
-                self.logger.error('No Server Embeds to Update')
+                self.logger.error('No Server Displays to Update')
                 self.server_display_update.stop()
                 return
 
@@ -140,8 +140,9 @@ class Server(commands.Cog):
                 discord_message = discord_channel.get_partial_message(embed['MessageID'])
                 message_list.append(discord_message)
 
-            #print(self.DBConfig.GetSetting('Banner_Type'))
+            
             if self.DBConfig.GetSetting('Banner_Type') == 'custom images':
+                
                 await self._banner_generator(message_list, discord_guild, discord_channel)
             else:
                 await self._embed_generator(message_list, discord_guild, discord_channel)
@@ -413,6 +414,7 @@ class Server(commands.Cog):
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def amp_server_nickname_add(self, context:commands.Context, server, nickname:str):
+        """Add a Nickname to a AMP Server"""
         self.logger.command(f'{context.author.name} used AMP Server Nickname Add...')
         
         amp_server = await self._serverCheck(context, server, False)
@@ -420,12 +422,14 @@ class Server(commands.Cog):
             db_server = self.DB.GetServer(amp_server.InstanceID)
             naughty_words = ['server','ign','whitelist']
             for word in naughty_words:
-                if nickname.lower().find(word) == -1:
-                    await context.send('Nicknames cannot contain the words `Server`, `IGN` or `Whitelist`, these are exclusive.')
+
+                if nickname.lower().find(word) != -1:
+                    await context.send('Nicknames cannot contain the words `Server`, `IGN` or `Whitelist`, these are exclusive.', ephemeral= True)
+
             if db_server.AddNickname(nickname):
-                await context.send(f'Added **{nickname}** to **{server}** Nicknames List.', ephemeral=True)
+                await context.send(f'Added **{nickname}** to **{server}** Nicknames List.', ephemeral= True)
             else:
-                await context.send(f"The nickname provided is not unique, this server or another server already has this nickname.", ephemeral=True)
+                await context.send(f"The nickname provided is not unique, this server or another server already has this nickname.", ephemeral= True)
         else:
             return
         
@@ -433,6 +437,7 @@ class Server(commands.Cog):
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def amp_server_nickname_remove(self, context:commands.Context, server, nickname):
+        """Remove a Nickname from a AMP Server"""
         self.logger.command(f'{context.author.name} used AMP Server Nickname remove...')
 
         amp_server = await self._serverCheck(context, server, False)
@@ -450,6 +455,7 @@ class Server(commands.Cog):
     @utils.role_check()
     @app_commands.autocomplete(server= autocomplete_servers)
     async def amp_server_nickname_list(self, context:commands.Context, server):
+        """Display a list of AMP Server Nicknames"""
         self.logger.command(f'{context.author.name} used AMP Server Nickname list...')
 
         amp_server = await self._serverCheck(context, server, False)
@@ -697,7 +703,7 @@ class Server(commands.Cog):
             if flag_reg == None:
                 return await context.send('Please use `true` or `false` for your flag.', ephemeral= True)
             
-            self.DB.GetServer(InstanceID= server.InstanceID).Hidden = self.uBot.str_to_bool(flag)
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Hidden = self.uBot.str_to_bool(flag)
             amp_server._setDBattr() #This will update the AMPConsole Attributes
             if flag.lower() == 'true':
                 return await context.send(f"The **{server}** will now be Hidden", ephemeral= True)

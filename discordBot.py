@@ -33,7 +33,7 @@ import AMP
 import DB
 import tokens
 
-Version = 'beta-4.3.1'
+Version = 'beta-4.3.2'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -162,15 +162,16 @@ async def bot_utils(context:commands.Context):
 @bot_utils.command(name='test')
 @utils.role_check()
 @utils.guild_check(guild_id=602285328320954378)
-async def bot_test(context:commands.Context):
+async def bot_utils_test(context:commands.Context):
     client.logger.command(f'{context.author.name} used Bot Test...')
     """Test Async Function..."""
     await context.send('Test Function Used', ephemeral=True)
 
 @bot_utils.command(name='clear')
 @app_commands.autocomplete(channel = utils.autocomplete_discord_channels)
+@app_commands.autocomplete(all = utils.autocomplete_bool)
 @utils.role_check()
-async def bot_utils_clear(context:commands.Context, channel, amount: app_commands.Range[int, 0, 100]= 25):
+async def bot_utils_clear(context:commands.Context, channel, amount: app_commands.Range[int, 0, 100]= 25, all:str= 'true'):
     """Cleans up Messages sent by the Bot. Limit 100"""
     client.logger.command(f'{context.author.name} used Bot Utils Clear...')
 
@@ -179,14 +180,18 @@ async def bot_utils_clear(context:commands.Context, channel, amount: app_command
     discord_channel = client.uBot.channelparse(channel, context, context.guild.id)
     if discord_channel == None:
         return await context.send('Unable to find the provided channel, please try again.', ephemeral=True)
+    
+    if all.lower() == 'true':
+        messages = await discord_channel.purge(limit= amount, bulk= False)
+    else:
+        messages = await discord_channel.purge(limit= amount, check= client.self_check, bulk= False)
 
-    messages = await discord_channel.purge(limit= amount, check= client.self_check, bulk= False)
     return await discord_channel.send(f'Cleaned up **{len(messages)} message(s)**. Wow, look at all this space!')
 
 @bot_utils.command(name='roleid')
 @utils.role_check()
 @app_commands.autocomplete(role= utils.autocomplete_discord_roles)
-async def bot_roleid(context:commands.Context, role:str):
+async def bot_utils_roleid(context:commands.Context, role:str):
     """Returns the role id for the specified role."""
     client.logger.command(f'{context.author.name} used Bot Utils Role ID...')
 
@@ -195,7 +200,7 @@ async def bot_roleid(context:commands.Context, role:str):
 @bot_utils.command(name='channelid')
 @utils.role_check()
 @app_commands.autocomplete(channel= utils.autocomplete_discord_channels)
-async def bot_channelid(context:commands.Context, channel:str):
+async def bot_utils_channelid(context:commands.Context, channel:str):
     """Returns the channel id for the specified channel."""
     client.logger.command(f'{context.author.name} used Bot Utils Channel ID...')
     
@@ -204,7 +209,7 @@ async def bot_channelid(context:commands.Context, channel:str):
 @bot_utils.command(name='userid')
 @utils.role_check()
 @app_commands.autocomplete(user= utils.autocomplete_discord_users)
-async def bot_userid(context:commands.Context, user:str):
+async def bot_utils_userid(context:commands.Context, user:str):
     """Returns the user id for the specified user."""
     client.logger.command(f'{context.author.name} used Bot Utils User ID...')
 
@@ -212,7 +217,7 @@ async def bot_userid(context:commands.Context, user:str):
 
 @bot_utils.command(name='ping')
 @utils.role_check()
-async def bot_ping(context:commands.Context):
+async def bot_utils_ping(context:commands.Context):
     """Pong..."""
     client.logger.command(f'{context.author.name} used Bot Ping...')
 
@@ -263,7 +268,7 @@ async def bot_cog_reload(context:commands.Context):
 
 @bot_utils.command(name='disconnect')
 @utils.role_check()
-async def bot_stop(context:commands.Context):
+async def bot_utils_stop(context:commands.Context):
     """Closes the connection to Discord."""
     client.logger.command(f'{context.author.name} used Bot Stop Function...')
 
@@ -272,7 +277,7 @@ async def bot_stop(context:commands.Context):
 
 @bot_utils.command(name='restart')
 @utils.role_check()
-async def bot_restart(context:commands.Context):
+async def bot_utils_restart(context:commands.Context):
     """This is the Gatekeeper restart function\n"""
     client.logger.command(f'{context.author.name} used Bot Restart Function...')
 
@@ -284,7 +289,7 @@ async def bot_restart(context:commands.Context):
 
 @bot_utils.command(name='status')
 @utils.role_check()
-async def bot_status(context:commands.Context):
+async def bot_utils_status(context:commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
     client.logger.command(f'{context.author.name} used Bot Status Function...')
 
@@ -296,7 +301,7 @@ async def bot_status(context:commands.Context):
 @utils.role_check()
 @app_commands.autocomplete(reset= utils.autocomplete_bool)
 @app_commands.autocomplete(local= utils.autocomplete_bool)
-async def bot_sync(context:commands.Context, local:str='true', reset:str='false'):
+async def bot_utils_sync(context:commands.Context, local:str='true', reset:str='false'):
     """Syncs Bot Commands to the current guild this command was used in."""
     client.logger.command(f'{context.author.name} used Bot Sync Function...')
     await context.defer()
@@ -339,7 +344,7 @@ async def bot_embed(context:commands.Context):
 @bot_embed.command(name='auto_update')
 @utils.role_check()
 @app_commands.autocomplete(flag= utils.autocomplete_bool)
-async def bot_embed_auto_update(context:commands.Context, flag:str):
+async def bot_embed_autoupdate(context:commands.Context, flag:str):
     """Toggles Auto Updating of Embeds On or Off. (Only for `/server Display`)"""
     client.logger.command(f'{context.author.name} used Bot Embed Display Auto...')
     
