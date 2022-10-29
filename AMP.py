@@ -369,18 +369,7 @@ class AMPInstance:
         self.background_banner_path = 'resources/banners/AMP_Banner.jpg'
         self.Banner = self.DB_Server.getBanner(self.background_banner_path)
         
-    def _ADScheck(self):
-        """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!
-        This updates `self.ADS_Running` attribute, also returns `True` on Success or `False` on failure"""
-        Success = self.Login()
-        self.logger.debug('Server Check, Login Sucess: ' + str(Success))
-        if Success:
-            status = self.getStatus(running_check = True)
-            if status == True:
-                self.logger.debug(f'{self.FriendlyName} ADS Running: {status}')
-                self.ADS_Running = status
-                return True
-        return False
+
 
     def Login(self):
         if self.SessionID == 0:
@@ -476,6 +465,17 @@ class AMPInstance:
     
         return post_req.json()
 
+    def _ADScheck(self):
+        """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!
+        This updates `self.ADS_Running` attribute, also returns `True` on Success or `False` on failure"""
+        Success = self.Login()
+        self.logger.debug('Server Check, Login Sucess: ' + str(Success))
+        if Success:
+            status = self.getStatus(running_check = True)
+            self.logger.dev(f'{self.FriendlyName} ADS Running: {status}')
+            self.ADS_Running = status
+            return status
+            
     def _updateInstanceAttributes(self):
         """This updates an AMP Server Objects attributes from `getInstances()` API call."""
         if (not self.Initialized) or (time.time() - self.Last_Update_Time < 5):
@@ -506,7 +506,7 @@ class AMPInstance:
         self.Last_Update_Time_Mutex.release()
 
     def _instanceValidation(self):
-        """This checks if any new instances have been created/started since last check. If so, updates AMP_Instances and creates the object."""
+        """This checks if any new instances have been created since last check. If so, updates AMP_Instances and creates the object."""
         self.Login()
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstances',parameters) 
@@ -516,7 +516,7 @@ class AMPInstance:
             for i in range(0,len(result["result"][0]['AvailableInstances'])): #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
                 instance = result["result"][0]['AvailableInstances'][i]
                 if instance['InstanceID'] not in amp_instance_keys:
-                    self.logger.info(f'Found a New Instance since Startup; Creating AMP Object for {instance["FriendlyName"]}')
+                    self.logger.info(f'Found a New AMP Instance since Startup; Creating AMP Object for {instance["FriendlyName"]}')
                     if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
                         name = str(self.AMPHandler.AMP_Modules[instance["DisplayImageSource"]]).split("'")[1]
                         self.logger.dev(f'Loaded __{name}__ for {instance["FriendlyName"]}')
@@ -530,7 +530,30 @@ class AMPInstance:
                         server = self.AMPHandler.AMP_Modules['Generic'](instance['InstanceID'],instance,i,self.AMPHandler)
                         self.AMPHandler.AMP_Instances[server.InstanceID] = server
                         return instance['FriendlyName']
-  
+    
+    def _instance_ThreadManager(self):
+        """AMP Instance(s) Thread Manager"""
+        self.Login()
+        for instance in self.AMPHandler.AMP_Instances:
+            server = self.AMPHandler.AMP_Instances[instance]
+            #Lets validate our ADS Running before we check for console threads.
+        
+            self.logger.dev(f'{server.FriendlyName} Running: {server.Running} ADS_Running: {server.ADS_Running}')
+            self.logger.dev(f'Console Object: {server.Console} Console Thread: {server.Console.console_thread} Console Thread Running: {server.Console.console_thread_running}')
+
+            if server.Running and server._ADScheck() and server.ADS_Running:
+                #Lets check if the Console Thread is running now.
+                if server.Console.console_thread_running == False:
+                    self.logger.info(f'{server.FriendlyName}: Starting Console Thread, Instance Online: {server.Running} and ADS Online: {server.ADS_Running}')
+                    server.Console.console_thread_running = True
+                    server.Console.console_thread.start()
+
+            if not server.Running or server.Running and not server.ADS_Running:
+                if server.Console.console_thread_running == True:
+                    self.logger.error(f'{server.FriendlyName}: Shutting down Console Thread, Instance Online: {server.Running}, ADS Online: {server.ADS_Running}.')
+                    server.Console.console_thread_running = False
+                    server.Console.console_thread.stop()
+
     def getInstances(self):
         """This gets all Instances on AMP and puts them into a dictionary.\n {'InstanceID': AMPAPI class}"""
         self.Login()
@@ -631,7 +654,7 @@ class AMPInstance:
         #This happens because CallAPI returns False when it fails permissions.
         if result == False:
             return False
-
+        
         #This works if I had permission and the server is online, but not actually running. So we check TPS to make sure the server is actually 'live' 
         if running_check and result != False:
             status = str(result['State'])
@@ -991,42 +1014,29 @@ class AMPConsole:
                 # self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
                 # self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
                 if self.AMPInstance.DisplayImageSource in self.AMPHandler.AMP_Console_Modules: #Should be AMP_Console_Modules: {Module_Name: 'Module_class_object'}
-                    if self.AMPInstance.Running:
-                        #self.AMPInstance._ADScheck()
-                    #if self.AMPInstance.ADS_Running: #This is the Instance's ADS 
-                        self.logger.dev(f'Loaded {self.AMPHandler.AMP_Console_Modules[self.AMPInstance.DisplayImageSource]} for {self.AMPInstance.FriendlyName}')
-        
-                        self.console_thread_running = True
+                    self.logger.dev(f'Loaded {self.AMPHandler.AMP_Console_Modules[self.AMPInstance.DisplayImageSource]} for {self.AMPInstance.FriendlyName}')
+    
+                    #This starts the console parse on our self in a seperate thread.
+                    self.console_thread = threading.Thread(target=self.console_parse, name=self.AMPInstance.FriendlyName)
 
-                        #This starts the console parse on our self in a seperate thread.
-                        self.console_thread = threading.Thread(target=self.console_parse, name=self.AMPInstance.FriendlyName)
+                    #This adds the AMPConsole Thread Object into a dictionary with the key value of AMPInstance.InstanceID
+                    self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
 
-                        #This adds the AMPConsole Thread Object into a dictionary with the key value of AMPInstance.InstanceID
-                        self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
+                    if self.AMPInstance.Running and self.AMPInstance._ADScheck() and self.AMPInstance.ADS_Running:
                         self.console_thread.start()
+                        self.console_thread_running = True
                         self.logger.dev(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
-
-                    # else:
-                    #     self.logger.warning(f'**ATTENTION** Server: {self.AMPInstance.FriendlyName} ADS is not currently Running, unable to Start Console Thread.')
-                    #     self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
-                    #     self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
-
+                        
                 else: #If we can't find the proper module; lets load the Generic.
-                    if self.AMPInstance.Running:
-                        #self.AMPInstance._ADScheck()
-                    #if self.AMPInstance.ADS_Running: #This is the Instance's ADS 
-                        self.logger.dev(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generic"]} for {self.AMPInstance.FriendlyName}')
-                        #server_console = self.AMP_Console_Modules['Generic']
-                        self.console_thread_running = True
-                        self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
-                        self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
-                        self.console_thread.start()
-                        self.logger.dev(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
+                    self.logger.dev(f'Loaded for {self.AMPHandler.AMP_Console_Modules["Generic"]} for {self.AMPInstance.FriendlyName}')
+            
+                    self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
+                    self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
 
-                    # else:
-                    #     self.logger.warning(f'**ATTENTION** Server: {self.AMPInstance.FriendlyName} ADS is not currently Running, unable to Start Console Thread.')
-                    #     self.console_thread = threading.Thread(target=self.console_parse, name= self.AMPInstance.FriendlyName)
-                    #     self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.console_thread
+                    if self.AMPInstance.Running and self.AMPInstance._ADScheck() and self.AMPInstance.ADS_Running:
+                        self.console_thread.start()
+                        self.console_thread_running = True
+                        self.logger.dev(f'**SUCCESS** Starting Console Thread for {self.AMPInstance.FriendlyName}...')
 
             except Exception as e:
                 self.AMP_Console_Threads[self.AMPInstance.InstanceID] = self.AMPHandler.AMP_Console_Modules['Generic']

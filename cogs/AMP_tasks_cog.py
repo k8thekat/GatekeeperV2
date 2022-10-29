@@ -95,11 +95,12 @@ class AMP_Cog(commands.Cog):
                        
         return message
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(seconds=30)
     async def amp_server_instance_check(self):
-        """Checks for new AMP Instances every Minute."""
-        self.logger.dev('Checking for any new AMP Instances...')
+        """Checks for new AMP Instances every 30 seconds.."""
+        self.logger.dev('Checking AMP Instance(s) Status...')
         self.AMPHandler.AMP._instanceValidation()
+        self.AMPHandler.AMP._instance_ThreadManager()
 
     @tasks.loop(seconds=1)
     async def amp_server_console_messages_send(self):
