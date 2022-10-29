@@ -1038,6 +1038,7 @@ class botPerms():
 
         self.validate_and_load()
         self.get_roles()
+        self.logger.info('**Success** Loading Bot Permissions')
 
     def validate_and_load(self):
         self.json_file = pathlib.Path.cwd().joinpath('bot_perms.json')

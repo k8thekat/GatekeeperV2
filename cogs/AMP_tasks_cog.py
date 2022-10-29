@@ -95,11 +95,12 @@ class AMP_Cog(commands.Cog):
                        
         return message
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(seconds=30)
     async def amp_server_instance_check(self):
-        """Checks for new AMP Instances every Minute."""
-        self.logger.dev('Checking for any new AMP Instances...')
+        """Checks for new AMP Instances every 30 seconds.."""
+        self.logger.dev('Checking AMP Instance(s) Status...')
         self.AMPHandler.AMP._instanceValidation()
+        self.AMPHandler.AMP._instance_ThreadManager()
 
     @tasks.loop(seconds=1)
     async def amp_server_console_messages_send(self):
@@ -260,61 +261,41 @@ class AMP_Cog(commands.Cog):
                     if chat_webhook == None:
                         self.logger.dev(f'*AMP Chat Message* creating a new webhook for {AMPServer_Chat.FriendlyName}')
                         chat_webhook = await channel.create_webhook(name=f'{AMPServer_Chat.FriendlyName} Chat')
-    
-                    author = None
-                    author_db = self.DB.GetUser(message['Source'])
+
+                    #This is the person who wrote the In-Game Message
+                    author = message['Source']
                     author_prefix = None
 
-                    if AMPServer_Chat.Discord_Chat_Prefix != None:
-                        contents = self.uBot.message_formatter(f"\x01[{AMPServer_Chat.Discord_Chat_Prefix}]\x02 : {message['Contents']}")
-                    contents = message['Contents']
+                    message_contents = message['Contents']
+                    server_prefix = AMPServer_Chat.Discord_Chat_Prefix
 
-                    #If we have a DB user, lets try to send customized message.
-                    if author_db != None:
-                        #This is for if we exist in the DB, but don't have proper DB information (MC IGN or similar)
-                        author = self._client.get_user(author_db.DiscordID) 
+                    db_author = self.DB.GetUser(author)
+                    if db_author != None:
+                        author_prefix = await self.bPerms.get_role_prefix(db_author.DiscordID)
 
-                        if author_db.Role in self.bPerms.permissions:
-                            author_prefix = self.bPerms.permissions[author_db.Role]['prefix']
+                        if AMPServer_Chat.get_IGN_Avatar(db_user= db_author):
+                            self.logger.dev('Using AMP Server Information')
+                            name, avatar = AMPServer_Chat.get_IGN_Avatar(db_user= db_author)
 
-                        #This can return false to land into the else:
-                        if AMPServer_Chat.get_IGN_Avatar(db_user= author_db):
-                            self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration with DB Information')
-                            name, avatar = AMPServer_Chat.get_IGN_Avatar(db_user= author_db)
-                            webhook_username = name
-
-                            #Lets attempt to use a Prefix set inside of bot_perms.json
-                            if author_prefix:
-                                if AMPServer_Chat.Discord_Chat_Prefix:
-                                    server_prefix = self.uBot.message_formatter(f'\x01[{AMPServer_Chat.Discord_Chat_Prefix}]\x02')
-                                    message['Contents'] = f'{server_prefix}{author_prefix}: {message["Contents"]}'
-                                else:
-                                    message['Contents'] = f'{author_prefix}: {message["Contents"]}'
-                                await chat_webhook.send(contents= message['Contents'], username= name, avatar_url= avatar)
-                                
-                            else:
-                                await chat_webhook.send(contents, username=name, avatar_url=avatar)
-                                
-                        #This will use discord Information after finding them in the DB, for there Display name and Avatar if possible.
-                        elif author != None:
-                            self.logger.dev('*AMP Chat Message** sending a message with discord information')
-                            webhook_username = author.name
-                            await chat_webhook.send(contents, username=author.name, avatar_url=author.avatar)
-                            
-                    #This fires if we cant find a DB user and the Discord User
-                    else:
-                        #This can return False to land into the pass through else:
-                        if AMPServer_Chat.get_IGN_Avatar(user= message['Source']):
-                            self.logger.dev('*AMP Chat Message* sending a message with Instance specific configuration without DB information')
-                            name, avatar = AMPServer_Chat.get_IGN_Avatar(user= message['Source'])
-                            webhook_username = name
-                            await chat_webhook.send(contents, username=name, avatar_url=avatar)
-                            
-                        #This just sends the message as is with default information from the bot.
                         else:
-                            self.logger.dev('**AMP Chat Message** sending message as is without changes.')
-                            webhook_username = message['Source']
-                            await chat_webhook.send(contents, username= message['Source'], avatar_url=self.AMPInstances[amp_server].Avatar_url)
+                            discord_user = self._client.get_user(db_author.DiscordID) 
+                            if discord_user != None:
+                                self.logger.dev('Using Discord Server Information')
+                                name, avatar = discord_user.name, discord_user.avatar
+
+                    if db_author == None:
+                        self.logger.dev('Using Message Information')
+                        name, avatar = author, AMPServer_Chat.Avatar_url
+
+                    if author_prefix != None:
+                        self.logger.dev('Adding Author Prefix to Name')
+                        name = f'[{author_prefix}] ' + name
+                     
+                    if server_prefix != None:
+                        self.logger.dev('Adding Server Prefix to Name')
+                        name = f'[{server_prefix}] - ' + name
+
+                    await chat_webhook.send(content= message_contents, username= name, avatar_url= avatar)
 
                     #This is the Chat Relay to seperate AMP Servers.
                     if chat_webhook.channel.id in AMPChatChannels:
@@ -322,10 +303,12 @@ class AMP_Cog(commands.Cog):
                             #Dont re-send the Console Chat message we sent to Discord to the same server.
                             if AMPServer_Chat.Discord_Chat_Channel == chat_webhook.channel.id:
                                 continue
+
                             if author_prefix:
-                                Server.Chat_Message(message= Server.Chat_Message_Formatter(message['Contents']), author_prefix= author_prefix, author= webhook_username , server_prefix= Server.Discord_Chat_Prefix)
+                                Server.Chat_Message(message= message_contents, author_prefix= author_prefix, author= name , server_prefix= Server.Discord_Chat_Prefix)
                                 continue
-                            Server.Chat_Message(message= Server.Chat_Message_Formatter(message['Contents']), author= webhook_username , server_prefix= Server.Discord_Chat_Prefix)
+
+                            Server.Chat_Message(message= message_contents, author= name , server_prefix= Server.Discord_Chat_Prefix)
 
 async def setup(client:commands.Bot):
     await client.add_cog(AMP_Cog(client))

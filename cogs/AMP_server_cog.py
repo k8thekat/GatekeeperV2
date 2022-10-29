@@ -156,8 +156,8 @@ class Server(commands.Cog):
     @utils.role_check()
     @utils.guild_check(guild_id=602285328320954378)
     @app_commands.autocomplete(server= autocomplete_servers)
-    @app_commands.autocomplete(flag= utils.autocomplete_bool)
-    async def amp_server_test(self, context:commands.Context, server, flag):
+   #@app_commands.autocomplete(flag= utils.autocomplete_bool)
+    async def amp_server_test(self, context:commands.Context, server):
         """This is a test function."""
         self.logger.command(f'{context.author.name} used AMP Server Test')
         amp_server = self.uBot.serverparse(server,context,context.guild.id)

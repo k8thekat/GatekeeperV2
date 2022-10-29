@@ -33,7 +33,7 @@ import AMP
 import DB
 import tokens
 
-Version = 'beta-4.3.0'
+Version = 'beta-4.3.1'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -91,7 +91,7 @@ class Gatekeeper(commands.Bot):
             await self.tree.sync(guild= self.get_guild(self.guild_id))
             self.logger.info(f'Syncing Commands via update_loop to guild: {self.get_guild(self.guild_id).name} {await self.tree.sync(guild= self.get_guild(self.guild_id))}')
         else:
-            self.logger.error(f'It appears I cannot Sync your commands for you, please run {self.prefix}bot sync or `/bot sync` to update your command tree. Please see the readme if you encounter issues.')
+            self.logger.error(f'It appears I cannot Sync your commands for you, please run {self.prefix}bot utils sync or `/bot utils sync` to update your command tree. Please see the readme if you encounter issues.')
         self.update_loop.stop()
     
 #This is my Template for Autocomplete
