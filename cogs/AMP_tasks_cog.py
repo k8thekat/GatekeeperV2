@@ -63,7 +63,11 @@ class AMP_Cog(commands.Cog):
         context = await self._client.get_context(message)
         if message.content.startswith(self._client.command_prefix):
             return message
-            
+        
+        if message.author == self._client.user:
+            self.logger.dev('Found my own Message, oops')
+            return
+
         for amp_server in self.AMPInstances:
             self.AMPServer = self.AMPInstances[amp_server]
             if not self.AMPServer.Running:
