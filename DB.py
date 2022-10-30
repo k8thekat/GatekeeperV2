@@ -38,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.2
+DB_Version = 2.3
 
 class DBHandler():
     def __init__(self):
@@ -921,7 +921,12 @@ class DBUpdate:
             self.DBConfig.DeleteSetting('Embed_Auto_Update')
             self.banner_name_conversion()
             self.DBConfig.SetSetting('DB_Version', '2.2')
-            
+
+        if 2.3 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 2.3')
+            self.banner_name_conversion()
+            self.DBConfig.SetSetting('DB_Version', '2.3')
+
     def user_roles(self):
         try:
             SQL = "alter table users add column Role text collate nocase default None"
@@ -1030,7 +1035,7 @@ class DBUpdate:
         
     def banner_name_conversion(self):
         try:
-            SQL = 'alter table ServerEmbeds rename to ServerDisplayBanners'
+            SQL = 'alter table ServerEmbed rename to ServerDisplayBanners'
             self.DB._execute(SQL, ())
         except:
             return
