@@ -298,16 +298,15 @@ class AMP_Cog(commands.Cog):
 
                     #This is the Chat Relay to seperate AMP Servers.
                     if chat_webhook.channel.id in AMPChatChannels:
+                        self.logger.dev('Found another Server Chat Channel Listening to this Discord channel.')
                         for Server in AMPChatChannels[chat_webhook.channel.id]:
+                            
                             #Dont re-send the Console Chat message we sent to Discord to the same server.
-                            if AMPServer_Chat.Discord_Chat_Channel == chat_webhook.channel.id:
+                            if AMPServer_Chat == Server:
                                 continue
 
-                            if author_prefix:
-                                Server.Chat_Message(message= message_contents, author_prefix= author_prefix, author= name , server_prefix= Server.Discord_Chat_Prefix)
-                                continue
-
-                            Server.Chat_Message(message= message_contents, author= name , server_prefix= Server.Discord_Chat_Prefix)
+                            self.logger.dev(f'Sending the Mesage from {AMPServer_Chat.FriendlyName} to Other Server: {Server.FriendlyName}')
+                            Server.Chat_Message(message= message_contents, author_prefix= author_prefix, author= author, server_prefix= Server.Discord_Chat_Prefix)
 
 async def setup(client:commands.Bot):
     await client.add_cog(AMP_Cog(client))
