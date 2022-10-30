@@ -126,6 +126,7 @@ class Banner(commands.Cog):
     @app_commands.autocomplete(server= autocomplete_servers)
     async def amp_banner_settings(self, context:commands.Context, server):
         """Prompts the Banner Editor Menu"""
+        self.logger.command(f'{context.author.name} used Server Banner Settings Editor...')
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
             return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)

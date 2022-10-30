@@ -33,7 +33,7 @@ import AMP
 import DB
 import tokens
 
-Version = 'beta-4.3.4'
+Version = 'beta-4.3.5'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -335,34 +335,33 @@ async def bot_utils_sync(context:commands.Context, local:str='true', reset:str='
         client.logger.command(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild=None)}')
         await context.send('Successfully Sync\'d Gatekeeper Commands Globally...', ephemeral= True)
 
-@main_bot.group(name='embed')
-@utils.role_check()
-async def bot_embed(context:commands.Context):
+@main_bot.group(name='banner')
+async def bot_banner(context:commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...', ephemeral=True)
 
-@bot_embed.command(name='auto_update')
+@bot_banner.command(name='auto_update')
 @utils.role_check()
 @app_commands.autocomplete(flag= utils.autocomplete_bool)
-async def bot_embed_autoupdate(context:commands.Context, flag:str):
-    """Toggles Auto Updating of Embeds On or Off. (Only for `/server Display`)"""
-    client.logger.command(f'{context.author.name} used Bot Embed Display Auto...')
+async def bot_banner_autoupdate( context:commands.Context, flag:str):
+    """Toggles Auto Updating of Banners On or Off. (Only for `/server Display`)"""
+    client.logger.command(f'{context.author.name} used Bot Display Banners Auto Update...')
     
     if flag.lower() == 'true':
-        client.DBConfig.SetSetting('Embed_Auto_Update', True)
-        return await context.send(f'All set! The bot will Auto Update the embeds from `/server display` every minute.', ephemeral= True)
+        client.DBConfig.SetSetting('Banner_Auto_Update', True)
+        return await context.send(f'All set! The bot will Auto Update the Banners from `/server display` every minute.', ephemeral= True)
     if flag.lower() == 'false':
-        client.DBConfig.SetSetting('Embed_Auto_Update', False)
-        return await context.send(f"Well, I guess I won't update the embeds anymore.", ephemeral= True)
+        client.DBConfig.SetSetting('Banner_Auto_Update', False)
+        return await context.send(f"Well, I guess I won't update the Banners anymore.", ephemeral= True)
     else:
         return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral= True)
 
-@bot_embed.command(name='type')
+@bot_banner.command(name='type')
 @utils.role_check()
-@app_commands.autocomplete(type= utils.embed_type_autocomplete)
-async def bot_embed_type(context:commands.Context, type:str):
+@app_commands.autocomplete(type= utils.banner_type_autocomplete)
+async def bot_banner_type(context:commands.Context, type:str):
     """Selects which type of Server Banner(s) to Display, either Embeds or Images"""
-    client.logger.command(f'{context.author.name} used Bot Embed Type...')
+    client.logger.command(f'{context.author.name} used Bot Display Banners Type...')
 
     if type.lower() == 'discord embeds':
         client.DBConfig.SetSetting('Banner_Type', 'discord embeds')
@@ -371,8 +370,8 @@ async def bot_embed_type(context:commands.Context, type:str):
         client.DBConfig.SetSetting('Banner_Type', 'custom images')
         await context.send('Looks like we are going to be using Custom Banner Images! Oooooh yea~', ephemeral= True)
     else:
-        return await context.send('Hey, You gotta pick either `Discord Embeds` or `Custom Images`', ephemeral= True)
-    
+        return await context.send('Hey, You gotta pick either `Discord Embeds` or `Custom Images`', ephemeral= True)    
+
 def client_run():
     client.logger.info('Gatekeeper v2 Intializing...')
     client.logger.info(f'Discord Version: {discord.__version__}  // Gatekeeper v2 Version: {client.Bot_Version} // Python Version {sys.version}')

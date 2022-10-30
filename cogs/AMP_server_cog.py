@@ -55,27 +55,27 @@ class Server(commands.Cog):
         self.dBot = utils.discordBot(client)
         self.BC = BC
         
-        if self.DBConfig.GetSetting('Embed_Auto_Update') == True:
+        if self.DBConfig.GetSetting('Banner_Auto_Update') == True:
             self.server_display_update.start()
-            self.logger.dev(f'Server Embed Display Update is Running: {self.server_display_update.is_running()}')
+            self.logger.dev(f'Server Display Banners Update is Running: {self.server_display_update.is_running()}')
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
     @commands.Cog.listener('on_message_delete')
     async def on_message_delete(self, message:discord.Message):
         """This should handle if someone deletes the Display Messages."""
-        display_list = self.DB.GetServerEmbeds()
+        display_list = self.DB.GetServerDisplayBanner()
         if len(display_list) != 0:
             
             message_list = []
-            for embed in display_list:
-                discord_guild = embed['GuildID']
-                discord_channel = embed['ChannelID']
-                discord_message = embed['MessageID']
+            for banner in display_list:
+                discord_guild = banner['GuildID']
+                discord_channel = banner['ChannelID']
+                discord_message = banner['MessageID']
                 message_list.append(discord_message)
             if message.id in message_list:
-                self.logger.warning('Someone deleted the Display Embeds, removing them from the Database and stopping the Loop..')
-                self.DB.DelServerEmebed(discord_guild, discord_channel)
+                self.logger.warning('Someone deleted the Display Banners, removing them from the Database and stopping the Loop..')
+                self.DB.DelServerDisplayBanner(discord_guild, discord_channel)
 
                 if self.server_display_update.is_running():
                     self.server_display_update.stop()
@@ -115,8 +115,8 @@ class Server(commands.Cog):
             try:
                 await message_list[curpos].edit(embeds=embed_list[curpos*10:(curpos+1)*10])
             except discord.errors.NotFound:
-                self.logger.error(f'Embed Messages were deleted, removing {discord_channel.name}and stopping the loop.')
-                self.DB.DelServerEmebed(discord_guild.id, discord_channel.id)
+                self.logger.error(f'Embed Banner Messages were deleted, removing {discord_channel.name}and stopping the loop.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
             self.server_display_update.stop()
             await asyncio.sleep(5)
@@ -138,8 +138,8 @@ class Server(commands.Cog):
             try:
                 await message_list[curpos].edit(attachments= banner_image_list[curpos*10:(curpos+1)*10])
             except discord.errors.NotFound:
-                self.logger.error(f'Display Messages were deleted, removing {discord_channel.name} Messages.')
-                self.DB.DelServerEmebed(discord_guild.id, discord_channel.id)
+                self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
             await asyncio.sleep(5)
 
@@ -147,20 +147,20 @@ class Server(commands.Cog):
     async def server_display_update(self):
         """This will handle the constant updating of Server Display Messages"""
         if self._client.is_ready():
-            if not self.DBConfig.GetSetting('Embed_Auto_Update'):
+            if not self.DBConfig.GetSetting('Banner_Auto_Update'):
                 return
             self.logger.info('Updating Server Display Messages')
-            server_embeds = self.DB.GetServerEmbeds()
-            if len(server_embeds) == 0:
-                self.logger.error('No Server Displays to Update')
+            server_banners = self.DB.GetServerDisplayBanner()
+            if len(server_banners) == 0:
+                self.logger.error('No Server Displays Messages to Update')
                 self.server_display_update.stop()
                 return
 
             message_list = []
-            for embed in server_embeds:
-                discord_guild = self._client.get_guild(embed['GuildID'])
-                discord_channel = discord_guild.get_channel(embed['ChannelID'])
-                discord_message = discord_channel.get_partial_message(embed['MessageID'])
+            for banner in server_banners:
+                discord_guild = self._client.get_guild(banner['GuildID'])
+                discord_channel = discord_guild.get_channel(banner['ChannelID'])
+                discord_message = discord_channel.get_partial_message(banner['MessageID'])
                 message_list.append(discord_message)
 
             
@@ -239,7 +239,7 @@ class Server(commands.Cog):
     @server.command(name='display')
     @utils.role_check()
     async def amp_server_display(self, context:commands.Context):
-        """Retrieves a list of all AMP Instances and displays them as embeds with constant updates."""
+        """Retrieves a list of all AMP Instances and displays them as Bannerss with constant updates."""
         self.logger.command(f'{context.author.name} used AMP Display List...')
 
         await context.defer()
@@ -252,24 +252,24 @@ class Server(commands.Cog):
                 banner_file = utils.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
                 banner_image_list.append(banner_file)
 
-            self.Server_Info_Embeds = []
+            self.Server_Info_Bannerss = []
             for curpos in range(0, len(banner_image_list), 10):
                 sent_msg = await context.send(files= banner_image_list[curpos:curpos+10])
-                self.Server_Info_Embeds.append(sent_msg.id)
+                self.Server_Info_Bannerss.append(sent_msg.id)
 
         else:
             embed_list = await self.uBot.server_display_embed()
             if len(embed_list) == 0:
-                return await context.send('Hey I encountered an issue trying to get the Messages. Please check your settings.', ephemeral=True)
+                return await context.send('Hey I encountered an issue trying to get the Messages. Please check your settings.', ephemeral= True)
 
             self.Server_Info_Embeds = []
             for curpos in range(0, len(embed_list), 10):
                 sent_msg = await context.send(embeds= embed_list[curpos:curpos+10])
                 self.Server_Info_Embeds.append(sent_msg.id)
                
-        self.DB.AddServerEmbed(context.guild.id, sent_msg.channel.id, self.Server_Info_Embeds)
-        if self.DBConfig.GetSetting('Embed_Auto_Update'):
-            reply = await context.send('Pin the Server Display Messages! and the bot will update the Messages every minute!', ephemeral=True)
+        self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Embeds)
+        if self.DBConfig.GetSetting('Banner_Auto_Update'):
+            reply = await context.send('Pin the Server Display Messages! and the bot will update the Messages every minute!', ephemeral= True)
             await reply.delete(delay=60)
             if not self.server_display_update.is_running():
                 self.server_display_update.start()
@@ -283,10 +283,10 @@ class Server(commands.Cog):
 
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True)
 
         if amp_server.Running == False:
-            return await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral=True)
+            return await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral= True)
 
         if not amp_server._ADScheck():
             amp_server.StartInstance()
@@ -393,8 +393,6 @@ class Server(commands.Cog):
                 Users_online = 'None'
             server_embed = await self.uBot.server_status_embed(context, amp_server, tps, Users, cpu, Memory, Uptime, Users_online)
             view = utils.StatusView(context=context, amp_server= amp_server)
-
-            view.add_item()
             utils.ServerButton(amp_server, view, amp_server.StartInstance,'Start',callback_label='Starting...',callback_disabled=True)
             utils.StopButton(amp_server, view, amp_server.StopInstance)
             utils.RestartButton(server, view, amp_server.RestartInstance)
@@ -718,7 +716,7 @@ class Server(commands.Cog):
     @app_commands.autocomplete(server= autocomplete_servers)
     @app_commands.autocomplete(flag= utils.autocomplete_bool)
     async def db_server_hidden(self, context:commands.Context, server, flag):
-        """Hides the server from Embed Display via `/server display`"""
+        """Hides the server from Banner Display via `/server display`"""
         self.logger.command(f'{context.author.name} used Database Server Hidden')
 
         amp_server = await self._serverCheck(context, server, False)
