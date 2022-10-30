@@ -33,7 +33,7 @@ import AMP
 import DB
 import tokens
 
-Version = 'beta-4.3.5'
+Version = 'beta-4.3.6'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -179,7 +179,7 @@ async def bot_utils_clear(context:commands.Context, channel, amount: app_command
 
     discord_channel = client.uBot.channelparse(channel, context, context.guild.id)
     if discord_channel == None:
-        return await context.send('Unable to find the provided channel, please try again.', ephemeral=True)
+        return await context.send('Unable to find the provided channel, please try again.', ephemeral= True)
     
     if all.lower() == 'true':
         messages = await discord_channel.purge(limit= amount, bulk= False)

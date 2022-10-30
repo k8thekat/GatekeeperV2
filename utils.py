@@ -161,7 +161,16 @@ async def autocomplete_discord_channels(interaction:discord.Interaction, current
     """This is for all the channels in the discord server. Returns the choice list"""
     choice_list = []
     for channel in interaction.guild.channels:
-        choice_list.append(channel.name)
+
+        if channel.category != None:
+            channel = f'{channel.category} -> ' + channel.name
+            
+            if channel not in choice_list:
+                choice_list.append(channel)
+
+        else:
+            choice_list.append(channel.name)
+
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
 
 async def autocomplete_discord_users(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
@@ -652,6 +661,10 @@ class botUtils():
             returns `<channel>` object if True, else returns `None`
             **Note** Use context.guild.id"""
             self.logger.dev('Channel Parse Called...')
+
+            category_clear = parameter.find('->')
+            if category_clear != -1:
+                parameter = parameter[(category_clear + 2):].strip()
            
             if guild_id == None:
                 channel = self._client.get_channel(parameter)

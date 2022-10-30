@@ -256,6 +256,7 @@ class Server(commands.Cog):
             for curpos in range(0, len(banner_image_list), 10):
                 sent_msg = await context.send(files= banner_image_list[curpos:curpos+10])
                 self.Server_Info_Bannerss.append(sent_msg.id)
+            self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Bannerss)
 
         else:
             embed_list = await self.uBot.server_display_embed()
@@ -266,8 +267,8 @@ class Server(commands.Cog):
             for curpos in range(0, len(embed_list), 10):
                 sent_msg = await context.send(embeds= embed_list[curpos:curpos+10])
                 self.Server_Info_Embeds.append(sent_msg.id)
+            self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Embeds)
                
-        self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Embeds)
         if self.DBConfig.GetSetting('Banner_Auto_Update'):
             reply = await context.send('Pin the Server Display Messages! and the bot will update the Messages every minute!', ephemeral= True)
             await reply.delete(delay=60)
