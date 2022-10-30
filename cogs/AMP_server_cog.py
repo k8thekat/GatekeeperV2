@@ -61,6 +61,25 @@ class Server(commands.Cog):
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
+    @commands.Cog.listener('on_message_delete')
+    async def on_message_delete(self, message:discord.Message):
+        """This should handle if someone deletes the Display Messages."""
+        display_list = self.DB.GetServerEmbeds()
+        if len(display_list) != 0:
+            
+            message_list = []
+            for embed in display_list:
+                discord_guild = embed['GuildID']
+                discord_channel = embed['ChannelID']
+                discord_message = embed['MessageID']
+                message_list.append(discord_message)
+            if message.id in message_list:
+                self.logger.warning('Someone deleted the Display Embeds, removing them from the Database and stopping the Loop..')
+                self.DB.DelServerEmebed(discord_guild, discord_channel)
+
+                if self.server_display_update.is_running():
+                    self.server_display_update.stop()
+
     async def autocomplete_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for AMP Instance Names"""
         choice_list = self.AMPHandler.get_AMP_instance_names()
@@ -104,20 +123,24 @@ class Server(commands.Cog):
 
     async def _banner_generator(self, message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
         banner_image_list = []
-        for server in self.AMPInstances:
-            server = self.AMPInstances[server]
-            db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-            banner_file = utils.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
-            banner_image_list.append(banner_file)
+        for cur_server in self.AMPInstances:
+            server = self.AMPInstances[cur_server]
+
+            if server.Hidden != 1:
+                db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+                banner_file = utils.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
+                banner_image_list.append(banner_file)
+
+            else:
+                continue
         
         for curpos in range(0, len(message_list)):
             try:
                 await message_list[curpos].edit(attachments= banner_image_list[curpos*10:(curpos+1)*10])
             except discord.errors.NotFound:
-                self.logger.error(f'Display Messages were deleted, removing {discord_channel.name} Messages and stopping the loop.')
+                self.logger.error(f'Display Messages were deleted, removing {discord_channel.name} Messages.')
                 self.DB.DelServerEmebed(discord_guild.id, discord_channel.id)
 
-            #self.server_display_update.stop()
             await asyncio.sleep(5)
 
     @tasks.loop(minutes=1)
@@ -475,7 +498,7 @@ class Server(commands.Cog):
         self.logger.command(f'{context.author.name} used Database Server Avatar Set')
         await context.defer()
 
-        if not url.startswith('http://') or not url.startswith('https://'):
+        if not url.startswith('http://') and not url.startswith('https://'):
             return await context.send('Ooops, please provide a valid url. It must start with either `http://` or `https://`', ephemeral=True)
             
         amp_server = await self._serverCheck(context, server, False)
@@ -536,7 +559,8 @@ class Server(commands.Cog):
 
         amp_server = await self._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).IP = ip
+            db_server = self.DB.GetServer(InstanceID= amp_server.InstanceID)
+            db_server.Display_IP = ip
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f"Set **{server}** IP to `{ip}`", ephemeral=True)
         else:

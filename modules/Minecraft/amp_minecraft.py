@@ -39,8 +39,7 @@ class AMPMinecraft(AMP.AMPInstance):
         super().__init__(instanceID, serverdata, Index,Handler= Handler)
         self.Console = AMPMinecraftConsole(self)
         
-        self.background_banner_path = 'resources/banners/Minecraft_banner.png'
-        self.Banner = self.DB_Server.getBanner(self.background_banner_path)
+        self.default_background_banner_path = 'resources/banners/Minecraft_banner.png'
         
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12Gd4qUO1aLsYoQBqMR0JPPdkUOSAX94r'

@@ -31,8 +31,7 @@ class AMPCsgo(AMP.AMPInstance):
         super().__init__(instanceID,serverdata,Index,Handler=Handler)
         self.Console = AMPCsgoConsole(AMPInstance = self)
 
-        self.background_banner_path = 'resources/banners/CS_Go_Banner_3.png'
-        self.Banner = self.DB_Server.getBanner(self.background_banner_path)
+        self.default_background_banner_path = 'resources/banners/CS_Go_Banner_3.png'
 
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12QI1dnEN4fFbspNLCHELcJIy6ar2cQUa'

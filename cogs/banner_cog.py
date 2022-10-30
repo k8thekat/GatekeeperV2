@@ -36,7 +36,7 @@ import DB as DB
 import modules.banner_creator as BC
 
 
-class Cog_Template(commands.Cog):
+class Banner(commands.Cog):
     def __init__ (self, client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
@@ -69,7 +69,7 @@ class Cog_Template(commands.Cog):
         _cwd = pathlib.Path.cwd().joinpath('resources/banners')
         banner_file_list = _cwd.iterdir()
         for entry in banner_file_list:
-            banners.append(entry.stem)
+            banners.append(entry.name)
         return [app_commands.Choice(name=banner, value=banner) for banner in banners if current.lower() in banner.lower()]
 
     async def banner_editor(self, context:commands.Context, amp_server:AMP.AMPInstance, db_server_banner=None):
@@ -108,7 +108,7 @@ class Cog_Template(commands.Cog):
     @app_commands.autocomplete(server= autocomplete_servers)
     @app_commands.autocomplete(image= autocomplete_banners)
     @utils.role_check()
-    async def amp_banner_image(self, context:commands.Context, server, image):
+    async def amp_banner_background(self, context:commands.Context, server, image):
         """Sets the Background Image for the selected Server."""
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
@@ -116,7 +116,10 @@ class Cog_Template(commands.Cog):
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
         banner = db_server.getBanner()
-        banner.backgound_path = image
+        image_path = pathlib.Path.cwd().joinpath('resources/banners').as_posix() + '/' + image
+        banner.background_path = image_path
+        my_image = Image.open(image_path)
+        await context.send(content= f'Set **{amp_server.FriendlyName}** Banner Image to', file = utils.banner_file_handler(my_image))
     
     @amp_banner.command(name= 'settings')
     @utils.role_check()
@@ -130,4 +133,4 @@ class Cog_Template(commands.Cog):
         await self.banner_editor(context, amp_server)
 
 async def setup(client):
-    await client.add_cog(Cog_Template(client))
+    await client.add_cog(Banner(client))
