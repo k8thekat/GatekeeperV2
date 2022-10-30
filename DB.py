@@ -38,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.1
+DB_Version = 2.2
 
 class DBHandler():
     def __init__(self):
@@ -146,7 +146,7 @@ class Database:
                         Role text collate nocase
                         )""")
 
-        cur.execute("""create table ServerEmbed (
+        cur.execute("""create table ServerDisplayBanners (
                         ID integer primary key,
                         Discord_Guild_ID text nocase,
                         Discord_Channel_ID text nocase,
@@ -203,7 +203,7 @@ class Database:
         self._AddConfig('Auto_Whitelist', False)
         self._AddConfig('Whitelist_Emoji_Pending', None)
         self._AddConfig('Whitelist_Emoji_Done', None)
-        self._AddConfig('Embed_Auto_Update', True)
+        self._AddConfig('Banner_Auto_Update', True)
         self._AddConfig('Banner_Type', 'Discord Embeds')
         self._AddConfig('Bot_Version', None)
 
@@ -367,22 +367,22 @@ class Database:
         self._execute("delete from WhitelistReply where Message=?", (Message,))
         return
        
-    def AddServerEmbed(self, Discord_Guild_ID:int, Discord_Channel_ID:int, Discord_Message_List:list[int]):
-        """Adds a Server Embed to the DB"""
-        self._execute("delete from ServerEmbed where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
+    def AddServerDisplayBanner(self, Discord_Guild_ID:int, Discord_Channel_ID:int, Discord_Message_List:list[int]):
+        """Adds a Server Banner to the DB"""
+        self._execute("delete from ServerDisplayBanners where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
         for message_id in Discord_Message_List:
-            self._execute("insert into ServerEmbed(Discord_Guild_ID, Discord_Channel_ID, Discord_Message_ID) values(?,?,?)", (Discord_Guild_ID, Discord_Channel_ID, message_id))
+            self._execute("insert into ServerDisplayBanners(Discord_Guild_ID, Discord_Channel_ID, Discord_Message_ID) values(?,?,?)", (Discord_Guild_ID, Discord_Channel_ID, message_id))
         return
 
-    def DelServerEmebed(self, Discord_Guild_ID:int, Discord_Channel_ID:int):
-        """Delete a Server Embed for a specific channel in the DB"""
-        self._execute("delete from ServerEmbed where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
+    def DelServerDisplayBanner(self, Discord_Guild_ID:int, Discord_Channel_ID:int):
+        """Delete a Server Banner for a specific channel in the DB"""
+        self._execute("delete from ServerDisplayBanners where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
         return
 
-    def GetServerEmbeds(self) -> list[dict]:
-        """Gets a Server Embed from the DB
+    def GetServerDisplayBanner(self) -> list[dict]:
+        """Gets a Server Banner from the DB
         `{"GuildID": entry["Discord_Guild_ID"], "ChannelID": entry["Discord_Channel_ID"], "MessageID": entry["Discord_Message_ID"]}`"""
-        SQL = "Select * from ServerEmbed order by ID"
+        SQL = "Select * from ServerDisplayBanners order by ID"
         SQLArgs = []
         (rows, cur) = self._fetchall(SQL, tuple(SQLArgs))
         ret = []
@@ -891,8 +891,8 @@ class DBUpdate:
         
         if 1.7 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.7')
-            self.DBConfig.AddSetting('Embed_Auto_Update', True)
-            self.server_embeds_table()
+            self.DBConfig.AddSetting('Banner_Auto_Update', True)
+            self.server_banner_table()
             self.whitelist_reply_table()
             self.DBConfig.DeleteSetting('Server_Info_Display')
             self.DBConfig.DeleteSetting('Auto_Display')
@@ -916,6 +916,12 @@ class DBUpdate:
             self.server_ip_name_change()
             self.DBConfig.SetSetting('DB_Version', '2.1')
 
+        if 2.2 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 2.2')
+            self.DBConfig.DeleteSetting('Embed_Auto_Update')
+            self.banner_name_conversion()
+            self.DBConfig.SetSetting('DB_Version', '2.2')
+            
     def user_roles(self):
         try:
             SQL = "alter table users add column Role text collate nocase default None"
@@ -965,9 +971,9 @@ class DBUpdate:
         except:
             return
 
-    def server_embeds_table(self):
+    def server_banner_table(self):
         try:
-            SQL = 'create table ServerEmbed (ID integer primary key, Discord_Guild_ID text nocase, Discord_Channel_ID text nocase, Discord_Message_ID text)'
+            SQL = 'create table ServerBanners (ID integer primary key, Discord_Guild_ID text nocase, Discord_Channel_ID text nocase, Discord_Message_ID text)'
             self.DB._execute(SQL, ())
         except:
             return
@@ -1018,6 +1024,13 @@ class DBUpdate:
     def server_ip_name_change(self):
         try:
             SQL = "alter table Servers rename column IP to Display_IP"
+            self.DB._execute(SQL, ())
+        except:
+            return
+        
+    def banner_name_conversion(self):
+        try:
+            SQL = 'alter table ServerEmbeds rename to ServerDisplayBanners'
             self.DB._execute(SQL, ())
         except:
             return

@@ -43,10 +43,10 @@ ___
 - `/bot cog unload (cogname)` - Unloads a specific Cog. *(eg. name = `cog_template`)*
 - `/bot cog reload` - Reloads all currently loaded Cogs.
 
-### <u>Bot Embed Commands</u>: 
-- `/bot embed auto_update (flag)` - Allows the bot to automatically update the `/server display` Banner messages.
+### <u>Bot Banner Commands</u>: 
+- `/bot banner auto_update (flag)` - Allows the bot to automatically update the `/server display` Banner messages.
     - **TIP**: Use the `/server display` command inplace of your "Server Info" or similar! 
-- `/bot embed type (type)` - Select which type of Banner to display via `/server display`
+- `/bot banner type (type)` - Select which type of Banner to display via `/server display`
 
 ### <u>Bot Whitelist Commands</u>:
 - `/whitelist auto (flag)` - Allows the bot to automatically Whitelist a Users request.
@@ -94,8 +94,8 @@ ___
 - `/dbserver swap (server, replacement_server)` - Use this to switch an AMP instance with another AMP Instance in the Database.
 
 ### <u>AMP Server Commands</u>: 
-- `/server display` - Lists all AMP Servers in Embeds with current information.
-    - **TIP**: Those embeds get updated every minute! So use the command as a "Status" style channel and pin them!
+- `/server display` - Lists all AMP Servers in banners with current information.
+    - **TIP**: Those banners get updated every minute! So use the command as a "Status" style channel and pin them!
 - `/server update` - Updates the current list of AMP servers. *(This is also done every 5 minutes)*
     - **TIP**: This is used when creating a new Instance and needing to update the bots listings.
 - `/server start (server)` - Starts the specified dedicated server.
@@ -132,7 +132,7 @@ ___
         - `url` Can be set to **None** so it displays the default/original Icon created.
 - `/server settings broadcast (type)` - Sends a message to every online AMP Dedicated Server.
     - `type` Can be picked as a Prefix to your message when sending the message to the server.
-- `/server settings hidden (flag)` - Hides or Shows the Servers embed when using `/server display`
+- `/server settings hidden (flag)` - Hides or Shows the Servers Banners when using `/server display`
 
 ### <u>AMP Server Donator Commands</u>:
 - `/server donator (flag)` - Sets Donator Only Flag for the AMP Dedicated server to True

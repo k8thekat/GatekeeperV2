@@ -265,7 +265,7 @@ class AMP_Cog(commands.Cog):
                     author = message['Source']
                     author_prefix = None
 
-                    message_contents = message['Contents']
+                    message_contents = message['Contents'].replace('\n', ' ')
                     server_prefix = AMPServer_Chat.Discord_Chat_Prefix
 
                     db_author = self.DB.GetUser(author)
