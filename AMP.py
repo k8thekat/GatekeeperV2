@@ -547,7 +547,6 @@ class AMPInstance:
                 if server.Console.console_thread_running == True:
                     self.logger.error(f'{server.FriendlyName}: Shutting down Console Thread, Instance Online: {server.Running}, ADS Online: {server.ADS_Running}.')
                     server.Console.console_thread_running = False
-                    server.Console.console_thread.stop()
 
     def getInstances(self):
         """This gets all Instances on AMP and puts them into a dictionary.\n {'InstanceID': AMPAPI class}"""
@@ -1043,6 +1042,10 @@ class AMPConsole:
         last_entry_time = 0
         while(self.console_thread_running):
             time.sleep(1)
+            
+            if not self.console_thread_running:
+                return
+            
             if not self.AMPInstance.Running:
                 time.sleep(10)
                 continue

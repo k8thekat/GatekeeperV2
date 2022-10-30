@@ -45,6 +45,7 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
+    logger.dev(f'Permission Context command node {str(context.command).replace(" ",".")}')
    
     author = context
     if type(context) != discord.Member:
@@ -59,7 +60,6 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
     #This handles Custom Permissions for people with the flag set.
     #print('Permission Setting', DBConfig.GetSetting('Permissions'))
     if DBConfig.GetSetting('Permissions') == 'Custom':
-        logger.dev('context command node',str(context.command).replace(" ","."))
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
         #print(perm_node)
@@ -134,7 +134,7 @@ async def permissions_autocomplete(interaction:discord.Interaction, current:str)
     types = ['Default', 'Custom']
     return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
 
-async def embed_type_autocomplete(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+async def banner_type_autocomplete(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
     """This is for Default or Custom permission setting via /bot permissions"""
     types = ['Discord Embeds', 'Custom Images']
     return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
