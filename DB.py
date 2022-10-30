@@ -38,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.0
+DB_Version = 2.1
 
 class DBHandler():
     def __init__(self):
@@ -115,7 +115,7 @@ class Database:
                         InstanceName text unique collate nocase,
                         DisplayName text unique,
                         Description text,
-                        IP text,
+                        Display_IP text,
                         Whitelist integer not null,
                         Donator integer not null,
                         Console_Flag integer not null,
@@ -155,7 +155,7 @@ class Database:
 
         cur.execute("""create table ServerBanners (
                         ServerID integer not null,
-                        background_path text not null,
+                        background_path text,
                         blur_background_amount integer not null,
                         color_header text,
                         color_nickname text,
@@ -911,6 +911,11 @@ class DBUpdate:
             self.banner_table_creation()
             self.DBConfig.SetSetting('DB_Version', '1.9')
 
+        if 2.1 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 2.1')
+            self.server_ip_name_change()
+            self.DBConfig.SetSetting('DB_Version', '2.1')
+
     def user_roles(self):
         try:
             SQL = "alter table users add column Role text collate nocase default None"
@@ -1006,6 +1011,13 @@ class DBUpdate:
     def banner_table_creation(self):
         try:
             SQL = 'create table ServerBanners (ServerID integer not null, background_path text not null, blur_background_amount integer not null, color_header text, color_nickname text, color_body text,color_IP text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text,color_player_limit_min text,color_player_limit_max text,color_player_online text,foreign key(ServerID) references Servers(ID))'
+            self.DB._execute(SQL, ())
+        except:
+            return
+    
+    def server_ip_name_change(self):
+        try:
+            SQL = "alter table Servers rename column IP to Display_IP"
             self.DB._execute(SQL, ())
         except:
             return

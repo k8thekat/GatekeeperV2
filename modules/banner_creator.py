@@ -5,6 +5,7 @@ import random
 
 import AMP
 import DB
+import logging
 
 class fake_server():
     def __init__(self):
@@ -22,6 +23,7 @@ class Banner_Generator():
     """Custom Banner Generator for Gatekeeper. """
     def __init__(self, AMPServer:AMP.AMPInstance, DBBanner:DB.DBBanner, Banner_path:str=None, blur_background:bool=None):
         self._font = pathlib.Path("resources/fonts/ReemKufiFun-Regular.ttf").as_posix()
+        self._logger = logging.getLogger()
         #Turn that str into a Purepath for cross OS support
         self._font_default_size = 25
         self._font_default = ImageFont.truetype(self._font, self._font_default_size)
@@ -29,6 +31,8 @@ class Banner_Generator():
 
         if Banner_path == None:
             Banner_path = AMPServer.background_banner_path
+            if Banner_path == None:
+                Banner_path = AMPServer.default_background_banner_path
 
         self._banner_limit_size_x = 1800
         self._banner_limit_size_y = 600
@@ -238,8 +242,8 @@ class Banner_Generator():
 
     def _Server_IP(self):
         self._font_IP_y = self._font_Nicknames_y + self._font_Body_text_height
-        if self._Server.IP != None or self._Server.IP != '':
-            text = 'Host: ' + self._Server.IP
+        if self._Server.Display_IP not in [None, '', 'None']:
+            text = 'Host: ' + self._Server.Display_IP
             #offset = int(ImageFont.truetype(self._font, self._font_IP_size).getlength(text)/2)
     
             x,y = (25, self._font_IP_y)

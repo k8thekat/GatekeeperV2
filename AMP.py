@@ -337,7 +337,7 @@ class AMPInstance:
         return True
 
     def __getattribute__(self, __name: str):
-        if __name in ['Initialized', 'InstanceID','serverdata']:
+        if __name in ['Initialized', 'InstanceID', 'serverdata']:
             return super().__getattribute__(__name)
 
         if self.Initialized and (self.InstanceID != 0) and __name in self.serverdata:
@@ -352,7 +352,7 @@ class AMPInstance:
         self.DisplayName = self.DB_Server.DisplayName
         self.Nicknames = self.DB_Server.Nicknames
         self.Description = self.DB_Server.Description
-        self.IP = self.DB_Server.IP
+        self.Display_IP = self.DB_Server.Display_IP
         self.Whitelist = self.DB_Server.Whitelist
         self.Donator = self.DB_Server.Donator
         self.Console_Flag = self.DB_Server.Console_Flag 
@@ -364,13 +364,8 @@ class AMPInstance:
         self.Discord_Role = self.DB_Server.Discord_Role
         self.Avatar_url = self.DB_Server.Avatar_url
         self.Hidden = self.DB_Server.Hidden
+        self.background_banner_path = self.DB_Server.getBanner().background_path
         
-        #Default Banner Information.
-        self.background_banner_path = 'resources/banners/AMP_Banner.jpg'
-        self.Banner = self.DB_Server.getBanner(self.background_banner_path)
-        
-
-
     def Login(self):
         if self.SessionID == 0:
             if self.InstanceID in self.AMPHandler.SessionIDlist:
