@@ -54,7 +54,7 @@ class DBHandler():
         self.DB_Version = DB_Version
 
         #This should ONLY BE TRUE on new Database's going forward. 
-        #self.DBConfig.SetSetting('DB_Version', 1.7)
+        #self.DBConfig.SetSetting('DB_Version', 2.3)
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
             DBUpdate(self.DB, 1.0)
             return
@@ -156,7 +156,7 @@ class Database:
         cur.execute("""create table ServerBanners (
                         ServerID integer not null,
                         background_path text,
-                        blur_background_amount integer not null,
+                        blur_background_amount integer,
                         color_header text,
                         color_nickname text,
                         color_body text,
@@ -1021,7 +1021,7 @@ class DBUpdate:
 
     def banner_table_creation(self):
         try:
-            SQL = 'create table ServerBanners (ServerID integer not null, background_path text not null, blur_background_amount integer not null, color_header text, color_nickname text, color_body text,color_IP text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text,color_player_limit_min text,color_player_limit_max text,color_player_online text,foreign key(ServerID) references Servers(ID))'
+            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer not null, color_header text, color_nickname text, color_body text,color_IP text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text,color_player_limit_min text,color_player_limit_max text,color_player_online text,foreign key(ServerID) references Servers(ID))'
             self.DB._execute(SQL, ())
         except:
             return
