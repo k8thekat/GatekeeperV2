@@ -170,7 +170,6 @@ class AMPInstance:
         self.Initialized = False
 
         self.logger = logging.getLogger()
-        #self.script_dir = pathlib.Path(__file__).parent.absolute()
 
         self.AMPHandler = Handler
         if self.AMPHandler == None:
@@ -191,6 +190,7 @@ class AMPInstance:
         self.ADS_Running = False #This is for the ADS (Dedicated Server) not the Instance!
 
         self.Last_Update_Time = 0
+
         if instanceID == 0:
             self.Last_Update_Time_Mutex = threading.Lock()
 
@@ -198,6 +198,7 @@ class AMPInstance:
 
         if hasattr(self,"perms") == False:
             self.perms = ['Core.*','Core.RoleManagement.*','Core.UserManagement.*','Instances.*','ADS.*','Settings.*','ADS.InstanceManagement.*','FileManager.*','LocalFileBackup.*','Core.AppManagement.*']
+
         if hasattr(self,'APIModule') == False:
             self.APIModule = 'AMP'
 
@@ -230,7 +231,6 @@ class AMPInstance:
             if self.FriendlyName != None:
                 #This gets me the DB_Server object if it's not there; it adds the server.
                 self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
-                #Possible DB_Server Attributes = InstanceID, InstanceName, DisplayName, Description, IP, Whitelist, Donator, Console_Flag, Console_Filtered, Discord_Console_Channel, Discord_Chat_Channel, Discord_Role
                 if self.DB_Server == None:
                     self.logger.dev(f'Adding Name: {self.FriendlyName} to the Database, Instance ID: {self.InstanceID}')
                     self.DB_Server = self.DB.AddServer(InstanceID = self.InstanceID, InstanceName = self.FriendlyName)
@@ -318,7 +318,6 @@ class AMPInstance:
                 continue
             check = self.CurrentSessionHasPermission(perm)
 
-           
             self.logger.dev(f'Permission check on __{perm}__ is: {check}')
 
             if check != True:
@@ -510,6 +509,10 @@ class AMPInstance:
         if len(result["result"][0]['AvailableInstances']) != 0:
             for i in range(0,len(result["result"][0]['AvailableInstances'])): #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
                 instance = result["result"][0]['AvailableInstances'][i]
+                
+                if instance['Module'] == 'ADS':
+                    continue
+
                 if instance['InstanceID'] not in amp_instance_keys:
                     self.logger.info(f'Found a New AMP Instance since Startup; Creating AMP Object for {instance["FriendlyName"]}')
                     if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
@@ -531,11 +534,8 @@ class AMPInstance:
         self.Login()
         for instance in self.AMPHandler.AMP_Instances:
             server = self.AMPHandler.AMP_Instances[instance]
+            
             #Lets validate our ADS Running before we check for console threads.
-        
-            #self.logger.dev(f'{server.FriendlyName} Running: {server.Running} ADS_Running: {server.ADS_Running}')
-            #self.logger.dev(f'Console Object: {server.Console} Console Thread: {server.Console.console_thread} Console Thread Running: {server.Console.console_thread_running}')
-
             if server.Running and server._ADScheck() and server.ADS_Running:
                 #Lets check if the Console Thread is running now.
                 if server.Console.console_thread_running == False:
@@ -554,6 +554,7 @@ class AMPInstance:
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstances',parameters) 
         serverlist = {}
+
         if len(result["result"][0]['AvailableInstances']) != 0:
 
             self.AMPHandler.InstancesFound = True
@@ -561,16 +562,20 @@ class AMPInstance:
                 instance = result["result"][0]['AvailableInstances'][i] 
 
                 #This exempts the AMPTemplate Gatekeeper *hopefully*
-                flag_reg = re.search("(gatekeeper)",instance['FriendlyName'].lower())
+                flag_reg = re.search("(gatekeeper)", instance['FriendlyName'].lower())
                 if flag_reg != None:
                     if flag_reg.group():
                         continue 
+                        
+                if instance['Module'] == 'ADS':
+                    continue
 
-                if instance['DisplayImageSource'] in self.AMPHandler.AMP_Modules:
-                    name = str(self.AMPHandler.AMP_Modules[instance["DisplayImageSource"]]).split("'")[1]
+                table_field = 'DisplayImageSource'
+                if instance[table_field] in self.AMPHandler.AMP_Modules:
+                    name = str(self.AMPHandler.AMP_Modules[instance[table_field]]).split("'")[1]
                     self.logger.dev(f'Loaded __{name}__ for {instance["FriendlyName"]}')
                     #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
-                    server = self.AMPHandler.AMP_Modules[instance['DisplayImageSource']](instance['InstanceID'],instance,i,self.AMPHandler)
+                    server = self.AMPHandler.AMP_Modules[instance[table_field]](instance['InstanceID'],instance,i,self.AMPHandler)
                     serverlist[server.InstanceID] = server
 
                 else:
