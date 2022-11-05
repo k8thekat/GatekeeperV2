@@ -310,7 +310,7 @@ class AMP_Cog(commands.Cog):
                                 continue
 
                             self.logger.dev(f'Sending the Mesage from {AMPServer_Chat.FriendlyName} to Other Server: {Server.FriendlyName}')
-                            Server.Chat_Message(message= message_contents, author_prefix= author_prefix, author= author, server_prefix= Server.Discord_Chat_Prefix)
+                            Server.Chat_Message(message= message_contents, author_prefix= author_prefix, author= author, server_prefix= AMPServer_Chat.Discord_Chat_Prefix)
 
 async def setup(client:commands.Bot):
     await client.add_cog(AMP_Cog(client))
