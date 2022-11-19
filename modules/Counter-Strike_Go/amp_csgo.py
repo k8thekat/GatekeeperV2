@@ -24,11 +24,11 @@ import pathlib
 
 DisplayImageSources = ['steam:730']
 class AMPCsgo(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {},Handler=None):
         self.perms = []
         self.APIModule = 'Counterstrike_GO'
         
-        super().__init__(instanceID,serverdata,Index,Handler=Handler)
+        super().__init__(instanceID, serverdata, Handler=Handler)
         self.Console = AMPCsgoConsole(AMPInstance = self)
 
         self.default_background_banner_path = 'resources/banners/CS_Go_Banner_3.png'

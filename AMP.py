@@ -106,12 +106,12 @@ class AMPHandler():
 
         import tokens
         self.tokens = tokens
-        if not tokens.AMPurl.startswith('http://'):
-            self.logger.critical('** Please Append "http://" at the start of your AMPurl.')
+        if not tokens.AMPurl.startswith('http://') and not tokens.AMPurl.startswith('https://'):
+            self.logger.critical('** Please Verify your AMP Url **')
             reset = True
             
-        if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
-            tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
+        # if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
+        #     tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
 
         if len(tokens.AMPAuth) < 7:
             if tokens.AMPAuth == '':
@@ -166,7 +166,7 @@ def getAMPHandler(args:bool=False)-> AMPHandler:
 
 class AMPInstance:
     """Base class for AMP"""
-    def __init__(self, instanceID=0, serverdata={}, Index=0, default_console=False, Handler=None):
+    def __init__(self, instanceID=0, serverdata={}, default_console=False, Handler=None):
         self.Initialized = False
 
         self.logger = logging.getLogger()
@@ -180,7 +180,7 @@ class AMPInstance:
         self.DBConfig = self.DB.GetConfig()
 
         self.SessionID = 0
-        self.Index = Index
+        #self.Index = Index
         self.serverdata = serverdata
         self.serverlist = {}
 
@@ -275,7 +275,8 @@ class AMPInstance:
                 #Not the main AMP Instance and the Bot Role Exists and we have the discord_bot role and we have super also!
                 if instanceID != 0 and self.AMP_BotRoleID != None and self.AMP_BotRoleID in self.AMP_userinfo['result']['Roles'] and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
                     self.logger.warning(f'***ATTENTION*** `discord_bot` role exists and we have `Super Admins` - Setting up Instance permissions for {self.FriendlyName}')
-                    self.setup_AMPpermissions()
+                    if not self.check_AMPpermissions():
+                        self.setup_AMPpermissions()
                  
             else:
                 self.logger.critical(f'***ATTENTION*** We are missing permissions for {self.APIModule} on {self.FriendlyName}! Please consider giving us `Super Admins` and the bot will set its own permissions and role!')
@@ -324,7 +325,7 @@ class AMPInstance:
                 if self.APIModule == 'AMP':
                     self.logger.warning(f'The Bot is missing the permission {perm} Please check under Configuration -> User Management for the Bot.')
                 else:
-                    end_point = self.AMPHandler.tokens.AMPurl.find(":",5)
+                    end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
                     self.logger.warning(f'The Bot is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> discord_bot')
                 failed = True
 
@@ -342,7 +343,7 @@ class AMPInstance:
         if self.Initialized and (self.InstanceID != 0) and __name in self.serverdata:
             self.AMPHandler.AMP._updateInstanceAttributes() 
             
-        return super().__getattribute__(__name)   
+        return super().__getattribute__(__name) 
 
 
     def _setDBattr(self):
@@ -554,34 +555,34 @@ class AMPInstance:
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstances',parameters) 
         serverlist = {}
-
         if len(result["result"][0]['AvailableInstances']) != 0:
 
-            self.AMPHandler.InstancesFound = True
-            for i in range(0,len(result["result"][0]['AvailableInstances'])): #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
-                instance = result["result"][0]['AvailableInstances'][i] 
+            for Target in result["result"]:
+                self.AMPHandler.InstancesFound = True
+                for amp_instance in Target['AvailableInstances']: #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
+                    #instance = result["result"][0]['AvailableInstances'][i] 
 
-                #This exempts the AMPTemplate Gatekeeper *hopefully*
-                flag_reg = re.search("(gatekeeper)", instance['FriendlyName'].lower())
-                if flag_reg != None:
-                    if flag_reg.group():
-                        continue 
-                        
-                if instance['Module'] == 'ADS':
-                    continue
+                    #This exempts the AMPTemplate Gatekeeper *hopefully*
+                    flag_reg = re.search("(gatekeeper)", amp_instance['FriendlyName'].lower())
+                    if flag_reg != None:
+                        if flag_reg.group():
+                            continue 
+                            
+                    if amp_instance['Module'] == 'ADS':
+                        continue
 
-                table_field = 'DisplayImageSource'
-                if instance[table_field] in self.AMPHandler.AMP_Modules:
-                    name = str(self.AMPHandler.AMP_Modules[instance[table_field]]).split("'")[1]
-                    self.logger.dev(f'Loaded __{name}__ for {instance["FriendlyName"]}')
-                    #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
-                    server = self.AMPHandler.AMP_Modules[instance[table_field]](instance['InstanceID'],instance,i,self.AMPHandler)
-                    serverlist[server.InstanceID] = server
+                    table_field = 'DisplayImageSource'
+                    if amp_instance[table_field] in self.AMPHandler.AMP_Modules:
+                        name = str(self.AMPHandler.AMP_Modules[amp_instance[table_field]]).split("'")[1]
+                        self.logger.dev(f'Loaded __{name}__ for {amp_instance["FriendlyName"]}')
+                        #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
+                        server = self.AMPHandler.AMP_Modules[amp_instance[table_field]](amp_instance['InstanceID'],amp_instance,self.AMPHandler)
+                        serverlist[server.InstanceID] = server
 
-                else:
-                    self.logger.dev(f'Loaded __AMP_Generic__ for {instance["FriendlyName"]}')
-                    server = self.AMPHandler.AMP_Modules['Generic'](instance['InstanceID'],instance,i,self.AMPHandler)
-                    serverlist[server.InstanceID] = server
+                    else:
+                        self.logger.dev(f'Loaded __AMP_Generic__ for {amp_instance["FriendlyName"]}')
+                        server = self.AMPHandler.AMP_Modules['Generic'](amp_instance['InstanceID'],amp_instance,self.AMPHandler)
+                        serverlist[server.InstanceID] = server
 
             return serverlist
 

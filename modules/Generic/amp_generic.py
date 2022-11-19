@@ -24,10 +24,10 @@ import pathlib
 
 DisplayImageSources = ['Generic']
 class AMPGeneric(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {},Handler=None):
         self.APIModule = 'Generic'
         
-        super().__init__(instanceID,serverdata,Index,Handler=Handler)
+        super().__init__(instanceID, serverdata, Handler=Handler)
         self.Console = AMPGenericConsole(AMPInstance = self)
 
         self.default_background_banner_path = 'resources/banners/AMP_Banner.jpg'
