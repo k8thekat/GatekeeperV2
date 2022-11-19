@@ -28,11 +28,11 @@ import pathlib
 
 DisplayImageSources = ['steam:427520']
 class AMPFactorio(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {},Handler=None):
         self.perms = []
         self.APIModule = 'Factorio'
         
-        super().__init__(instanceID,serverdata,Index,Handler=Handler)
+        super().__init__(instanceID,serverdata, Handler=Handler)
         self.Console = AMPFactorioConsole(AMPInstance = self)
 
         self.default_background_banner_path = 'resources/banners/Factorio_Banner.jpg'

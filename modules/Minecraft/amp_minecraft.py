@@ -31,12 +31,12 @@ from DB import DBUser
 DisplayImageSources = ["internal:MinecraftJava"]
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0, Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {}, Handler=None):
         self.perms = ['Minecraft.*','Minecraft.InGameActions.*','-Minecraft.PluginManagement.*']
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
 
         
-        super().__init__(instanceID, serverdata, Index,Handler= Handler)
+        super().__init__(instanceID, serverdata,Handler= Handler)
         self.Console = AMPMinecraftConsole(self)
         
         self.default_background_banner_path = 'resources/banners/Minecraft_banner.png'

@@ -24,11 +24,11 @@ import pathlib
 #Resources - https://www.dexerto.com/gaming/terraria-console-commands-explained-a-simple-controls-guide-1663852/
 DisplayImageSources = ['steam:105600']
 class AMPTerraria(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {} ,Handler=None):
         self.perms = []
         self.APIModule = 'Terraria'
         
-        super().__init__(instanceID,serverdata,Index,Handler=Handler)
+        super().__init__(instanceID,serverdata, Handler=Handler)
         self.Console = AMPTerrariaConsole(AMPInstance = self)
 
         self.default_background_banner_path = 'resources/banners/Terraria_Banner.png'
