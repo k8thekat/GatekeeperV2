@@ -30,6 +30,7 @@ import re
 import io
 import PIL
 from PIL import Image
+from typing import Union
 
 import discord
 from discord import app_commands
@@ -185,269 +186,6 @@ async def autocomplete_template(interaction:discord.Interaction, current:str, ch
     """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
-class ServerButton(Button):
-    """Custom Start Button for when Servers are Offline."""
-    def __init__(self, server:AMP.AMPInstance, view:discord.ui.View, function, label:str, callback_label:str, callback_disabled:bool, style=discord.ButtonStyle.green, context=None):
-        super().__init__(label=label, style=style, custom_id=label)
-        self.logger = logging.getLogger()
-        self.server = server
-        self.context = context
-        self._label = label
-        self.permission_node = 'server.' + self._label.lower()
-
-        self.callback_label = callback_label
-        self.callback_disabled = callback_disabled
-
-        self._function = function
-        self._view = view
-        view.add_item(self)
-
-    async def callback(self, interaction):
-        """This is called when a button is interacted with."""
-        if not await async_rolecheck(interaction.user, self.permission_node):
-            return
-        self._interaction = interaction
-        self.label = self.callback_label
-        self.disabled = self.callback_disabled
-        self._function()
-        await interaction.response.edit_message(view=self._view)
-        await asyncio.sleep(30)
-        await self.reset()
-
-    async def reset(self):
-        self.logger.info('Resetting Buttons...')
-        self.label = self._label
-        self.disabled = False
-        #server_embed = await self._view.update_view()
-        await self._interaction.followup.edit_message(message_id=self._interaction.message.id, view=self._view)
-
-class StartButton(ServerButton):
-    def __init__(self, server, view, function):
-        super().__init__(server=server, view=view, function=function, label='Start', callback_label='Starting...', callback_disabled=True, style=discord.ButtonStyle.green)
-
-class StopButton(ServerButton):
-    def __init__(self, server, view, function):
-        super().__init__(server=server, view=view, function=function, label='Stop', callback_label='Stopping...', callback_disabled=True, style=discord.ButtonStyle.red)
-
-class RestartButton(ServerButton):
-    def __init__(self, server, view, function):
-        super().__init__(server=server, view=view, function=function, label='Restart', callback_label='Restarting...', callback_disabled=True, style=discord.ButtonStyle.blurple)
-
-class KillButton(ServerButton):
-    def __init__(self, server, view, function):
-        super().__init__(server=server, view=view, function=function, label='Kill', callback_label='Killed...', callback_disabled=True, style=discord.ButtonStyle.danger)
-    
-class StatusView(View):
-    def __init__(self, timeout=180, context:commands.Context=None, amp_server:AMP.AMPInstance=None):
-        super().__init__(timeout=timeout)
-        self.server = amp_server
-        self.context = context
-        self.uBot = botUtils()
-
-    async def on_timeout(self):
-        """This Removes all the Buttons after timeout has expired"""
-        self.stop()
-
-def banner_file_handler(image:Image.Image):
-    with io.BytesIO() as image_binary:
-        image.save(image_binary, 'PNG')
-        image_binary.seek(0)
-        return discord.File(fp=image_binary, filename='image.png')
-
-class Edited_DB_Banner():
-    """DB_Banner for Banner Editor"""
-    def __init__(self, db_banner:DB.DBBanner):
-        self._db_banner = db_banner
-
-        self.invalid_keys = ['_db','ServerID','background_path'] 
-        self.reset_db()
-
-    def save_db(self):
-        for key in self._db_banner.attr_list:
-            if key in self.invalid_keys:
-                continue
-
-            if getattr(self._db_banner, key) != getattr(self, key):
-                setattr(self._db_banner, key, getattr(self, key))
-
-        return self._db_banner
-    
-    def reset_db(self):
-        for key in self._db_banner.attr_list:
-            if key in self.invalid_keys:
-                continue
-            setattr(self, key, getattr(self._db_banner, key))
-        return self._db_banner
-    
-class Banner_Editor_View(View):
-    def __init__(self, amp_server: AMP.AMPInstance, db_banner: DB.DBBanner, banner_message: discord.Message, timeout=None):
-        self.logger = logging.getLogger()
-
-        self._original_db_banner = db_banner
-        self._edited_db_banner = Edited_DB_Banner(db_banner)
-        self._banner_message = banner_message #This is the message that the banner is attached to.
-        self._amp_server = amp_server
-        self._first_interaction = discord.Interaction
-        self._first_interaction_bool = True
-        
-        self._banner_editor_select = Banner_Editor_Select(custom_id= 'banner_editor', edited_db_banner= self._edited_db_banner, banner_message= self._banner_message, view= self, amp_server= self._amp_server)
-        super().__init__(timeout=timeout)
-        self.add_item(self._banner_editor_select)
-        self.add_item(Save_Banner_Button(banner_message= self._banner_message, edited_banner= self._edited_db_banner, server= self._amp_server))
-        self.add_item(Reset_Banner_Button(banner_message= self._banner_message, edited_banner= self._edited_db_banner, server= self._amp_server))
-        self.add_item(Cancel_Banner_Button(banner_message= self._banner_message))
-
-class Banner_Editor_Select(Select):
-    def __init__(self, edited_db_banner: Edited_DB_Banner, view: Banner_Editor_View, amp_server: AMP.AMPInstance, banner_message: discord.Message, custom_id:str= None, min_values:int= 1, max_values:int= 1, row:int= None, disabled:bool= False, placeholder:str= None):
-        self.logger = logging.getLogger()
-        self._banner_view = view
-
-        self._edited_db_banner = edited_db_banner
-        self._banner_message = banner_message
-
-        self._amp_server = amp_server
-        options = [
-            discord.SelectOption(label= "Blur Background Intensity", value= 'blur_background_amount'),
-            discord.SelectOption(label= "Header Font Color", value= 'color_header'),
-            discord.SelectOption(label= "Nickname Font Color", value= 'color_nickname'),
-            discord.SelectOption(label= "Body Font Color", value= 'color_body'),
-            discord.SelectOption(label= "IP Font Color", value= 'color_IP'),
-            discord.SelectOption(label= "Whitelist Open Font Color", value= 'color_whitelist_open'),
-            discord.SelectOption(label= "Whitelist Closed Font Color", value= 'color_whitelist_closed'),
-            discord.SelectOption(label= "Donator Font Color", value= 'color_donator'),
-            discord.SelectOption(label= "Server Online Font Color", value= 'color_status_online'),
-            discord.SelectOption(label= "Server Offline Font Color", value= 'color_status_offline'),
-            discord.SelectOption(label= "Player Limit Minimum Font Color", value= 'color_player_limit_min'),
-            discord.SelectOption(label= "Player Limit Maximum Font Color", value= 'color_player_limit_max'),
-            discord.SelectOption(label= "Players Online Font Color", value= 'color_player_online')
-            ]
-        super().__init__(custom_id=custom_id, placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, disabled=disabled, row=row)
-
-    async def callback(self, interaction: discord.Interaction):
-        if self.values[0] == 'blur_background_amount':
-            input_type = 'int'
-        else:
-            input_type = 'color'
-
-        self._banner_modal = Banner_Modal(input_type= input_type, title= f'{self.values[0].replace("_", " ")}', select_value= self.values[0], edited_db_banner= self._edited_db_banner, banner_message= self._banner_message, view= self._banner_view, amp_server= self._amp_server)
-        await interaction.response.send_modal(self._banner_modal)
-        
-        self._first_interaction = False
-
-class Banner_Modal(Modal):
-    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: discord.Message, amp_server: AMP.AMPInstance, timeout= None , custom_id= 'Banner Modal'):
-        self._edited_db_banner = edited_db_banner
-        self._banner_message = banner_message
-        self._banner_view = view
-
-        self._amp_server = amp_server
-
-        self._select_value = select_value #This is the Select Option Choice that was made.
-        self._input_type = input_type
-        super().__init__(title= title, timeout= timeout, custom_id= custom_id)
-
-        if self._input_type == 'color':
-            self._color_code_input = Banner_Color_Input(edited_db_banner= self._edited_db_banner, select_value= self._select_value, view= self._banner_view)
-            self.add_item(self._color_code_input)
-
-        if self._input_type == 'int':
-            self._int_code_input = Banner_Blur_Input(edited_db_banner= self._edited_db_banner, select_value= self._select_value, view= self._banner_view)
-            self.add_item(self._int_code_input)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        if self._input_type == 'color':
-            if await self._color_code_input.callback() == False:
-                await interaction.response.send_message(content= f'Please provide a proper Hex color Code. {self._color_code_input._value}', ephemeral= True)
-                
-          
-        if self._input_type == 'int':
-            if await self._int_code_input.callback() == False:
-                await interaction.response.send_message(f'Please provide a Number only. {self._int_code_input.value}', ephemeral= True)
-                
-        else:
-            await interaction.response.defer()
-        await self._banner_message.edit(attachments= [banner_file_handler(BC.Banner_Generator(self._amp_server, self._edited_db_banner)._image_())], view= self._banner_view)
- 
-class Banner_Color_Input(TextInput):
-    def __init__(self, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, select_value: str, label: str= "Enter your Hex color code below.", style= discord.TextStyle.short, placeholder: str= '#000000', default: str= '#ffffff', required= True, min_length= 3, max_length= 8):
-        self._edited_db_banner = edited_db_banner
-        self._select_value = select_value
-        self._banner_view = view
-        super().__init__(label= label, style= style, placeholder= placeholder, default= default, required= required, min_length= min_length, max_length= max_length)
-
-    async def callback(self):
-        #Remove the Hex code for validation.
-        self._value = self.value
-        if self._value[0] == '#':
-            self._value = self._value[1:]
-
-        #Validate if Hex Color Code.
-        if len(self._value) in [3,4,6,8] and re.search(f'([0-9a-f]{{{len(self._value)}}})$', self._value):
-            self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} # {self._value}')
-            setattr(self._edited_db_banner, self._select_value, '#' + self._value)
-            return True
-        else:
-            return False
-
-class Banner_Blur_Input(TextInput):
-    def __init__(self, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, select_value: str, label: str= "Blur Background Intensity", style= discord.TextStyle.short, placeholder= 'Enter a Number', default:int= 2, required= True, min_length= 1, max_length= 2):
-        self._edited_db_banner = edited_db_banner
-        self._select_value = select_value
-        self._banner_view = view
-        super().__init__(label= label, style= style, placeholder= placeholder, default= default, required= required, min_length= min_length, max_length= max_length)
-
-    async def callback(self):
-        if self.value.isalnum() and int(self.value) <= 99:
-            self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} {self.value}')
-            setattr(self._edited_db_banner, self._select_value, int(self.value[0]))
-            return True
-        else:
-            return False
-
-class Save_Banner_Button(Button):
-    """Saves the Banners current settings to the DB."""
-    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner,  style=discord.ButtonStyle.green):
-        super().__init__(label='Save', style=style, custom_id='Save_Button')
-        self.logger = logging.getLogger()
-        self._amp_server = server
-        self._banner_message = banner_message
-        self._edited_db_banner = edited_banner
-
-    async def callback(self, interaction):
-        """This is called when a button is interacted with."""
-        saved_banner = self._edited_db_banner.save_db()
-        await interaction.response.defer()
-        file = banner_file_handler(BC.Banner_Generator(self._amp_server, saved_banner)._image_())
-        await self._banner_message.edit(content='**Banner Settings have been saved.**', attachments= [file], view= None)
-
-class Reset_Banner_Button(Button):
-    """Resets the Banners current settings to the original DB."""
-    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner, style=discord.ButtonStyle.blurple):
-        super().__init__(label='Reset', style=style, custom_id='Reset_Button')
-        self.logger = logging.getLogger()
-        self._amp_server = server
-        self._banner_message = banner_message
-        self._edited_db_banner = edited_banner
-
-    async def callback(self, interaction):
-        """This is called when a button is interacted with."""
-        saved_banner = self._edited_db_banner.reset_db()
-        await interaction.response.defer()
-        file = banner_file_handler(BC.Banner_Generator(self._amp_server, saved_banner)._image_())
-        await self._banner_message.edit(content='**Banner Settings have been reset.**', attachments= [file])
-
-class Cancel_Banner_Button(Button):
-    """Cancels the Banner Settings View"""
-    def __init__(self, banner_message: discord.Message, style=discord.ButtonStyle.red):
-        super().__init__(label='Cancel', style=style, custom_id='Cancel_Button')
-        self.logger = logging.getLogger()
-        self._banner_message = banner_message
-
-    async def callback(self, interaction):
-        """This is called when a button is interacted with."""
-        await interaction.response.defer()
-        await self._banner_message.edit(content='**Banner Settings Editor has been Cancelled.**', attachments= [], view= None)
-    
 class discordBot():
     def __init__(self, client:commands.Bot):
         self.botLogger = logging.getLogger(__name__)
@@ -525,513 +263,282 @@ class discordBot():
             return await message.add_reaction(emoji)
 
 class botUtils():
-        def __init__ (self, client:commands.Bot=None):
-            self._client = client
-            self.logger = logging.getLogger(__name__)
-            self.logger.debug('Utils Bot Loaded')
+    """Gatekeeper Utility Class"""
+    def __init__ (self, client:commands.Bot=None):
+        self._client = client
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug('Utils Bot Loaded')
 
-            self.DBHandler = DB.getDBHandler()
-            self.DB = self.DBHandler.DB #Main Database object
-            self.DBConfig = self.DBHandler.DBConfig
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
 
-            self.AMPHandler = AMP.getAMPHandler()
-            self.AMPInstances = self.AMPHandler.AMP_Instances
-            self.AMPServer_Avatar_urls = []
+        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPInstances = self.AMPHandler.AMP_Instances
+        self.AMPServer_Avatar_urls = []
 
-        def str_to_bool(self, parameter:str):
-            """Bool Converter"""
-            return parameter.lower() == 'true'
-            
-        def message_formatter(self, message:str):
-            """Formats the message for Discord \n
-            `Bold = \\x01, \\x02` \n
-            `Italic = \\x03, \\x04` \n
-            `Underline = \\x05, \\x06` \n"""
-            #Bold
-            message = message.replace('\x01', '**')
-            message = message.replace('\x02', '**')
-            #Italic
-            message = message.replace('\x03', '*')
-            message = message.replace('\x04', '*')
-            #Underline
-            message = message.replace('\x05', '__')
-            message = message.replace('\x06', '__')
-            return message
+    def str_to_bool(self, parameter:str):
+        """Bool Converter"""
+        return parameter.lower() == 'true'
+        
+    def message_formatter(self, message:str):
+        """Formats the message for Discord \n
+        `Bold = \\x01, \\x02` \n
+        `Italic = \\x03, \\x04` \n
+        `Underline = \\x05, \\x06` \n"""
+        #Bold
+        message = message.replace('\x01', '**')
+        message = message.replace('\x02', '**')
+        #Italic
+        message = message.replace('\x03', '*')
+        message = message.replace('\x04', '*')
+        #Underline
+        message = message.replace('\x05', '__')
+        message = message.replace('\x06', '__')
+        return message
 
-        async def validate_avatar(self, db_server:AMP.AMPInstance):
-            """This checks the DB Server objects Avatar_url and returns the proper object type. \n
-            Must be either `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
-            if db_server.Avatar_url == None:
-                return None
-            #This handles web URL avatar icon urls.
-            if db_server.Avatar_url.startswith("https://") or db_server.Avatar_url.startswith("http://"):
-                if db_server.Avatar_url not in self.AMPServer_Avatar_urls:
-                    await asyncio.sleep(.5)
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(db_server.Avatar_url) as response:
-                            if response.status == 200:
-                                self.AMPServer_Avatar_urls.append(db_server.Avatar_url)
-                                return db_server.Avatar_url
-                            else:
-                                self.logger.error(f'We are getting Error Code {response.status}, not sure whats going on...')
-                                return None
-                else:
-                    return db_server.Avatar_url
+    async def validate_avatar(self, db_server:AMP.AMPInstance) -> Union[str, None]:
+        """This checks the DB Server objects Avatar_url and returns the proper object type. \n
+        Must be either `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
+        if db_server.Avatar_url == None:
+            return None
+        #This handles web URL avatar icon urls.
+        if db_server.Avatar_url.startswith("https://") or db_server.Avatar_url.startswith("http://"):
+            if db_server.Avatar_url not in self.AMPServer_Avatar_urls:
+                await asyncio.sleep(.5)
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(db_server.Avatar_url) as response:
+                        if response.status == 200:
+                            self.AMPServer_Avatar_urls.append(db_server.Avatar_url)
+                            return db_server.Avatar_url
+                        else:
+                            self.logger.error(f'We are getting Error Code {response.status}, not sure whats going on...')
+                            return None
             else:
-                return None
+                return db_server.Avatar_url
+        else:
+            return None
 
-        def name_to_uuid_MC(self, name): 
-            """Converts an IGN to a UUID/Name Table \n
-            `returns 'uuid'` else returns `None`, multiple results return `None`"""
-            url = 'https://api.mojang.com/profiles/minecraft'
-            header = {'Content-Type': 'application/json'}
-            jsonhandler = json.dumps(name)
-            post_req = requests.post(url, headers=header, data=jsonhandler)
-            minecraft_user = post_req.json()
+    def name_to_uuid_MC(self, name) -> Union[None, str]: 
+        """Converts an IGN to a UUID/Name Table \n
+        `returns 'uuid'` else returns `None`, multiple results return `None`"""
+        url = 'https://api.mojang.com/profiles/minecraft'
+        header = {'Content-Type': 'application/json'}
+        jsonhandler = json.dumps(name)
+        post_req = requests.post(url, headers=header, data=jsonhandler)
+        minecraft_user = post_req.json()
 
-            if len(minecraft_user) == 0: 
-                return None
+        if len(minecraft_user) == 0: 
+            return None
 
-            if len(minecraft_user) > 1:
-                return None
+        if len(minecraft_user) > 1:
+            return None
 
-            else:
-                return minecraft_user[0]['id'] #returns [{'id': 'uuid', 'name': 'name'}] 
+        else:
+            return minecraft_user[0]['id'] #returns [{'id': 'uuid', 'name': 'name'}] 
 
-        def name_to_steam_id(self, steamname:str):
-            """Converts a Steam Name to a Steam ID returns `STEAM_0:0:2806383`
-            """
-            #Really basic HTML text scan to find the Title; which has the steam ID in it. Thank you STEAMIDFINDER! <3
-            #<title> Steam ID STEAM_0:0:2806383 via Steam ID Finder</title>
-            r = requests.get(f'https://www.steamidfinder.com/lookup/{steamname}')
-            self.logger.dev('Status Code',r.status_code)
-            if r.status_code == 404:
-                return None
+    def name_to_steam_id(self, steamname:str) -> Union[None, str]:
+        """Converts a Steam Name to a Steam ID returns `STEAM_0:0:2806383`
+        """
+        #Really basic HTML text scan to find the Title; which has the steam ID in it. Thank you STEAMIDFINDER! <3
+        #<title> Steam ID STEAM_0:0:2806383 via Steam ID Finder</title>
+        r = requests.get(f'https://www.steamidfinder.com/lookup/{steamname}')
+        self.logger.dev('Status Code',r.status_code)
+        if r.status_code == 404:
+            return None
 
-            title = re.search('(<title>)',r.text)
-            start,title_start = title.span()
-            title = re.search('(</title>)',r.text)
-            title_end,end = title.span()
-            #turns into  " STEAM_0:0:2806383 "
-            #This should work regardless of the Steam ID length; since we came from the end of the second title backwards.
-            steam_id = r.text[title_start+9:title_end-20].strip() 
-            self.logger.dev(f'Found Steam ID {steam_id}')
-            return steam_id
+        title = re.search('(<title>)',r.text)
+        start,title_start = title.span()
+        title = re.search('(</title>)',r.text)
+        title_end,end = title.span()
+        #turns into  " STEAM_0:0:2806383 "
+        #This should work regardless of the Steam ID length; since we came from the end of the second title backwards.
+        steam_id = r.text[title_start+9:title_end-20].strip() 
+        self.logger.dev(f'Found Steam ID {steam_id}')
+        return steam_id
 
-        def roleparse(self, parameter:str, context:commands.Context, guild_id:int) -> discord.Role: 
-            """This is the bot utils Role Parse Function\n
-            It handles finding the specificed Discord `<role>` in multiple different formats.\n
-            They can contain single quotes, double quotes and underscores. (" ",' ',_)\n
-            returns `<role>` object if True, else returns `None`
-            **Note** Use context.guild.id"""
-            self.logger.dev('Role Parse Called...')
-            #print(dir(self._client),self._client.get_guild(guild_id),guild_id)
-            guild = self._client.get_guild(guild_id)
-            role_list = guild.roles
-            
-            #Role ID catch
-            if parameter.isnumeric():
-                role = guild.get_role(int(parameter))
-                self.logger.debug(f'Found the Discord Role {role}')
-                return role
-            else:
-                #This allows a user to pass in a role in quotes double or single
-                if parameter.find("'") != -1 or parameter.find('"'):
-                    parameter = parameter.replace('"','')
-                    parameter = parameter.replace("'",'')
+    def roleparse(self, parameter:str, context:commands.Context, guild_id:int) -> Union[discord.Role, None]: 
+        """This is the bot utils Role Parse Function\n
+        It handles finding the specificed Discord `<role>` in multiple different formats.\n
+        They can contain single quotes, double quotes and underscores. (" ",' ',_)\n
+        returns `<role>` object if True, else returns `None`
+        **Note** Use context.guild.id"""
+        self.logger.dev('Role Parse Called...')
+        #print(dir(self._client),self._client.get_guild(guild_id),guild_id)
+        guild = self._client.get_guild(guild_id)
+        role_list = guild.roles
+        
+        #Role ID catch
+        if parameter.isnumeric():
+            role = guild.get_role(int(parameter))
+            self.logger.debug(f'Found the Discord Role {role}')
+            return role
+        else:
+            #This allows a user to pass in a role in quotes double or single
+            if parameter.find("'") != -1 or parameter.find('"'):
+                parameter = parameter.replace('"','')
+                parameter = parameter.replace("'",'')
 
-                #If a user provides a role name; this will check if it exists and return the ID
-                for role in role_list:
-                    if role.name.lower() == parameter.lower():
-                        self.logger.debug(f'Found the Discord Role {role}')
-                        return role
+            #If a user provides a role name; this will check if it exists and return the ID
+            for role in role_list:
+                if role.name.lower() == parameter.lower():
+                    self.logger.debug(f'Found the Discord Role {role}')
+                    return role
 
-                    #This is to handle roles with spaces
-                    parameter.replace('_',' ')
-                    if role.name.lower() == parameter.lower():
-                        self.logger.debug(f'Found the Discord Role {role}')
-                        return role
+                #This is to handle roles with spaces
+                parameter.replace('_',' ')
+                if role.name.lower() == parameter.lower():
+                    self.logger.debug(f'Found the Discord Role {role}')
+                    return role
 
-                #await context.reply(f'Unable to find the Discord Role: {parameter}')
-                return None
+            #await context.reply(f'Unable to find the Discord Role: {parameter}')
+            return None
 
-        def channelparse(self, parameter:str, context:commands.Context=None, guild_id:int=None) -> discord.TextChannel:
-            """This is the bot utils Channel Parse Function\n
-            It handles finding the specificed Discord `<channel>` in multiple different formats, either numeric or alphanumeric.\n
-            returns `<channel>` object if True, else returns `None`
-            **Note** Use context.guild.id"""
-            self.logger.dev('Channel Parse Called...')
+    def channelparse(self, parameter:Union[str, int], context:commands.Context=None, guild_id:int=None) -> Union[discord.TextChannel, None]:
+        """This is the bot utils Channel Parse Function\n
+        It handles finding the specificed Discord `<channel>` in multiple different formats, either numeric or alphanumeric.\n
+        returns `<channel>` object if True, else returns `None`
+        **Note** Use context.guild.id"""
+        self.logger.dev('Channel Parse Called...')   
+        
+        if guild_id == None:
+            channel = self._client.get_channel(parameter)
+            self.logger.debug(f'Found the Discord Channel {channel}')
+            return channel
 
+        guild = self._client.get_guild(guild_id)
+        channel_list = guild.channels
+        if type(parameter) == int:
+            channel = guild.get_channel(parameter)
+            self.logger.debug(f'Found the Discord Channel {channel}')
+            return channel
+        else:
             category_clear = parameter.find('->')
             if category_clear != -1:
                 parameter = parameter[(category_clear + 2):].strip()
-           
-            if guild_id == None:
-                channel = self._client.get_channel(parameter)
-                self.logger.debug(f'Found the Discord Channel {channel}')
-                return channel
 
-            guild = self._client.get_guild(guild_id)
-            channel_list = guild.channels
-            if type(parameter) == int:
-                channel = guild.get_channel(parameter)
-                self.logger.debug(f'Found the Discord Channel {channel}')
-                return channel
+            for channel in channel_list:
+                if channel.name == parameter:
+                    self.logger.debug(f'Found the Discord Channel {channel}')
+                    return channel
             else:
-                for channel in channel_list:
-                    if channel.name == parameter:
-                        self.logger.debug(f'Found the Discord Channel {channel}')
-                        return channel
-                else:
-                    self.logger.error('Unable to Find the Discord Channel')
-                    #await context.reply(f'Unable to find the Discord Channel: {parameter}')
-                    return None
-        
-        def userparse(self, parameter:str, context:commands.Context=None, guild_id:int=None) -> discord.Member:
-            """This is the bot utils User Parse Function\n
-            It handles finding the specificed Discord `<user>` in multiple different formats, either numeric or alphanumeric.\n
-            It also supports '@', '#0000' and partial display name searching for user indentification (eg. k8thekat#1357)\n
-            returns `<user>` object if True, else returns `None`
-            **Note** Use context.guild.id"""
-            self.logger.dev('User Parse Called...')
+                self.logger.error('Unable to Find the Discord Channel')
+                #await context.reply(f'Unable to find the Discord Channel: {parameter}')
+                return None
+    
+    def userparse(self, parameter:str, context:commands.Context=None, guild_id:int=None) -> Union[discord.Member, None]:
+        """This is the bot utils User Parse Function\n
+        It handles finding the specificed Discord `<user>` in multiple different formats, either numeric or alphanumeric.\n
+        It also supports '@', '#0000' and partial display name searching for user indentification (eg. k8thekat#1357)\n
+        returns `<user>` object if True, else returns `None`
+        **Note** Use context.guild.id"""
+        self.logger.dev('User Parse Called...')
 
-            #Without a guild_ID its harder to parse members.
-            if guild_id == None:
-                cur_member = self._client.get_user(int(parameter))
-                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
-                return cur_member
+        #Without a guild_ID its harder to parse members.
+        if guild_id == None:
+            cur_member = self._client.get_user(int(parameter))
+            self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
+            return cur_member
 
-            guild = self._client.get_guild(guild_id)
-            #Discord ID catch
-            if parameter.isnumeric():
-                cur_member = guild.get_member(int(parameter))
-                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
-                return cur_member
+        guild = self._client.get_guild(guild_id)
+        #Discord ID catch
+        if parameter.isnumeric():
+            cur_member = guild.get_member(int(parameter))
+            self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
+            return cur_member
 
-            #Profile Name Catch
-            if parameter.find('#') != -1:
-                cur_member = guild.get_member_named(parameter)
-                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
-                return cur_member
-
-            #Using @ at user and stripping
-            if parameter.startswith('<@!') and parameter.endswith('>'):
-                user_discordid = parameter[3:-1]
-                cur_member = guild.get_member(int(user_discordid))
-                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
-                return cur_member
-
-            #DiscordName/IGN Catch(DB Get user can look this up)
+        #Profile Name Catch
+        if parameter.find('#') != -1:
             cur_member = guild.get_member_named(parameter)
-            if cur_member != None:
-                self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
-                return cur_member
+            self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
+            return cur_member
 
-            #Display Name Lookup
-            else:
-                cur_member = None
-                for member in guild.members:
-                    if member.display_name.lower().startswith(parameter.lower()) or (member.display_name.lower().find(parameter.lower()) != -1):
-                        if cur_member != None:
-                            self.logger.error(f'**ERROR** Found multiple Discord Members: {parameter}, Returning None')
-                            return None
+        #Using @ at user and stripping
+        if parameter.startswith('<@!') and parameter.endswith('>'):
+            user_discordid = parameter[3:-1]
+            cur_member = guild.get_member(int(user_discordid))
+            self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
+            return cur_member
 
-                        self.logger.dev(f'Found the Discord Member {member.display_name}')
-                        cur_member = member
-                return cur_member
-                
-        def serverparse(self, parameter, context:commands.Context=None, guild_id:int=None) -> AMP.AMPInstance:
-            """This is the botUtils Server Parse function.
-            **Note** Use context.guild.id \n
-            Returns `AMPInstance[server] <object>`"""
-            self.logger.dev('Bot Utility Server Parse')
-            cur_server = None
+        #DiscordName/IGN Catch(DB Get user can look this up)
+        cur_member = guild.get_member_named(parameter)
+        if cur_member != None:
+            self.logger.dev(f'Found the Discord Member {cur_member.display_name}')
+            return cur_member
 
-            #This is to handle Instance Names or Display Names with spaces, also removes quotes.
-            if type(parameter) == tuple:
-                parameter = ' '.join(parameter)
-            #parameter = parameter.replace(' ','_').replace("'",'').replace('"','')
-            parameter = parameter.replace("'",'').replace('"','')
-
-            #Lets check the DB First, this checks Nicknames and Display names.
-            cur_server = self.DB.GetServer(Name = parameter)
-            if cur_server != None:
-                self.logger.dev(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
-                #This converts the DB_Server object into our AMPInstance Object
-                cur_server = self.AMPInstances[cur_server.InstanceID]
-                return cur_server
-
-            #Since the DB came up empty; lets continue and try all AMPInstances Friendly Names!
-            for server in self.AMPInstances:
-                var = self.AMPInstances[server].FriendlyName.lower().find(parameter.lower())
-                self.logger.dev(f'{var}{self.AMPInstances[server].FriendlyName}')
-
-                if var != -1: #When its FOUND an entry
-                    if cur_server != None:
-                        self.logger.error(f'**ERROR** Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
-                        #await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
+        #Display Name Lookup
+        else:
+            cur_member = None
+            for member in guild.members:
+                if member.display_name.lower().startswith(parameter.lower()) or (member.display_name.lower().find(parameter.lower()) != -1):
+                    if cur_member != None:
+                        self.logger.error(f'**ERROR** Found multiple Discord Members: {parameter}, Returning None')
                         return None
 
-                    self.logger.dev(f'Found the AMP Server {self.AMPInstances[server].FriendlyName}')
-                    cur_server = self.AMPInstances[server]
+                    self.logger.dev(f'Found the Discord Member {member.display_name}')
+                    cur_member = member
+            return cur_member
+            
+    def serverparse(self, parameter, context:commands.Context=None, guild_id:int=None) -> Union[AMP.AMPInstance, None]:
+        """This is the botUtils Server Parse function.
+        **Note** Use context.guild.id \n
+        Returns `AMPInstance[server] <object>`"""
+        self.logger.dev('Bot Utility Server Parse')
+        cur_server = None
 
-            return cur_server #AMP instance object 
+        #This is to handle Instance Names or Display Names with spaces, also removes quotes.
+        if type(parameter) == tuple:
+            parameter = ' '.join(parameter)
+        #parameter = parameter.replace(' ','_').replace("'",'').replace('"','')
+        parameter = parameter.replace("'",'').replace('"','')
 
-        def sub_command_handler(self, command:str, sub_command):
-            """This will get the `Parent` command and then add a `Sub` command to said `Parent` command."""
-            parent_command = self._client.get_command(command)
-            self.logger.dev(f'Loading Parent Command: {parent_command}')
-            parent_command.add_command(sub_command)
+        #Lets check the DB First, this checks Nicknames and Display names.
+        cur_server = self.DB.GetServer(Name = parameter)
+        if cur_server != None:
+            self.logger.dev(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
+            #This converts the DB_Server object into our AMPInstance Object
+            cur_server = self.AMPInstances[cur_server.InstanceID]
+            return cur_server
+
+        #Since the DB came up empty; lets continue and try all AMPInstances Friendly Names!
+        for server in self.AMPInstances:
+            var = self.AMPInstances[server].FriendlyName.lower().find(parameter.lower())
+            self.logger.dev(f'{var}{self.AMPInstances[server].FriendlyName}')
+
+            if var != -1: #When its FOUND an entry
+                if cur_server != None:
+                    self.logger.error(f'**ERROR** Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
+                    #await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
+                    return None
+
+                self.logger.dev(f'Found the AMP Server {self.AMPInstances[server].FriendlyName}')
+                cur_server = self.AMPInstances[server]
+
+        return cur_server #AMP instance object 
+
+    def sub_command_handler(self, command:str, sub_command):
+        """This will get the `Parent` command and then add a `Sub` command to said `Parent` command."""
+        parent_command = self._client.get_command(command)
+        self.logger.dev(f'Loading Parent Command: {parent_command}')
+        parent_command.add_command(sub_command)
+    
+    async def _serverCheck(self, context:commands.Context, server, online_only:bool=True) -> Union[AMP.AMPInstance,bool]:
+        """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
+        amp_server = self.serverparse(server, context, context.guild.id)
         
-        def default_embedmsg(self, title, context:commands.Context, description=None, field=None, field_value=None):
-            """This Embed has only one Field Entry."""
-            embed=discord.Embed(title=title, description=description, color=0x808000) #color is RED 
-            embed.set_author(name=context.author.display_name, icon_url=context.author.avatar)
-            embed.add_field(name=field, value=field_value, inline=False)
-            return embed
+        if amp_server == None:
+            await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True, delete_after= self._client.Message_Timeout)
+            return False
 
-        async def server_info_embed(self, server:AMP.AMPInstance, context:commands.Context):
-            """For Individual Server info embed replies"""
-            db_server = self.DB.GetServer(InstanceID = server.InstanceID)
-            server_name = db_server.InstanceName
-            if db_server.DisplayName != None:
-                server_name = db_server.DisplayName
-            embed=discord.Embed(title=f'__**{server_name}**__', color=0x00ff00, description=server.Description)
+        if online_only == False:
+            return amp_server
 
-            discord_role = db_server.Discord_Role
-            if discord_role != None:
-                discord_role = context.guild.get_role(int(db_server.Discord_Role)).name
-
-            avatar = await self.validate_avatar(db_server)
-            if avatar != None:
-                embed.set_thumbnail(url=avatar)
-
-            embed.add_field(name=f'Server IP: ', value=str(db_server.IP), inline=False)
-            embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
-            embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
-            embed.add_field(name='Role:', value= str(discord_role), inline=False)
-            embed.add_field(name='Discord Chat Prefix:', value= str(db_server.Discord_Chat_Prefix), inline=True)
-            embed.add_field(name='Filtered Console:', value= str(bool(db_server.Whitelist)), inline=True)
-
-            if db_server.Discord_Console_Channel != None:
-                discord_channel = self.channelparse(db_server.Discord_Console_Channel, context, context.guild.id)
-                embed.add_field(name='Console Channel:', value= discord_channel.name, inline=False)
-            else:
-                embed.add_field(name='Console Channel:', value= db_server.Discord_Console_Channel, inline=False)
-
-            if db_server.Discord_Chat_Channel != None:
-                discord_channel = self.channelparse(db_server.Discord_Chat_Channel, context, context.guild.id)
-                embed.add_field(name='Chat Channel:', value= discord_channel.name, inline=True)
-            else:
-                embed.add_field(name='Chat Channel:', value= db_server.Discord_Chat_Channel, inline=True)
-            
-            if db_server.Discord_Event_Channel != None:
-                discord_channel = self.channelparse(db_server.Discord_Event_Channel, context, context.guild.id)
-                embed.add_field(name='Event Channel:', value= discord_channel.name, inline=True)
-            else:
-                embed.add_field(name='Event Channel:', value= db_server.Discord_Event_Channel, inline=True)
-
-            if len(db_server.Nicknames) != 0:
-                embed.add_field(name='Nicknames:', value=(", ").join(db_server.Nicknames),inline=False)
-            return embed
-
-        async def server_display_embed(self, guild:discord.Guild=None) -> list:
-            """Used for `/server display command`"""
-            embed_list = []
-            for server in self.AMPInstances:
-                server = self.AMPInstances[server]
-    
-                db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-                if db_server != None and db_server.Hidden != 1:
-
-                    status = 'Offline'
-                    Users = None
-                    User_list = None
-                    if server.Running and server._ADScheck() and server.ADS_Running:
-                        Users = server.getStatus(users_only= True)
-                        if len(server.getUserList()) > 1:
-                            User_list = (', ').join(server.getUserList())
-                        status = 'Online'
-
-                    embed_color = 0x71368a
-                    if guild != None and db_server.Discord_Role != None:
-                        db_server_role = guild.get_role(int(db_server.Discord_Role))
-                        if db_server_role != None:
-                            embed_color = db_server_role.color
-
-                    server_name = server.FriendlyName
-                    if server.DisplayName != None:
-                        server_name = db_server.DisplayName
-
-                    nicknames = None
-                    if len(db_server.Nicknames) != 0:
-                        nicknames = (", ").join(db_server.Nicknames)
-
-                    embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= db_server.Description, color=embed_color)
-                    #This is for future custom avatar support.
-                    avatar = await self.validate_avatar(db_server)
-                    if avatar != None:
-                        embed.set_thumbnail(url=avatar)
-    
-                    embed.add_field(name='**IP**:', value= str(db_server.IP), inline=True)
-                    embed.add_field(name='**Status**:' , value= status, inline= True)
-                    embed.add_field(name='**Donator Only**:', value= str(bool(db_server.Donator)), inline= True)
-                    embed.add_field(name='**Whitelist Open**:', value= str(bool(db_server.Whitelist)), inline= True)
-                    embed.add_field(name='**Nicknames**:' , value= str(nicknames) ,inline=True)
-                    if Users != None:
-                        embed.add_field(name=f'**Players**:', value= f'{Users[0]}/{Users[1]}',inline=True)
-                    else:
-                        embed.add_field(name='**Player Limit**:', value= str(Users), inline= True)
-                    embed.add_field(name='**Players Online**:', value=str(User_list), inline=False)
-                    embed_list.append(embed)
-            
-            return embed_list
-
-        async def server_status_embed(self, context:commands.Context, server:AMP.AMPInstance, TPS=None, Users=None, CPU=None, Memory=None, Uptime=None, Users_Online=None) -> discord.Embed:
-            """This is the Server Status Embed Message"""
-            db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-          
-            if server.ADS_Running:
-                server_status = 'Online'
-            else:
-                server_status = 'Offline'
-
-            embed_color = 0x71368a
-            if db_server.Discord_Role != None:
-                db_server_role = context.guild.get_role(int(db_server.Discord_Role))
-                if db_server_role != None:
-                    embed_color = db_server_role.color
-
-            server_name = server.FriendlyName
-            if server.DisplayName != None:
-                server_name = db_server.DisplayName
-
-            embed=discord.Embed(title=server_name, description=f'Dedicated Server Status: **{server_status}**', color=embed_color)
-           
-            avatar = await self.validate_avatar(db_server)
-            if avatar != None:
-                embed.set_thumbnail(url=avatar)
-
-            if db_server.IP != None:
-                embed.add_field(name=f'Server IP: ', value=db_server.IP, inline=False)
-
-            if len(db_server.Nicknames) != 0:
-                embed.add_field(name='Nicknames:' , value=db_server.Nicknames, inline=False)
-
-            #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
-            embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
-            embed.add_field(name='Whitelist Open:' , value= str(bool(db_server.Whitelist)), inline=True)
-            #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False) #This Generates a BLANK Field entirely.
-
-            if server.ADS_Running:
-                embed.add_field(name='TPS', value=TPS, inline=True)
-                embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
-                embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=False)
-                embed.add_field(name='CPU Usage', value=f'{CPU}/100%', inline=True)
-                embed.add_field(name='Uptime', value=Uptime, inline=True)
-                embed.add_field(name='Players Online', value=Users_Online, inline=False)
-            return embed
-                   
-        async def server_whitelist_embed(self, context:commands.Context, server:AMP.AMPInstance) -> discord.Embed:
-            """Default Embed Reply for Successful Whitelist requests"""
-            db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-
-            embed_color = 0x71368a
-            if db_server != None:
-                if db_server.Discord_Role != None:
-                    db_server_role = context.guild.get_role(int(db_server.Discord_Role))
-                    if db_server_role != None:
-                        embed_color = db_server_role.color
-
-                User_list = None
-                if len(server.getUserList()) > 1:
-                    User_list = (', ').join(server.getUserList())
-
-                server_name = server.FriendlyName
-                if server.DisplayName != None:
-                    server_name = db_server.DisplayName
-
-                embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= db_server.Description, color=embed_color)
-                avatar = await self.validate_avatar(db_server)
-                if avatar != None:
-                    embed.set_thumbnail(url=avatar)
-
-                embed.add_field(name='**IP**:', value= str(db_server.IP), inline=True)
-                embed.add_field(name='Users Online:' , value=str(User_list), inline=False)
-                return embed
-                
-        def bot_settings_embed(self, context:commands.Context, settings:list) -> discord.Embed:
-            """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
-            embed=discord.Embed(title=f'**Bot Settings**', color=0x71368a)
-            embed.set_thumbnail(url= context.guild.icon)
-            embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
-            for value in settings:
-                key_value = list(value.values())[0]
-                key = list(value.keys())[0]
-                #print(key, key_value)
-
-                if key == 'Whitelist_emoji_pending' or key == 'Whitelist_emoji_done':
-                    if key_value != 'None':
-                        emoji = self._client.get_emoji(int(key_value))
-                        embed.add_field(name=f'{key.replace("_"," ")}', value=emoji, inline=True)
-                    else:
-                        embed.add_field(name=f'{key.replace("_"," ")}', value='None', inline=True)
-
-                if key == 'Whitelist_wait_time':
-                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value} Minutes', inline=False)
-
-                if key.lower() == 'permissions':
-                    embed.add_field(name='Permissions:', value=f'{key_value}', inline=True)
-
-                if key.lower() == 'db_version':
-                    embed.add_field(name='SQL Database Version:', value=f'{key_value}', inline=True)
-
-                if key.lower() == 'bot_version':
-                    embed.add_field(name='Gatekeeper Version:', value=f'{key_value}', inline=True)
-
-                if key.lower() == 'guild_id':
-                    if self._client != None:
-                        key_value = f'**{self._client.get_guild(int(key_value)).name}**'
-                        if key_value == None:
-                            key_value = 'None'
-                        embed.add_field(name='Guild ID:', value=f'{key_value}', inline=False)
-
-                if key.lower() == 'moderator_role_id':
-                    key_value = self.roleparse(key_value,context,context.guild.id)
-                    if key_value == None:
-                        key_value = 'None'
-                    embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
+        if amp_server.Running and amp_server._ADScheck():
+            return amp_server
+        
+        await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral=True, delete_after= self._client.Message_Timeout)
+        return False
                     
-                if key.lower() == 'whitelist_channel':
-                    channel = self.channelparse(key_value,context,context.guild.id)
-                    if channel != None:
-                        channel = f'<#{channel.id}>'
-                    else:
-                        channel = 'None'
-                    embed.add_field(name='Whitelist Channel', value=f'{channel}',inline=False)
-
-                if key_value == '0' or key_value == '1':
-                    key_value = bool(key_value)
-                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
-
-            return embed
-
-        def user_info_embed(self, context:commands.Context, db_user:DB.DBUser, discord_user:discord.User):
-            #print(db_user.DiscordID,db_user.DiscordName,db_user.MC_IngameName,db_user.MC_UUID,db_user.SteamID,db_user.Donator)
-            embed=discord.Embed(title=f'{discord_user.name}',description=f'Discord ID: {discord_user.id}', color=discord_user.color)
-            embed.set_thumbnail(url= discord_user.avatar.url)
-            if db_user != None:
-                embed.add_field(name='In Database:', value='True')
-                if db_user.MC_IngameName != None:
-                    embed.add_field(name='Minecraft IGN:', value=f'{db_user.MC_IngameName}',inline= False)
-                if db_user.MC_UUID != None:
-                    embed.add_field(name='Minecraft UUID:', value=f'{db_user.MC_UUID}',inline= True)
-                if db_user.SteamID != None:
-                    embed.add_field(name='Steam ID:', value=f'{db_user.SteamID}',inline=False)
-                if db_user.Role != None:
-                    embed.add_field(name='Permission Role:', value=f'{db_user.Role}', inline=False)
-            return embed
-                          
 bPerms = None
 def get_botPerms():
     global bPerms
@@ -1075,7 +582,7 @@ class botPerms():
                 self.permissions = None
                 self.logger.critical('Unable to load your permissions file. Please check your formatting.')
 
-    def perm_node_check(self, command_perm_node:str, context:commands.Context):
+    def perm_node_check(self, command_perm_node:str, context:commands.Context) -> bool:
         """Checks a Users for a DB Role then checks for that Role inside of bot_perms.py, then checks that Role for the proper permission node."""
         #Lets get our DB user and check if they exist.
         DB_user = self.DB.GetUser(str(context.author.id))
@@ -1117,14 +624,14 @@ class botPerms():
                     self.logger.dev('Found command perm node in Roles Permissions list.',command_perm_node)
                     return True
     
-    def get_roles(self):
+    def get_roles(self) -> list[str]:
         """Pre build my Permissions Role Name List"""
         self.permission_roles = []
         for role in self.permissions['Roles']:
             self.permission_roles.append(role['name'])
         return self.permission_roles
 
-    async def get_role_prefix(self, user_id:str=None, context:commands.Context=None):
+    async def get_role_prefix(self, user_id:str=None, context:commands.Context=None) -> Union[str, None]:
         """Use to get a Users Role Prefix for displaying."""
 
         #This grabs all a Users discord roles and makes a list of their ids

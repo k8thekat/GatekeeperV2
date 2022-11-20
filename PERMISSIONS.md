@@ -172,6 +172,7 @@ ___
 "server.whitelist.*",
 "server.whitelist.true",
 "server.whitelist.false",
+"server.whitelist.disabled",
 "server.whitelist.add",
 "server.whitelist.remove",
 
@@ -181,5 +182,15 @@ ___
 "server.nickname.list",
 
 "server.banner.settings",
-"server.banner.background"
+"server.banner.background",
+
+"server.regex.add",
+"server.regex.delete",
+"server.regex.list",
+
+"bot.regex_pattern.add",
+"bot.regex_pattern.delete",
+"bot.regex_pattern.update",
+"bot.regex_pattern.list"
+
 ```

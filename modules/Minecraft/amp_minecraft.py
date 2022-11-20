@@ -236,58 +236,59 @@ class AMPMinecraftConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPMinecraft):
         super().__init__(AMPInstance)
 
-    def console_filter(self, message):
-        """This is what SHOULD be displayed if we filter the console!
-        By Default everything is excluded, so we need to include what we want to see."""
-        #Example Console Entry: {'Timestamp': '/Date(1658685241525)/', 'Source': 'Server thread/INFO', 'Type': 'Console', 'Contents': 'k8_thekat issued server command: /gamemode survival'}
-        #Return TRUE to Exclude message
-        if not self.AMPInstance.Console_Filtered:
-            return False
-        else:
-            if message['Type'] == 'Chat':
-                return False
-            #This list will be used to capture output that I want. These are best for partial finds.
-            message_finder_list = [
-                'Unkown command.', 
-                'players online:',
-                'Staff',
-                '?',
-                'Help', 
-                'left the game', 
-                'joined the game', 
-                'lost connection:',
-                'whitelisted players:',
-                'was slain by',
-                'game mode to']
-            for entry in message_finder_list:
-                if message['Contents'].find(entry) != -1:
-                    #print(f"Found {entry} in {message['Contents']}")
-                    return False
-            if message['Contents'].startswith('/'):
-                return False
-            if message['Contents'].startswith('Player Console banned') and message['Contents'].endswith('You have been banned:'):
-                return False
-            if message['Contents'].startswith('Player Console unbanned'):
-                return False
-            if message['Contents'].startswith('Added') and message['Contents'].endswith('to the whitelist'):
-                return False
-            if message['Contents'].startswith('Removed') and message['Contents'].endswith('from the whitelist'):
-                return False
-            else:
-                self.logger.dev(f'Filtered Message {message}')
-                return True
-    
-    def console_events(self, message):
-        """ALWAYS RETURN FALSE! ALL events go to `.console_event_messages`"""
-        event_list = ['left the game', 'joined the game', 'tried to swim','completed the challenge','made the advancement', 'was slain by', 'fell off', 'was shot by']
-        #Event List Interations
-        for event in event_list:
-            if message['Contents'].find(event) != -1:
-                self.logger.dev(f'**{self.AMPInstance.APIModule} Event Message Found {event}**')
-                self.console_event_message_lock.acquire()
-                self.console_event_messages.append(message['Contents'])
-                self.console_event_message_lock.release()
-                return False
 
-        else:
-            return False
+    # def console_filter(self, message):
+    #     """This is what SHOULD be displayed if we filter the console!
+    #     By Default everything is excluded, so we need to include what we want to see."""
+    #     #Example Console Entry: {'Timestamp': '/Date(1658685241525)/', 'Source': 'Server thread/INFO', 'Type': 'Console', 'Contents': 'k8_thekat issued server command: /gamemode survival'}
+    #     #Return TRUE to Exclude message
+    #     if not self.AMPInstance.Console_Filtered:
+    #         return False
+    #     else:
+    #         if message['Type'] == 'Chat':
+    #             return False
+    #         #This list will be used to capture output that I want. These are best for partial finds.
+    #         message_finder_list = [
+    #             'Unkown command.', 
+    #             'players online:',
+    #             'Staff',
+    #             '?',
+    #             'Help', 
+    #             'left the game', 
+    #             'joined the game', 
+    #             'lost connection:',
+    #             'whitelisted players:',
+    #             'was slain by',
+    #             'game mode to']
+    #         for entry in message_finder_list:
+    #             if message['Contents'].find(entry) != -1:
+    #                 #print(f"Found {entry} in {message['Contents']}")
+    #                 return False
+    #         if message['Contents'].startswith('/'):
+    #             return False
+    #         if message['Contents'].startswith('Player Console banned') and message['Contents'].endswith('You have been banned:'):
+    #             return False
+    #         if message['Contents'].startswith('Player Console unbanned'):
+    #             return False
+    #         if message['Contents'].startswith('Added') and message['Contents'].endswith('to the whitelist'):
+    #             return False
+    #         if message['Contents'].startswith('Removed') and message['Contents'].endswith('from the whitelist'):
+    #             return False
+    #         else:
+    #             self.logger.dev(f'Filtered Message {message}')
+    #             return True
+    
+    # def console_events(self, message):
+    #     """ALWAYS RETURN FALSE! ALL events go to `.console_event_messages`"""
+    #     event_list = ['left the game', 'joined the game', 'tried to swim','completed the challenge','made the advancement', 'was slain by', 'fell off', 'was shot by']
+    #     #Event List Interations
+    #     for event in event_list:
+    #         if message['Contents'].find(event) != -1:
+    #             self.logger.dev(f'**{self.AMPInstance.APIModule} Event Message Found {event}**')
+    #             self.console_event_message_lock.acquire()
+    #             self.console_event_messages.append(message['Contents'])
+    #             self.console_event_message_lock.release()
+    #             return False
+
+    #     else:
+    #         return False

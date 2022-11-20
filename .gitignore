@@ -29,3 +29,4 @@ discordBot v1.5.db
 .vscode/settings.json
 .gitignore
 discordBot-old.db
+tokens-Ice.py

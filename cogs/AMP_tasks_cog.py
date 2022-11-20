@@ -65,7 +65,7 @@ class AMP_Cog(commands.Cog):
             return message
         
         if message.author == self._client.user:
-            self.logger.dev('Found my own Message, oops')
+            self.logger.dev('AMP_Tasks_Cog Found my own Message, oops')
             return
 
         for amp_server in self.AMPInstances:
@@ -76,8 +76,7 @@ class AMP_Cog(commands.Cog):
 
             #Check and see if our Discord Console Channel matches the current message.id
             if self.AMPServer.Discord_Console_Channel == message.channel.id:
-                if message.author == self._client.user:
-                    return
+                
                 #Makes sure we are not responding to a webhook message (ourselves/bots/etc)
                 if message.webhook_id == None:
                     #This checks user permissions. Just in case.
@@ -87,12 +86,14 @@ class AMP_Cog(commands.Cog):
 
             #Check and see if our Discord Chat channel matches the message.id
             if self.AMPServer.Discord_Chat_Channel == message.channel.id:
-                
+                if message.author == self._client.user:
+                    self.logger.dev('AMP_Tasks_Cog Found my own Message, oops')
+                    return
                 #If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This is usually a USER sending a message..
                 if message.webhook_id == None:
                     #This fetch's a users prefix from the bot_perms.json file.
                     author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
-                    #author_prefix = 'MOD'
+                  
                     #This calls the generic AMP Function; each server will handle this differently
                     self.AMPServer.Chat_Message(message.content, author= message.author.name, author_prefix= author_prefix)
                        

@@ -48,7 +48,7 @@ def init(args=None):
     #This is for displaying slash commands information for tracing info!
     command_level = 19
     command_label = 'COMMAND'
-    logs.add_logging_level(command_label,command_level)
+    logs.add_logging_level(command_label, command_level)
     if args.command:
         logginglevel = logging.COMMAND
     

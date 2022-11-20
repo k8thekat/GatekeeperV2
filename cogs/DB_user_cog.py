@@ -27,6 +27,7 @@ from discord.ext import commands
 from discord import app_commands
 
 import utils
+import utils_embeds
 import AMP 
 import DB
 
@@ -48,8 +49,9 @@ class DB_User(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
         self.pBot = utils.botPerms()
+        self.eBot = utils_embeds.botEmbeds(client)
 
-        self.uBot.sub_command_handler('bot',self.db_bot_donator)
+        self.uBot.sub_command_handler('bot', self.db_bot_donator)
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.replace("db","DB")}')
 
@@ -96,7 +98,7 @@ class DB_User(commands.Cog):
     @commands.hybrid_group(name='user')
     async def user(self, context:commands.Context):
         if context.invoked_subcommand is None:
-            await context.send('Please try your command again...', ephemeral=True)
+            await context.send('Please try your command again...', ephemeral=True, delete_after= self._client.Message_Timeout)
 
     @user.command(name='info')
     @utils.role_check()
@@ -109,9 +111,9 @@ class DB_User(commands.Cog):
         if discord_user != None:
             db_user = self.DB.GetUser(str(discord_user.id))
             if db_user != None:
-                await context.send(embed= self.uBot.user_info_embed(context,db_user,discord_user), ephemeral=True)
+                await context.send(embed= self.eBot.user_info_embed(db_user,discord_user), ephemeral= True, delete_after= self._client.Message_Timeout)
             else:
-                await context.send(f'Unable to find the user {discord_user} in the Database, please add them.', ephemeral=True)
+                await context.send(f'Unable to find the user {discord_user} in the Database, please add them.', ephemeral= True, delete_after= self._client.Message_Timeout)
                
     @user.command(name='add')
     @utils.role_check()
@@ -126,9 +128,9 @@ class DB_User(commands.Cog):
         discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
         if discord_user != None:
             self.DB.AddUser(DiscordID=discord_user.id, DiscordName=discord_user.name, MC_IngameName=mc_ign, MC_UUID=mc_uuid, SteamID=steamid)
-            await context.send(f'Added **{discord_user.name}** to the Database!', ephemeral=True)
+            await context.send(f'Added **{discord_user.name}** to the Database!', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send(f'Unable to find the {discord_name} you provided, please try again.', ephemeral=True)
+            await context.send(f'Unable to find the {discord_name} you provided, please try again.', ephemeral= True, delete_after= self._client.Message_Timeout)
             
     @user.command(name='update')
     @utils.role_check()
@@ -158,11 +160,11 @@ class DB_User(commands.Cog):
                     if params[entry] != None:
                         setattr(db_user,db_params[entry],params[entry])
 
-                await context.send(f'We Updated the Database User: **{db_user.DiscordName}**', ephemeral=True)
+                await context.send(f'We Updated the Database User: **{db_user.DiscordName}**', ephemeral= True, delete_after= self._client.Message_Timeout)
             else:
-                await context.send('Looks like this user is not in the Database, please use `/user add`', ephemeral=True)
+                await context.send('Looks like this user is not in the Database, please use `/user add`', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send(f'Hey I was unable to find the User: {discord_name}', ephemeral=True)
+            await context.send(f'Hey I was unable to find the User: {discord_name}', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @user.command(name='uuid')
     @utils.role_check()
@@ -170,7 +172,7 @@ class DB_User(commands.Cog):
         """This will convert a Minecraft IGN to a UUID if it exists"""
         self.logger.command(f'{context.author.name} used User UUID Function')
 
-        await context.send(f'The UUID of **{mc_ign}** is: `{self.uBot.name_to_uuid_MC(mc_ign)}`', ephemeral=True)
+        await context.send(f'The UUID of **{mc_ign}** is: `{self.uBot.name_to_uuid_MC(mc_ign)}`', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @user.command(name='steamid')
     @utils.role_check()
@@ -178,7 +180,7 @@ class DB_User(commands.Cog):
         """This will convert a Steam Display Name to a SteamID if it exists"""
         self.logger.command(f'{context.author.name} used User SteamID Function')
 
-        await context.send(f'The SteamID of **{steam_name}** is: `{self.uBot.name_to_steam_id(steam_name)}`', ephemeral=True)
+        await context.send(f'The SteamID of **{steam_name}** is: `{self.uBot.name_to_steam_id(steam_name)}`', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @user.command(name='role')
     @utils.role_check()
@@ -190,15 +192,15 @@ class DB_User(commands.Cog):
 
         discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
         if discord_user == None:
-            await context.send(f'We failed to find the User: {discord_name}, please make sure they are apart of the server..', ephemeral=True)
+            await context.send(f'We failed to find the User: {discord_name}, please make sure they are apart of the server..', ephemeral= True, delete_after= self._client.Message_Timeout)
             return
 
         db_user = self.DB.GetUser(discord_user.id)
         if db_user != None:
             db_user.Role = role
-            await context.send(f"We set the User: **{discord_name}** permission's role to `{role}`.", ephemeral=True)
+            await context.send(f"We set the User: **{discord_name}** permission's role to `{role}`.", ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send(f'We failed to find the User: {discord_name}, please make sure they are in the DB.', ephemeral=True)
+            await context.send(f'We failed to find the User: {discord_name}, please make sure they are in the DB.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @user.command(name='test')
     @utils.role_check()
@@ -208,7 +210,7 @@ class DB_User(commands.Cog):
         cur_user = self.uBot.userparse(context = context,guild_id=context.guild.id,parameter = user)
         DB_user = self.DB.GetUser(cur_user.id)
         print('DB User Role', DB_user.Role)
-        await context.send(cur_user, ephemeral=True)
+        await context.send(cur_user, ephemeral=True, delete_after= self._client.Message_Timeout)
 
     @commands.hybrid_command(name='donator')
     @utils.role_check()
@@ -220,9 +222,9 @@ class DB_User(commands.Cog):
         discord_role = self.uBot.roleparse(role,context,context.guild.id)
         if discord_role != None:
             self.DBConfig.SetSetting('Donator_role_id',discord_role.id)
-            await context.send(f'You are all set! Donator Role is now set to {discord_role.name}', ephemeral=True)
+            await context.send(f'You are all set! Donator Role is now set to {discord_role.name}', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send(f'Hey! I was unable to find the role {role}, Please try again.', ephemeral=True)
+            await context.send(f'Hey! I was unable to find the role {role}, Please try again.', ephemeral= True, delete_after= self._client.Message_Timeout)
     
 
     #!TODO! Allow DMs to update a Users information
