@@ -26,12 +26,15 @@ import random
 
 import discord
 from discord import app_commands
+from discord.app_commands import Choice
 from discord.ext import commands,tasks
 
 import AMP
 import DB
 from modules.parser import Parser
 import utils
+import utils_embeds
+import utils_ui
 
 
 class Whitelist(commands.Cog):
@@ -48,6 +51,7 @@ class Whitelist(commands.Cog):
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
+        self.eBot = utils_embeds.botEmbeds(client)
         self.Parser = Parser()
         
 
@@ -55,6 +59,8 @@ class Whitelist(commands.Cog):
         
         self.failed_whitelist = []
         self.WL_wait_list = [] # Layout = [{'author': message.author.name, 'msg' : message, 'ampserver' : amp_server, 'dbuser' : db_user}]
+
+        self.uBot.sub_command_handler('server', self.server_whitelist)
     
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
@@ -134,24 +140,107 @@ class Whitelist(commands.Cog):
     async def on_member_remove(self, member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
         self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
-        for index in len(0,self.WL_wait_list):
+        
+        for index in range(0, len(self.WL_wait_list)):
             if member.name == self.WL_wait_list[index]['author']:
                 self.WL_wait_list.pop(index)
                 self.logger.info(f'Removed {member.name} from Whitelist Wait List.')
-        return member
+                break
+       
+
+    #Server Whitelist Commands ------------------------------------------------------------
+    @commands.hybrid_group(name='whitelist')
+    @utils.role_check()
+    async def server_whitelist(self, context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @server_whitelist.command(name='true')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def dbserver_whitelist_true(self, context:commands.Context, server):
+        """Set Servers Whitelist Allowed to True"""
+        self.logger.command(f'{context.author.name} used Database Server Whitelist True...')
+     
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = True
+            amp_server._setDBattr() #This will update the AMPInstance Attributes
+        await context.send(f"Server: **{server}**, Whitelist set to : `True`", ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @server_whitelist.command(name='false')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def dbserver_whitelist_false(self, context:commands.Context, server):
+        """Set Servers Whitelist Allowed to False"""
+        self.logger.command(f'{context.author.name} used Database Server Whitelist False...')
+
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = False
+            amp_server._setDBattr() #This will update the AMPInstance Attributes
+        await context.send(f"Server: **{server}**, Whitelist set to : `False`", ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @server_whitelist.command(name='disabled')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    @app_commands.choices(flag= [Choice(name='False', value= 0), Choice(name='True', value= 1)])
+    async def dbserver_whitelist_disabled(self, context:commands.Context, server, flag:Choice[int]):
+        """Disables the Servers Whitelist Functionality"""
+        self.logger.command(f'{context.author.name} used Database Server Whitelist Disabled...')
+
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = flag.value
+            amp_server._setDBattr() #This will update the AMPInstance Attributes
+        await context.send(f"Server: **{server}**, Whitelist set to : `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @server_whitelist.command(name='add')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def amp_server_whitelist_add(self, context:commands.Context, server, name):
+        """Adds User to Servers Whitelist"""
+        self.logger.command(f'{context.author.name} used AMP Server Whitelist Add...')
+
+        amp_server = await self.uBot._serverCheck(context, server)
+        if amp_server:
+            whitelist = amp_server.addWhitelist(name)
+            if whitelist:
+                await context.send(f'**{server}**: Whitelisted `{name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
+            if whitelist == False:
+                await context.send(f'I was unable to find the UUID of that **{name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+            if whitelist == None:
+                await context.send(f'Oops, it appears this user is already whitelisted! **{name}** is good to go~', ephemeral= True, delete_after= self._client.Message_Timeout)
+            
+    @server_whitelist.command(name='remove')
+    @utils.role_check()
+    @app_commands.autocomplete(server= autocomplete_servers)
+    async def amp_server_whitelist_remove(self, context:commands.Context, server, name):
+        """Remove a User from the Servers Whitelist"""
+        self.logger.command(f'{context.author.name} used AMP Server Whitelist Remove...')
+
+        amp_server = await self.uBot._serverCheck(context, server)
+        if amp_server:
+            whitelist = amp_server.removeWhitelist(name= name)
+            if whitelist:
+                await context.send(f'Oops, it appears this user is not whitelisted! **{name}** is not here~', ephemeral= True, delete_after= self._client.Message_Timeout)
+            if whitelist == False:
+                await context.send(f'I was unable to find the UUID of that **{name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+            if whitelist == None:
+                await context.send(f'**{server}**: Removed `{name}` from the Whitelist', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     #All DBConfig Whitelist Specific function settings --------------------------------------------------------------
     @commands.hybrid_group(name='whitelist')
     @utils.role_check()
     async def db_bot_whitelist(self, context:commands.Context):
         if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral=True)
+            await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @db_bot_whitelist.group(name='reply')
     @utils.role_check()
     async def db_bot_whitelist_reply(self, context:commands.Context):
         if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral=True)
+            await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @db_bot_whitelist_reply.command(name='add')
     @utils.role_check()
@@ -160,9 +249,9 @@ class Whitelist(commands.Cog):
         self.logger.command(f'{context.author.name} used Database Bot Whitelist Reply Add...')
 
         self.DB.AddWhitelistReply(message)
-        await context.send('Woohoo! I can now use a new reply! How does it look?!', ephemeral=True)
+        await context.send('Woohoo! I can now use a new reply! How does it look?!', ephemeral= True, delete_after= self._client.Message_Timeout)
         message = self.whitelist_reply_handler(message, context)
-        await context.send(f'{message}', ephemeral=True)
+        await context.send(f'{message}', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @db_bot_whitelist_reply.command(name='remove')
     @utils.role_check()
@@ -174,10 +263,10 @@ class Whitelist(commands.Cog):
         for reply in reply_list:
             if message in reply:
                 self.DB.DeleteWhitelistReply(reply)
-                return await context.send('Awwww! It looks like I can no longer use that reply, shucks~', ephemeral=True)
+                return await context.send('Awwww! It looks like I can no longer use that reply, shucks~', ephemeral= True, delete_after= self._client.Message_Timeout)
             else:
                 continue
-        return await context.send('Oops! I can\'t find that reply, sorry~', ephemeral=True)
+        return await context.send('Oops! I can\'t find that reply, sorry~', ephemeral= True, delete_after= self._client.Message_Timeout)
         
     @db_bot_whitelist_reply.command(name='list')
     @utils.role_check()
@@ -186,9 +275,9 @@ class Whitelist(commands.Cog):
         self.logger.command(f'{context.author.name} used Database Bot Whitelist Reply List...')
 
         replies = self.DB.GetAllWhitelistReplies()
-        await context.send('Here are all the replies I can use:', ephemeral=True)
+        await context.send('Here are all the replies I can use:', ephemeral= True, delete_after= self._client.Message_Timeout)
         for reply in replies:
-            await context.send(f'{reply}', ephemeral=True)
+            await context.send(f'{reply}', ephemeral= True, delete_after= self._client.Message_Timeout)
  
     @db_bot_whitelist.command(name='channel')
     @utils.role_check()
@@ -199,10 +288,10 @@ class Whitelist(commands.Cog):
       
         channel = self.uBot.channelparse(channel,context,context.guild.id)
         if channel == None:
-            return await context.send(f'Unable to find the Discord Channel: **{channel}**', ephemeral=True)
+            return await context.send(f'Unable to find the Discord Channel: **{channel}**', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
             self.DBConfig.SetSetting('Whitelist_channel',channel.id)
-            await context.send(f'Set Bot Channel Whitelist to **{channel.name}**', ephemeral=True)
+            await context.send(f'Set Bot Channel Whitelist to **{channel.name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @db_bot_whitelist.command(name='waittime')
     @utils.role_check()
@@ -213,26 +302,23 @@ class Whitelist(commands.Cog):
         
         if time.isnumeric():
             self.DBConfig.Whitelist_wait_time = time
-            await context.send(f'Whitelist wait time has been set to **{time} minutes**.', ephemeral=True)
+            await context.send(f'Whitelist wait time has been set to **{time} minutes**.', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send('Please use only numbers when setting the wait time. All values are in minutes!', ephemeral=True)
+            await context.send('Please use only numbers when setting the wait time. All values are in minutes!', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @db_bot_whitelist.command(name='auto')
     @utils.role_check()
-    @app_commands.autocomplete(flag= utils.autocomplete_bool)
-    async def db_bot_whitelist_auto_whitelist(self, context:commands.Context, flag:str):
+    @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
+    async def db_bot_whitelist_auto_whitelist(self, context:commands.Context, flag:Choice[int]):
         """This turns on or off Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
-    
-        #flag_reg = re.search("(true|false)",flag.lower())
-        if flag == None:
-            return await context.send(f'Please use `true` or `false` for your flag.', ephemeral=True)
-        if flag.lower() == 'true':
-            self.DBConfig.SetSetting('Auto_Whitelist', True)
-            return await context.send('Woohoo! Let me handle all your Whitelisting requests.', ephemeral=True)
-        if flag.lower() == 'false':
-            self.DBConfig.SetSetting('Auto_Whitelist', False)
-            return await context.send('Waaah? Looks like I am not handling Whitelisting anymore.', ephemeral=True)
+       
+        if flag.value.lower() == 'true':
+            self.DBConfig.SetSetting('Auto_Whitelist', flag)
+            return await context.send('Woohoo! Let me handle all your Whitelisting requests.', ephemeral= True, delete_after= self._client.Message_Timeout)
+        if flag.value.lower() == 'false':
+            self.DBConfig.SetSetting('Auto_Whitelist', flag)
+            return await context.send('Waaah? Looks like I am not handling Whitelisting anymore.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @db_bot_whitelist.command(name='pending_emoji')
     @utils.role_check()
@@ -240,7 +326,7 @@ class Whitelist(commands.Cog):
         """This sets the Whitelist pending emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Pending Emoji...')
       
-        message = await context.send('Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!', ephemeral=True)
+        message = await context.send('Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!', ephemeral= True, delete_after= self._client.Message_Timeout)
         
         def check(reaction:discord.Reaction, user:discord.Member):
             if self._client.get_emoji(reaction.emoji.id) != None:
@@ -251,10 +337,10 @@ class Whitelist(commands.Cog):
                 raise Exception('Emoji not found!')
         try:
             reaction, user = await self._client.wait_for('reaction_add', check=check)
-            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}', ephemeral=True)
+            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}', ephemeral= True, delete_after= self._client.Message_Timeout)
         except Exception as e:
             self.logger.error(f'Error: {e}')
-            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!', ephemeral=True)    
+            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!', ephemeral= True, delete_after= self._client.Message_Timeout)    
 
     @db_bot_whitelist.command(name='done_emoji')
     @utils.role_check()
@@ -262,21 +348,21 @@ class Whitelist(commands.Cog):
         """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Done Emoji...')
 
-        message = await context.send('Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!', ephemeral=True)
+        message = await context.send('Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!', ephemeral= True, delete_after= self._client.Message_Timeout)
 
         def check(reaction:discord.Reaction, user:discord.Member):
             if self._client.get_emoji(reaction.emoji.id) != None:
                 if user == context.author:
-                    self.DBConfig.SetSetting('Whitelist_emoji_done',reaction.emoji.id)
+                    self.DBConfig.SetSetting('Whitelist_emoji_done', reaction.emoji.id)
                     return True
             else:
                 raise Exception('Emoji not found!')
         try:
             reaction, user = await self._client.wait_for('reaction_add', check=check)
-            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}', ephemeral=True)
+            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}', ephemeral= True, delete_after= self._client.Message_Timeout)
         except Exception as e:
             self.logger.error(f'Error: {e}')
-            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!', ephemeral=True)      
+            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!', ephemeral= True, delete_after= self._client.Message_Timeout)      
 
     async def on_message_whitelist(self, message:discord.Message, context:commands.Context):
         """This handles on_message whitelist requests."""
@@ -397,15 +483,15 @@ class Whitelist(commands.Cog):
                 db_server = self.DB.GetServer(cur_message['ampserver'].FriendlyName)
                 #This handles all the Discord Role stuff.
                 if db_server != None and db_server.Discord_Role != None:
-                    discord_role = self.uBot.roleparse(db_server.Discord_Role,cur_message['context'],cur_message['context'].guild_id)
-                    discord_user = self.uBot.userparse(cur_message['author'].name,cur_message['context'],cur_message['context'].guild_id)
+                    discord_role = self.uBot.roleparse(db_server.Discord_Role, cur_message['context'], cur_message['context'].guild_id)
+                    discord_user = self.uBot.userparse(cur_message['author'].name, cur_message['context'], cur_message['context'].guild_id)
                     await discord_user.add_roles(discord_role, reason= 'Auto Whitelisting')
 
                 emoji = self._client.get_emoji(self.DBConfig.GetSetting('Whitelist_Emoji_Done'))
                 if emoji != None:
                     await cur_message['msg'].add_reaction(emoji) #This should point to bot_config Emoji
 
-                server_embed = await self.uBot.server_whitelist_embed(cur_message['context'], cur_message['ampserver'])
+                server_embed = await self.eBot.server_whitelist_embed(cur_message['context'], cur_message['ampserver'])
                 whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
                 await cur_message['msg'].reply(content= self.whitelist_reply_handler(whitelist_reply), embed=server_embed)#, ephemeral=True)
 

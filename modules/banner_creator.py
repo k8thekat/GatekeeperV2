@@ -123,7 +123,7 @@ class Banner_Generator():
     def _image_(self):
         return self.banner_image
 
-    def _validate_image(self, path)-> Image.Image:
+    def _validate_image(self, path) -> Image.Image:
         try:
             image = Image.open(path)
 
@@ -271,15 +271,17 @@ class Banner_Generator():
     def _Server_Description(self):
         x,y= (15, (self._banner_limit_size_y - (self._font_Body_text_height * 2) - 8))
 
-        if self._Server.Description != None:
-            text = self._word_wrap(self._Server.Description, self._font, self._font_Body_size, (self._banner_shadow_box_x - x), ' ', False)
+        if self._Server.Display_Description != None:
+            text = self._word_wrap(self._Server.Display_Description, self._font, self._font_Body_size, (self._banner_shadow_box_x - x), ' ', False)
             if type(text) == list:
                 for entry in text:
                     self._draw_text((x,y), entry, self._font_Body, self._font_Body_color)
                     x = x
                     y += self._font_Body_text_height
-  
+            else:
+                self._draw_text((x,y), text, self._font_Body, self._font_Body_color)
 
+  
     def _Server_Status(self):
         text = 'Offline'
         fill = self._font_Status_color_offline
@@ -288,7 +290,7 @@ class Banner_Generator():
             text = 'Online: '
             fill = self._font_Status_color_online
             #This will change depending on the player limit of the server.
-            self.user_count = self._Server.getStatus(users_only= True)
+            self.user_count = self._Server.getUsersOnline()
             user_count_text = f'{self.user_count[0]} / {self.user_count[1]}'
             text_length = ImageFont.truetype(self._font, self._font_Status_size).getlength(text + user_count_text)
             padding = int((self._banner_shadow_box[0] - text_length) / 2)

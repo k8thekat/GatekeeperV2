@@ -37,135 +37,62 @@ import importlib.util
 import os
 import discord
 import re
+from typing import Union
 
 import DB
 
 #import utils
 Handler = None
 
-class AMPHandler():
-    def __init__(self, args:Namespace):
-        self.args = args
-        self.logger = logging.getLogger()
-        self._cwd = pathlib.Path.cwd()
-        self.name = os.path.basename(__file__)
 
-        self.AMP2FA = False
-        self.tokens = ''
-
-        self.superUser = False
-    
-        self.SessionIDlist = {}
-
-        self.AMP_Instances = {}
-        self.AMP_Modules = {}
-
-        self.AMP_Console_Modules = {}
-        self.AMP_Console_Threads = {}
-
-        self.SuccessfulConnection = False
-        self.InstancesFound = False
-
-        self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB #Main Database object
-        self.DBConfig = self.DBHandler.DBConfig
-
-        self.val_settings()
-        self.moduleHandler()
-
-    def setup_AMPInstances(self):
-        """Intializes the connection to AMP and creates AMP_Instance objects."""
-        self.AMP = AMPInstance(Handler = self)
-        self.AMP_Instances = self.AMP.getInstances()
-
-        #This removes Super Admins from the bot user! Controlled through parser args!
-        if self.args.super or not self.args.dev:
-            self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID,self.AMP.super_AdminID,False) 
-            self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
-    
-    def get_AMP_instance_names(self):
-        """This only works for ONLINE/EXISTING Instances. Anything offline wont show up."""
-        AMP_Instances_Names = []
-        for server in self.AMP_Instances:
-            if self.AMP_Instances[server].DisplayName != None:
-                AMP_Instances_Names.append(self.AMP_Instances[server].DisplayName)
-            else:
-                AMP_Instances_Names.append(self.AMP_Instances[server].FriendlyName)
-        return AMP_Instances_Names
-    
-    #Checks for Errors in Config
-    def val_settings(self):
-        """Validates the tokens.py settings and 2FA."""
-        self.logger.info('AMPHandler is validating your token file...')
-        reset = False
-
-        if not self.args.token:
-            if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
-                self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
-                reset = True
-
-        import tokens
-        self.tokens = tokens
-        if not tokens.AMPurl.startswith('http://') and not tokens.AMPurl.startswith('https://'):
-            self.logger.critical('** Please Verify your AMP Url **')
-            reset = True
-            
-        # if tokens.AMPurl.endswith('/') or tokens.AMPurl.endswith('\\'):
-        #     tokens.AMPurl = tokens.AMPurl.replace('/','').replace('\\','')
-
-        if len(tokens.AMPAuth) < 7:
-            if tokens.AMPAuth == '':
-                self.AMP2FA = False
-                return
-            else:
-                self.logger.critical('**ERROR** Please use your 2 Factor Generator Code (Should be over 25 characters long), not the 6 digit numeric generated code that expires with time.')
-                reset = True
-
-        if reset:
-            input("Press any Key to Exit")
-            sys.exit(0)
-
-        self.AMP2FA = True
-    
-    def moduleHandler(self):
-        """AMPs class Loader for specific server types."""
-        self.logger.dev('AMPHandler moduleHandler loading modules...')
-        try:
-            dir_list = self._cwd.joinpath('modules').iterdir()
-            for folder in dir_list:
-                file_list = folder.glob('amp_*.py')
-                for script in file_list:
-                    module_name = script.name[4:-3].capitalize()
-                    try:
-                        #print(script)
-                        spec = importlib.util.spec_from_file_location(module_name, script)
-                        class_module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(class_module)
-
-                        # self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
-                        # self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
-                        #!ATTENTION! This may change in the future. Depends on the table update.
-                        for DIS in getattr(class_module,f'DisplayImageSources'):
-                            self.AMP_Modules[DIS] = getattr(class_module,f'AMP{module_name}')
-                            self.AMP_Console_Modules[DIS] = getattr(class_module,f'AMP{module_name}Console')
-
-                        self.logger.dev(f'**SUCCESS** {self.name} Loading AMP Module **{module_name}**')
-
-                    except Exception as e:
-                        self.logger.error(f'**ERROR** {self.name} Loading AMP Module **{module_name}** - {e}')
-                        continue
-   
-        except Exception as e:
-            self.logger.error(f'**ERROR** {self.name} Loading AMP Module ** - File Not Found {e}')
-                    
-def getAMPHandler(args:bool=False)-> AMPHandler:
-    global Handler
-    if Handler == None:
-        Handler = AMPHandler(args= args)
-    return Handler
-
-class AMPInstance:
-    """Base class for AMP"""
+class AMPInstance():
+    """AMP Base Class: \n
+        Attributes: \n
+        `AMP2Factor `\n
+        `AMPheader `\n
+        `AppState `\n
+        `ApplicationEndpoints `\n
+        `CallAPI `\n
+        `Console - AMPConsole Object `\n
+        `ConsoleMessage `\n
+        `ConsoleUpdate #returns a list `\n
+        `ContainerCPUs `\n
+        `ContainerMemoryMB `\n
+        `ContainerMemoryPolicy `\n
+        `Daemon `\n
+        `DaemonAutostart `\n
+        `DisplayImageSource `\n
+        `ExcludeFromFirewall `\n
+        `FriendlyName : What is displayed in AMP Panel `\n
+        `IP `\n
+        `InstalledVersion `\n
+        `InstanceID `\n
+        `InstanceName : What the instance was named when it was created! `\n
+        `IsContainerInstance `\n
+        `IsHTTPS `\n
+        `IsTemplateInstance `\n
+        `KillInstance `\n
+        `Login `\n
+        `ManagementMode `\n
+        `Metrics `\n
+        `Module `\n
+        `Port `\n
+        `ReleaseStream `\n
+        `RestartInstance `\n
+        `Running : This is the Instance Status `\n
+        `ADS_Running : This is the Dedicated Server `\n
+        `SessionID `\n
+        `StartInstance `\n
+        `StopInstance `\n
+        `Suspended `\n
+        `TargetID `\n
+        `addTask `\n
+        `getInstances : # returns list `\n
+        `getSchedule : #returns a dict `\n
+        `getStatus : #returns TPS,PlayerCount,Uptime `\n
+        `serverdata `\n
+        `url `\n
+        """
     def __init__(self, instanceID=0, serverdata={}, default_console=False, Handler=None):
         self.Initialized = False
 
@@ -249,8 +176,8 @@ class AMPInstance:
         if instanceID == 0 or self.Running:
             if self.check_AMPpermissions(): #We either have to have super or our bot role perms has been set manually!
                 self.AMP_userinfo = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser) #This gets my AMP User Information
-                self.AMP_UserID = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser,True) #This gets my AMP User ID
-                self.getRoleIds(True) #This checks for Super Admins role and discord_bot role
+                self.AMP_UserID = self.getAMPUserID(self.AMPHandler.tokens.AMPUser) #This gets my AMP User ID
+                self.setRoleIDs() #This checks for Super Admins role and discord_bot role
 
                 #Bot role doesn't exists, but we have Super Admin!
                 if self.AMP_BotRoleID == None and self.super_AdminID in self.AMP_userinfo['result']['Roles']:
@@ -289,9 +216,9 @@ class AMPInstance:
         """Creates the `discord_bot` role."""
         self.logger.warning('Creating the AMP role `discord_bot`.')
         self.createRole('discord_bot')
-        self.getRoleIds(True)
+        self.setRoleIDs()
         self.logger.dev(f'Created `discord_bot` role. ID: {self.AMP_BotRoleID}')
-        self.AMP_UserID = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser,True)
+        self.AMP_UserID = self.getAMPUserID(self.AMPHandler.tokens.AMPUser)
         self.setAMPUserRoleMembership(self.AMP_UserID,self.AMP_BotRoleID,True)
         self.logger.warning(f'***ATTENTION*** Adding {self.AMPHandler.tokens.AMPUser} to `discord_bot` Role.')
 
@@ -309,7 +236,7 @@ class AMPInstance:
             self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return
 
-    def check_AMPpermissions(self):
+    def check_AMPpermissions(self) -> bool:
         """These check the permissions for AMP Modules"""
         self.logger.warning(f'Checking {self.APIModule} for proper permissions...')
         failed = False
@@ -351,12 +278,14 @@ class AMPInstance:
         self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
         self.DisplayName = self.DB_Server.DisplayName
         self.Nicknames = self.DB_Server.Nicknames
-        self.Description = self.DB_Server.Description
+        self.Display_Description = self.DB_Server.Description
         self.Display_IP = self.DB_Server.Display_IP
         self.Whitelist = self.DB_Server.Whitelist
+        self.Whitelist_disabled = self.DB_Server.Whitelist_disabled
         self.Donator = self.DB_Server.Donator
         self.Console_Flag = self.DB_Server.Console_Flag 
         self.Console_Filtered = self.DB_Server.Console_Filtered
+        self.Console_Filtered_Type = self.DB_Server.Console_Filtered_Type
         self.Discord_Console_Channel = self.DB_Server.Discord_Console_Channel
         self.Discord_Chat_Channel = self.DB_Server.Discord_Chat_Channel
         self.Discord_Chat_Prefix = self.DB_Server.Discord_Chat_Prefix
@@ -366,7 +295,7 @@ class AMPInstance:
         self.Hidden = self.DB_Server.Hidden
         self.background_banner_path = self.DB_Server.getBanner().background_path
         
-    def Login(self):
+    def Login(self) -> bool:
         if self.SessionID == 0:
             if self.InstanceID in self.AMPHandler.SessionIDlist:
                 self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
@@ -388,17 +317,19 @@ class AMPInstance:
 
             try:
                 result = self.CallAPI('Core/Login',parameters)
+                
                 self.SessionID = result['sessionID']
                 self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
                 self.Running = True
 
             except:
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
+                pprint(result)
                 self.Running = False
                 return False
         return True
 
-    def CallAPI(self, APICall, parameters):
+    def CallAPI(self, APICall, parameters) -> Union[bool, dict]:
         """This is the main API Call function"""
         self.logger.debug(f'Function {APICall} was called with {parameters} by {self.InstanceID}')
 
@@ -460,13 +391,13 @@ class AMPInstance:
     
         return post_req.json()
 
-    def _ADScheck(self):
+    def _ADScheck(self) -> bool:
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!
         This updates `self.ADS_Running` attribute, also returns `True` on Success or `False` on failure"""
         Success = self.Login()
         self.logger.debug('Server Check, Login Sucess: ' + str(Success))
         if Success:
-            status = self.getStatus(running_check = True)
+            status = self.getLiveStatus()
             self.logger.debug(f'{self.FriendlyName} ADS Running: {status}')
             self.ADS_Running = status
             return status
@@ -482,7 +413,6 @@ class AMPInstance:
         self.Login()
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstances',parameters) 
-        #serverlist = {}
         if len(result["result"][0]['AvailableInstances']) != 0:
             for Target in result["result"]:
                 for instance in Target['AvailableInstances']: #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
@@ -557,47 +487,13 @@ class AMPInstance:
                     self.logger.error(f'{server.FriendlyName}: Shutting down Console Thread, Instance Online: {server.Running}, ADS Online: {server.ADS_Running}.')
                     server.Console.console_thread_running = False
 
-    def getInstances(self):
-        """This gets all Instances on AMP and puts them into a dictionary.\n {'InstanceID': AMPAPI class}"""
+    def getInstances(self) -> dict:
+        """This gets all Instances on AMP."""
         self.Login()
         parameters = {}
-        result = self.CallAPI('ADSModule/GetInstances',parameters) 
-        serverlist = {}
-        if len(result["result"][0]['AvailableInstances']) != 0:
-
-            for Target in result["result"]:
-                self.AMPHandler.InstancesFound = True
-                for amp_instance in Target['AvailableInstances']: #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
-                    #instance = result["result"][0]['AvailableInstances'][i] 
-
-                    #This exempts the AMPTemplate Gatekeeper *hopefully*
-                    flag_reg = re.search("(gatekeeper)", amp_instance['FriendlyName'].lower())
-                    if flag_reg != None:
-                        if flag_reg.group():
-                            continue 
-                            
-                    if amp_instance['Module'] == 'ADS':
-                        continue
-
-                    table_field = 'DisplayImageSource'
-                    if amp_instance[table_field] in self.AMPHandler.AMP_Modules:
-                        name = str(self.AMPHandler.AMP_Modules[amp_instance[table_field]]).split("'")[1]
-                        self.logger.dev(f'Loaded __{name}__ for {amp_instance["FriendlyName"]}')
-                        #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
-                        server = self.AMPHandler.AMP_Modules[amp_instance[table_field]](instanceID= amp_instance['InstanceID'], serverdata= amp_instance, Handler= self.AMPHandler)
-                        serverlist[server.InstanceID] = server
-
-                    else:
-                        self.logger.dev(f'Loaded __AMP_Generic__ for {amp_instance["FriendlyName"]}')
-                        server = self.AMPHandler.AMP_Modules['Generic'](instanceID= amp_instance['InstanceID'], serverdata= amp_instance, Handler= self.AMPHandler)
-                        serverlist[server.InstanceID] = server
-
-            return serverlist
-
-        else:
-            self.AMPHandler.InstancesFound = False
-            self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
-            time.sleep(30)     
+        result = self.CallAPI('ADSModule/GetInstances',parameters)
+        #pprint(result)
+        return result     
 
     def ConsoleUpdate(self) -> dict:
         """Returns `{'ConsoleEntries':[{'Contents': 'String','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`\n
@@ -651,10 +547,8 @@ class AMPInstance:
         self.CallAPI('Core/Kill', parameters)
         return
 
-    def getStatus(self, running_check:bool=False, users_only:bool=False) -> tuple:
-        """AMP Instance Metrics \n
-        CPU is percentage based <tuple>
-        """
+    def getStatus(self) -> dict:
+        """AMP Instance Status Information"""
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetStatus', parameters)
@@ -662,28 +556,46 @@ class AMPInstance:
         #This happens because CallAPI returns False when it fails permissions.
         if result == False:
             return False
-        
-        #This works if I had permission and the server is online, but not actually running. So we check TPS to make sure the server is actually 'live' 
-        if running_check and result != False:
+        return result
+
+    def getMetrics(self) -> tuple:
+        """Returns AMP Instance Metrics \n
+        `Uptime str` \n
+        `TPS str`  \n
+        `Users tuple(str,str)` \n
+        `Memory tuple(str, str)` \n
+        `CPU tuple(str, str)` \n
+        """
+        result = self.getStatus()
+        if result != False:
+            Uptime = str(result['Uptime'])
+            TPS = str(result['State'])
+            Users = (str(result['Metrics']['Active Users']['RawValue']),str(result['Metrics']['Active Users']['MaxValue']))
+            Memory = (str(result['Metrics']['Memory Usage']['RawValue']),str(result['Metrics']['Memory Usage']['MaxValue']))
+            CPU = str(result['Metrics']['CPU Usage']['RawValue']) #This is a percentage
+            self.Metrics = result['Metrics']
+            return TPS, Users, CPU, Memory, Uptime
+    
+    def getLiveStatus(self) -> bool:
+        """Server is Online and Proper AMP Permissions. \n
+        So we check TPS/State to make sure the Dedicated Server is actually 'live'. \n
+        `Returns False` when 0 TPS """
+        result = self.getStatus()
+        if result != False:
             status = str(result['State'])
             if status == '0':
                 return False
             return True
 
-        #If we want to check ONLY online users!
-        if users_only:
+    def getUsersOnline(self) -> tuple[str, str]:
+        """Returns Number of Online Players over Player Limit. \n
+        `eg 2/10`"""
+        result = self.getStatus()
+        if result != False:
             Users = (str(result['Metrics']['Active Users']['RawValue']),str(result['Metrics']['Active Users']['MaxValue']))
             return Users
-
-        Uptime = str(result['Uptime'])
-        tps = str(result['State'])
-        Users = (str(result['Metrics']['Active Users']['RawValue']),str(result['Metrics']['Active Users']['MaxValue']))
-        Memory = (str(result['Metrics']['Memory Usage']['RawValue']),str(result['Metrics']['Memory Usage']['MaxValue']))
-        cpu = str(result['Metrics']['CPU Usage']['RawValue']) #This is a percentage
-        self.Metrics = result['Metrics']
-        return tps,Users,cpu,Memory,Uptime
-    
-    def getUserList(self) -> list:
+        
+    def getUserList(self) -> list[str]:
         """Returns a List of connected users."""
         self.Login()
         parameters = {}
@@ -830,22 +742,24 @@ class AMPInstance:
             "Description" : description,
             "Sticky" : sticky
         }
-        result = self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
-
+        self.CallAPI('LocalFileBackupPlugin/TakeBackup',parameters)
         return
 
-    def getAMPUserInfo(self, name:str, IdOnly=False):
+    def getAMPUserInfo(self, name:str) -> Union[str, dict]:
         """Gets AMP user info. if IdOnly is True; returns AMP User ID only!"""
         self.Login()
         parameters = {
             'Username' : name
         }
         result = self.CallAPI('Core/GetAMPUserInfo', parameters)
-        if IdOnly:
-            return result['result']['ID']
         return result
 
-    def CurrentSessionHasPermission(self, PermissionNode:str):
+    def getAMPUserID(self, name:str):
+        """Returns AMP Users ID Only."""
+        result = self.getAMPUserInfo(name= name)
+        return result['result']['ID']
+
+    def CurrentSessionHasPermission(self, PermissionNode:str) -> dict:
         """Gets current Sessions permission spec"""
         self.Login()
         parameters = {
@@ -858,7 +772,7 @@ class AMPInstance:
 
         return result
 
-    def getAMPRolePermissions(self, RoleID:str):
+    def getAMPRolePermissions(self, RoleID:str) -> dict:
         """Gets full permission spec for Role (returns permission nodes)"""
         self.Login()
         parameters = {
@@ -867,35 +781,36 @@ class AMPInstance:
         result = self.CallAPI('Core/GetAMPRolePermissions', parameters)
         return result
 
-    def getPermissions(self):
+    def getPermissions(self) -> dict:
         """Gets full Permission spec for self"""
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetPermissionsSpec', parameters)
         return result
 
-    def getRoleIds(self, set_roleID=False):
+    def getRoleIds(self) -> dict:
         """Gets a List of all Roles, if set_roleID is true; it checks for `discord_bot` and `Super Admins`. Sets them to self.AMP_BotRoleID and self.super_AdminID"""
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetRoleIds', parameters)
+        return result
 
-        if set_roleID:
-            roles = result['result']
-            for role in roles:
-                if roles[role] == 'discord_bot':
-                    self.AMP_BotRoleID = role
+    def setRoleIDs(self) -> bool:
+        """Sets AMP_BotRoleID and super_AdminID if they exist."""
+        result = self.getRoleIds()
+        roles = result['result']
+        for role in roles:
+            if roles[role] == 'discord_bot':
+                self.AMP_BotRoleID = role
 
-                if roles[role] == 'Super Admins':
-                    self.super_AdminID = role
-                
-            if self.AMP_BotRoleID == None:
-                return False
+            if roles[role] == 'Super Admins':
+                self.super_AdminID = role
+            
+        if self.AMP_BotRoleID == None:
+            return False
 
-            if self.AMP_BotRoleID != None and self.super_AdminID != None:
-                return True
-
-        return result['result']
+        if self.AMP_BotRoleID != None and self.super_AdminID != None:
+            return True
 
     def createRole(self, name:str, AsCommonRole=False):
         """Creates a AMP User role"""
@@ -905,7 +820,6 @@ class AMPInstance:
             'AsCommonRole' : AsCommonRole
         }
         result = self.CallAPI('Core/CreateRole', parameters)
-        pprint(result)
         return result
 
     def getRole(self, Roleid:str):
@@ -954,7 +868,7 @@ class AMPInstance:
         """Base Function for AMP.removeWhitelist"""
         return False
 
-    def whitelist_intake(self, discord_user:discord.Member, user_name:str):
+    def whitelist_intake(self, discord_user: discord.Member, user_name:str):
         """Base Function for AMP.whitelist_intake"""
         return True
   
@@ -966,7 +880,7 @@ class AMPInstance:
         """Base Function for AMP.name_History"""
         return user
 
-    def check_Whitelist(self, discord_user:discord.Member= None, in_gamename:str= None):
+    def check_Whitelist(self, discord_user: discord.Member= None, in_gamename:str= None):
         """Base Funcion for AMP.check_Whitelist `default return is None`"""
         return None
 
@@ -986,8 +900,196 @@ class AMPInstance:
         """Base Function for Broadcast Messages to AMP ADS"""
         return
 
+class AMPHandler():
+    def __init__(self, args:Namespace):
+        self.args = args
+        self.logger = logging.getLogger()
+        self._cwd = pathlib.Path.cwd()
+        self.name = os.path.basename(__file__)
+
+        self.AMP2FA = False
+        self.tokens = ''
+
+        self.superUser = False
+    
+        self.SessionIDlist = {}
+
+        self.AMP_Modules = {}
+
+        self.AMP_Console_Modules = {}
+        self.AMP_Console_Threads = {}
+
+        self.SuccessfulConnection = False
+        self.InstancesFound = False
+
+        self.DBHandler = DB.getDBHandler()
+        self.DB = self.DBHandler.DB #Main Database object
+        self.DBConfig = self.DBHandler.DBConfig
+
+        self.val_settings()
+        self.moduleHandler()
+
+    def setup_AMPInstances(self):
+        """Intializes the connection to AMP and creates AMP_Instance objects."""
+        self.AMP = AMPInstance(Handler = self)
+        self.getAMPInstances(amp= self.AMP)
+
+        #This removes Super Admins from the bot user! Controlled through parser args!
+        if self.args.super or not self.args.dev:
+            self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID, self.AMP.super_AdminID, False) 
+            self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
+    
+    def get_AMP_instance_names(self) -> list[str]:
+        """This only works for ONLINE/EXISTING Instances. Anything offline wont show up."""
+        AMP_Instances_Names = []
+        for server in self.AMP_Instances:
+            if self.AMP_Instances[server].DisplayName != None:
+                AMP_Instances_Names.append(self.AMP_Instances[server].DisplayName)
+            else:
+                AMP_Instances_Names.append(self.AMP_Instances[server].FriendlyName)
+        return AMP_Instances_Names
+    
+    #Checks for Errors in Config
+    def val_settings(self):
+        """Validates the tokens.py settings and 2FA."""
+        self.logger.info('AMPHandler is validating your token file...')
+        reset = False
+
+        if not self.args.token:
+            if self._cwd.joinpath('tokenstemplate.py').exists() or not self._cwd.joinpath('tokens.py').exists():
+                self.logger.critical('**ERROR** Please rename your tokenstemplate.py file to tokens.py before trying again.')
+                reset = True
+
+        import tokens
+        self.tokens = tokens
+        if not tokens.AMPurl.startswith('http://') and not tokens.AMPurl.startswith('https://'):
+            self.logger.critical('** Please verifiy your AMPurl. **')
+            reset = True
+            
+        if tokens.AMPurl.endswith('/'):
+            self.logger.warning(f'** Please remove the forward slash at the end of {tokens.AMPurl} **, we temporarily did it for you. This may break things...')
+            tokens.AMPurl = tokens.AMPurl[:-1]
+        
+        if len(tokens.AMPAuth) < 7:
+            if tokens.AMPAuth == '':
+                self.AMP2FA = False
+                return
+            else:
+                self.logger.critical('**ERROR** Please use your 2 Factor Generator Code (Should be over 25 characters long), not the 6 digit numeric generated code that expires with time.')
+                reset = True
+
+        if reset:
+            input("Press any Key to Exit")
+            sys.exit(0)
+
+        self.AMP2FA = True
+    
+    def moduleHandler(self):
+        """AMPs class Loader for specific server types."""
+        self.logger.dev('AMPHandler moduleHandler loading modules...')
+        try:
+            dir_list = self._cwd.joinpath('modules').iterdir()
+            for folder in dir_list:
+                file_list = folder.glob('amp_*.py')
+                for script in file_list:
+                    module_name = script.name[4:-3].capitalize()
+                    try:
+                        #print(script)
+                        spec = importlib.util.spec_from_file_location(module_name, script)
+                        class_module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(class_module)
+
+                        # self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
+                        # self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
+                        #!ATTENTION! This may change in the future. Depends on the table update.
+                        for DIS in getattr(class_module,f'DisplayImageSources'):
+                            self.AMP_Modules[DIS] = getattr(class_module, f'AMP{module_name}')
+                            self.AMP_Console_Modules[DIS] = getattr(class_module, f'AMP{module_name}Console')
+
+                        self.logger.dev(f'**SUCCESS** {self.name} Loading AMP Module **{module_name}**')
+
+                    except Exception as e:
+                        self.logger.error(f'**ERROR** {self.name} Loading AMP Module **{module_name}** - {e}')
+                        continue
+   
+        except Exception as e:
+            self.logger.error(f'**ERROR** {self.name} Loading AMP Module ** - File Not Found {e}')
+                    
+    def getAMPInstances(self, amp: AMPInstance) -> dict[AMPInstance]:
+        """Creates all the AMP Instance Objects and puts them into a dictionary.\n `{'InstanceID': AMPInstance}`"""
+        data = amp.getInstances()
+        self.AMP_Instances = {}
+        if len(data["result"][0]['AvailableInstances']) != 0:
+            self.InstancesFound = True
+            # for Target in data["result"]:
+            #     for amp_instance in data["result"][Target]['AvailableInstances']: #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
+            #         instance = data["result"][0]['AvailableInstances']
+
+            #         #This exempts the AMPTemplate Gatekeeper *hopefully*
+            #         flag_reg = re.search("(gatekeeper)",instance['FriendlyName'].lower())
+            #         if flag_reg != None:
+            #             if flag_reg.group():
+            #                 continue 
+                        
+            #         #This should omit the main AMP instance.
+            #         if instance['Module'] == 'ADS':
+            #             continue
+
+            #         if instance['DisplayImageSource'] in self.AMP_Modules:
+            #             name = str(self.AMP_Modules[instance["DisplayImageSource"]]).split("'")[1]
+            #             self.logger.dev(f'Loaded __{name}__ for {instance["FriendlyName"]}')
+            #             #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
+            #             server = self.AMP_Modules[instance['DisplayImageSource']](instanceID= instance['InstanceID'], serverdata= instance, Handler= self)
+            #             self.AMP_Instances[server.InstanceID] = server
+
+            #         else:
+            #             self.logger.dev(f'Loaded __AMP_Generic__ for {instance["FriendlyName"]}')
+            #             server = self.AMP_Modules['Generic'](instanceID= instance['InstanceID'], serverdata= instance, Handler= self)
+            #             self.AMP_Instances[server.InstanceID] = server
+            for Target in data["result"]:
+                for amp_instance in Target['AvailableInstances']: #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
+
+                    #This exempts the AMPTemplate Gatekeeper *hopefully*
+                    flag_reg = re.search("(gatekeeper)", amp_instance['FriendlyName'].lower())
+                    if flag_reg != None:
+                        if flag_reg.group():
+                            continue 
+                        
+                    #This should omit the main AMP instance.
+                    if amp_instance['Module'] == 'ADS':
+                        continue
+
+                    if amp_instance['DisplayImageSource'] in self.AMP_Modules:
+                        name = str(self.AMP_Modules[amp_instance["DisplayImageSource"]]).split("'")[1]
+                        self.logger.dev(f'Loaded __{name}__ for {amp_instance["FriendlyName"]}')
+                        #def __init__(self, instanceID = 0, serverdata = {}, Index = 0, default_console = False, Handler = None):
+                        server = self.AMP_Modules[amp_instance['DisplayImageSource']](instanceID= amp_instance['InstanceID'], serverdata= amp_instance, Handler= self)
+                        self.AMP_Instances[server.InstanceID] = server
+
+                    else:
+                        self.logger.dev(f'Loaded __AMP_Generic__ for {amp_instance["FriendlyName"]}')
+                        server = self.AMP_Modules['Generic'](instanceID= amp_instance['InstanceID'], serverdata= amp_instance, Handler= self)
+                        self.AMP_Instances[server.InstanceID] = server
+                 
+
+        else:
+            self.InstancesFound = False
+            self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
+            time.sleep(30)
+
+def getAMPHandler(args:bool=False) -> AMPHandler:
+    global Handler
+    if Handler == None:
+        Handler = AMPHandler(args= args)
+    return Handler
+
 class AMPConsole:
-    def __init__(self, AMPInstance=AMPInstance):
+    FILTER_TYPE_CONSOLE = 0
+    FILTER_TYPE_EVENT = 1
+    FILTER_TYPE_BLACKLIST = 0
+    FILTER_TYPE_WHITELIST = 1
+
+    def __init__(self, AMPInstance= AMPInstance):
         self.logger = logging.getLogger()
 
         self.AMPInstance = AMPInstance
@@ -1079,16 +1181,16 @@ class AMPConsole:
                     continue
                 
                 self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} DisplayImageSource: {self.AMPInstance.DisplayImageSource} Console Entry: {entry}')
-                self.logger.dev(f'Console Filtered: {bool(self.AMPInstance.Console_Filtered)} Chat Prefix: {self.DB_Server.Discord_Chat_Prefix}')
-                self.logger.dev(f"Console Channel: {self.AMPInstance.Discord_Console_Channel} Chat Channel: {self.AMPInstance.Discord_Chat_Channel} Event Channel: {self.AMPInstance.Discord_Event_Channel}")
+                self.logger.dev(f'Console Filtered: {bool(self.AMPInstance.Console_Filtered)} ConsoleFiltered Type: {self.AMPInstance.Console_Filtered_Type} Console Channel: {self.AMPInstance.Discord_Console_Channel}')
+                self.logger.dev(f"Chat Channel: {self.AMPInstance.Discord_Chat_Channel} Chat Prefix: {self.DB_Server.Discord_Chat_Prefix} Event Channel: {self.AMPInstance.Discord_Event_Channel}")
                 #This will add the Servers Discord_Chat_Prefix to the beginning of any of the messages.
                 #Its done down here to prevent breaking of any exisiting filtering.
                 if self.DB_Server.Discord_Chat_Prefix != None:
                     entry['Prefix'] = self.DB_Server.Discord_Chat_Prefix
 
                 #This should handle server events(such as join/leave/disconnects)
-                if self.console_events(entry):
-                    continue
+                #if self.console_events(entry):
+                    #continue
 
                 #This will vary depending on the server type. 
                 # I don't want to filter out the chat message here though. Just send it to two different places!
@@ -1139,19 +1241,43 @@ class AMPConsole:
                     self.logger.debug(self.AMPInstance.FriendlyName + bulkentry[:-1])
                     
             self.console_message_list = []
-            
+
         self.logger.warning(f'{self.AMPInstance.FriendlyName} Thread Loop is Ending')
     
     def console_filter(self, message):
-        """Controls what will be sent to the Discord Console Channel via AMP Console."""
-        if not self.AMPInstance.Console_Filtered:
-            self.logger.dev(f'Filtered Message {message}')
-            return False
-        else:
-            return True
+        """Controls what will be sent to the Discord Console Channel via AMP Console. \n
+        Return `True` to Continue, `False` to Return Message"""
+        if self.AMPInstance.Console_Filtered:
+            
+            #This is to prevent Regex filtering on Chat Messages.
+            if message['Type'] == 'Chat':
+                return False
 
+            #0 = Blacklist | 1 = Whitelist (0 = False/ 1 = True)
+            return_bool = bool(self.AMPInstance.Console_Filtered_Type)
+
+            regex = self.DB_Server.GetServerRegexPatterns()
+            for pattern in regex:
+                flag = re.search(regex[pattern]['Pattern'], message['Contents'])
+                if flag != None:
+                    #0 = Console | 1 = Event
+                    #This is Console Regex Filtering
+                    if regex[pattern]['Type'] == self.FILTER_TYPE_CONSOLE:
+                        return not return_bool
+
+                    #This is Event Regex Filtering
+                    if regex[pattern]['Type'] == self.FILTER_TYPE_EVENT:
+                        self.console_event_message_lock.acquire()
+                        self.console_event_messages.append(message['Contents'])
+                        self.console_event_message_lock.release()
+                        return not return_bool
+            else:
+                self.logger.dev(f'Filtered Message: {message}')
+                return return_bool
+            
     def console_chat(self, message):
-        """This will handle all player chat messages from AMP to Discord"""
+        """This will handle all player chat messages from AMP to Discord.\n
+        Format's Server Chat Messages for better readability to the Console"""
         #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message','Prefix': 'Discord_Chat_Prefix}
         #Currently all servers set "Type" to Chat! So lets use those.
         if message["Type"] == 'Chat':
@@ -1169,7 +1295,7 @@ class AMPConsole:
             return True
         return False
 
-    def console_events(self, message):
-        """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!
-        ALL events go to `self.console_event_messages` """
-        return False
+    # def console_events(self, message):
+    #     """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!
+    #     ALL events go to `self.console_event_messages` """
+    #     return False

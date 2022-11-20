@@ -61,7 +61,7 @@ class DB_Server(commands.Cog):
     @utils.role_check()
     async def db_server(self, context:commands.Context):
         if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral=True)
+            await context.send('Invalid command passed...', ephemeral= True, delete_after= 30)
 
     @db_server.command(name='cleanup')
     @utils.role_check()
@@ -77,10 +77,10 @@ class DB_Server(commands.Cog):
             if db_server != None and db_server.InstanceID not in amp_instance_keys:
                 db_server.delServer()
                 found_server = True
-                await context.send(f'Removing Server: **{db_server.InstanceName}** from the DB', ephemeral= True)
+                await context.send(f'Removing Server: **{db_server.InstanceName}** from the DB', ephemeral= True, delete_after= self._client.Message_Timeout)
             
         if not found_server:
-            await context.send('Hmm, it appears you don\'t have any Servers to cleanup..', ephemeral= True)
+            await context.send('Hmm, it appears you don\'t have any Servers to cleanup..', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @db_server.command(name='test')
     @utils.role_check()
@@ -90,10 +90,11 @@ class DB_Server(commands.Cog):
     async def db_server_test(self, context:commands.Context, server:str, replacement_server:str):
         self.logger.command('Test Function for DB_Server')
       
-        await context.send('Test Function for DB_Server used...', ephemeral=True)
+        await context.send('Test Function for DB_Server used...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @db_server.command(name='swap')
-    @utils.role_check()
+    #@utils.role_check()
+    @utils.author_check(144462063920611328)
     @app_commands.autocomplete(server= autocomplete_db_servers)
     @app_commands.autocomplete(replacement_server= autocomplete_servers)
     async def db_server_instance_swap(self, context:commands.Context, server:str, replacement_server:str):
@@ -105,6 +106,7 @@ class DB_Server(commands.Cog):
         db_server = self.DB.GetServer(amp_server.InstanceID)
         db_server.delServer()
 
+        #!TODO! Need to finish this command.
         #Replace the old_db server ID with the new one. This assume's that the AMP Instance is already gone.
         replacement_db_server  = self.DB.GetServer(server)
         if replacement_db_server != None:

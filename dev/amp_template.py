@@ -79,34 +79,5 @@ class AMPTemplateConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPTemplate):
         super().__init__(AMPInstance)
 
-    def console_events(self, message):
-        """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!
-        ALL events go to `self.console_event_messages` """
-        #Any specific events that need to be caught, like achievements, player deaths.
-        #Anything that is deemed an "event" worth monitoring and displaying to a different discord channel.
-        #Example:
-        # if message['Contents'].endswith('has joined the game'):
-        #     self.console_event_message_lock.acquire()
-        #     self.console_event_messages.append(message['Contents'])
-        #     self.console_event_message_lock.release()
-        #     return False
-        return False
-    
-    def console_filter(self, message):
-        """Controls what will be sent to the Discord Console Channel via AMP Console."""
-        #You can remove specific console messages that get output to the Discord Console Channel.
-        #Return TRUE if you want to PREVENT the message from being displayed. 
-        #Usually you return True by default and use this as a whitelist.
-        #Example:
-        #This list will be used to capture output that I want. These are best for partial finds.
-        # message_finder_list = ['Unkown command.', 'players online:','Staff','?','Help', 'left the game', 'joined the game', 'lost connection:']
-        # for entry in message_finder_list:
-        #     if message['Contents'].find(entry) != -1:
-        #         return False
-
-        if not self.AMPInstance.Console_Filtered:
-            return False
-        return True
-
 
     
