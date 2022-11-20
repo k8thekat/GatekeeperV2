@@ -22,6 +22,7 @@
 import sys
 import subprocess
 import argparse
+import pip
 
 class Setup:
     def __init__(self):
@@ -65,9 +66,21 @@ class Setup:
         self.AMPHandler.setup_AMPInstances() 
         self.AMP = self.AMPHandler.AMP
         self.logger.info(f'AMP Connected: {self.AMP.AMPHandler.SuccessfulConnection}')
+    
+    def python_ver_check(self):
+        if not sys.version_info.major >= 3 and not sys.version_info.minor >= 10:
+            self.logger.critical(f'Unable to Start Gatekeeper, Python Version is {sys.version_info.major + "." + sys.version_info.minor} we require Python Version >= 3.10')
+            sys.exit(1)
 
     def pip_install(self):
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r','requirements.txt'])
+        pip_version = pip.__version__.split('.')
+        pip_v_major = int(pip_version[0])
+        pip_v_minor = int(pip_version[1])
+
+        if pip_v_major > 22 or (pip_v_major == 22 and pip_v_minor >= 1):
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r','requirements.txt'])
+        else:
+            self.logger.critical(f'Unable to Start Gatekeeper, PIP Version is {pip.__version__}, we require PIP Version >= 22.1')
 
 Start = Setup()
 

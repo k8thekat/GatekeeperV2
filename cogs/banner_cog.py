@@ -78,7 +78,7 @@ class Banner(commands.Cog):
 
         db_server_banner = db_server.getBanner()
         #Send a message so we can have a message.id to eidt later.
-        sent_msg = await context.send('Creating Banner Editor...', ephemeral= True)
+        sent_msg = await context.send('Creating Banner Editor...', ephemeral= True, delete_after= 60)
 
         #Create my View first
         editor_view = utils.Banner_Editor_View(db_banner=db_server_banner, amp_server= amp_server, banner_message = sent_msg)
@@ -89,7 +89,7 @@ class Banner(commands.Cog):
     @utils.role_check()
     async def amp_banner(self, context:commands.Context):
         if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral=True)
+            await context.send('Invalid command passed...', ephemeral= True, delete_after= 30)
 
     @amp_banner.command(name= 'test')
     @app_commands.autocomplete(server = autocomplete_servers)
@@ -99,7 +99,7 @@ class Banner(commands.Cog):
         """ Usage case is for test display of banners based upon the picked Server."""
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
         await context.send(file= utils.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_()))
@@ -112,14 +112,14 @@ class Banner(commands.Cog):
         """Sets the Background Image for the selected Server."""
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
         banner = db_server.getBanner()
         image_path = pathlib.Path.cwd().joinpath('resources/banners').as_posix() + '/' + image
         banner.background_path = image_path
         my_image = Image.open(image_path)
-        await context.send(content= f'Set **{amp_server.FriendlyName}** Banner Image to', file = utils.banner_file_handler(my_image))
+        await context.send(content= f'Set **{amp_server.FriendlyName}** Banner Image to', file = utils.banner_file_handler(my_image), ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @amp_banner.command(name= 'settings')
     @utils.role_check()
@@ -129,7 +129,7 @@ class Banner(commands.Cog):
         self.logger.command(f'{context.author.name} used Server Banner Settings Editor...')
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True)
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
 
         await self.banner_editor(context, amp_server)
 
