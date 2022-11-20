@@ -54,6 +54,7 @@ class DBHandler():
         self.DB_Version = DB_Version
 
         #self.DBConfig.SetSetting('DB_Version', 2.3)
+
         #This should ONLY BE TRUE on new Database's going forward. 
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
             DBUpdate(self.DB, 1.0)

@@ -324,7 +324,6 @@ class AMPInstance():
 
             except:
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
-                pprint(result)
                 self.Running = False
                 return False
         return True
@@ -481,7 +480,7 @@ class AMPInstance():
 
                     if not server.Console.console_thread.is_alive():
                         server.Console.console_thread.start()
-
+                    
             if not server.Running or server.Running and not server.ADS_Running:
                 if server.Console.console_thread_running == True:
                     self.logger.error(f'{server.FriendlyName}: Shutting down Console Thread, Instance Online: {server.Running}, ADS Online: {server.ADS_Running}.')

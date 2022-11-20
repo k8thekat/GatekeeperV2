@@ -49,6 +49,7 @@ class DB_User(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
 
+        self.eBot = utils_embeds.botEmbeds(client)
 
         self.uBot.sub_command_handler('bot', self.db_bot_donator)
 
