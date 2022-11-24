@@ -54,7 +54,7 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
     #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
     admin = author.guild_permissions.administrator
     if admin == True:
-        logger.command(f'Permission Check Okay on {author}')
+        logger.command(f'*Admin* Permission Check Okay on {author}')
         return True
 
     #This handles Custom Permissions for people with the flag set.
@@ -62,14 +62,14 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
     if DBConfig.GetSetting('Permissions') == 'Custom':
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
-        #print(perm_node)
+       
         bPerms = get_botPerms()
         bPerms.perm_node_check(perm_node,context)
         if bPerms.perm_node_check == False:
-            logger.command(f'Permission Check Failed on {author} missing {perm_node}')
+            logger.command(f'*Custom* Permission Check Failed on {author} missing {perm_node}')
             return False
         else:
-            logger.command(f'Permission Check Okay on {author}')
+            logger.command(f'*Custom* Permission Check Okay on {author}')
             return True
 
     #This is the final check before we attempt to use the "DEFAULT" permissions setup.
@@ -78,31 +78,33 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
         logger.error(f'DBConfig Moderator role has not been set yet!')
         return False
 
-    staff_role,author_top_role = 0,0
+    staff_role, author_top_role = 0,0
     guild_roles = context.guild.roles
 
     if type(context) == discord.member.Member:
         top_role_id = context.top_role.id
         author = context.name
+
     else:
+        #This is for on_message commands
         top_role_id = context.message.author.top_role.id
         author = context.message.author
 
-    for i in range(0,len(guild_roles)):
+    for i in range(0, len(guild_roles)):
         if guild_roles[i].id == top_role_id:
             author_top_role = i
 
-        if str(guild_roles[i].id) == DBConfig.Moderator_role_id:
+        if guild_roles[i].id == DBConfig.Moderator_role_id:
             staff_role = i
             
     if author_top_role > staff_role:
-        logger.command(f'Permission Check Okay on {author}')
+        print(staff_role, author_top_role)
+        logger.command(f'*Default* Permission Check Okay on {author}')
         return True
         
-    else:
-        logger.command(f'Permission Check Failed on {author}')
-        await context.send('You do not have permission to use that command...', ephemeral=True)
-        return False
+    logger.command(f'*Default* Permission Check Failed on {author}')
+    await context.send('You do not have permission to use that command...', ephemeral=True)
+    return False
 
 def role_check():
     """Use this before any Commands that require a Staff/Mod level permission Role, this will also check for Administrator"""
@@ -143,12 +145,6 @@ async def autocomplete_bool(interaction:discord.Interaction, current:str) -> lis
     """True or False Autocomplete reply"""
     booleans = ['True', 'False']
     return [app_commands.Choice(name=bool, value=bool) for bool in booleans if current.lower() in bool.lower()]
-
-async def autocomplete_permission_roles(interaction:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
-    """This is for roles inside of the bot_perms file. Returns a list of all the roles.."""
-    bPerms = get_botPerms()
-    choice_list = bPerms.get_roles()
-    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
 
 async def autocomplete_discord_roles(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
     """This is for all the roles in the discord server. Returns the choice list"""
@@ -780,7 +776,7 @@ class botUtils():
         def sub_command_handler(self, command:str, sub_command):
             """This will get the `Parent` command and then add a `Sub` command to said `Parent` command."""
             parent_command = self._client.get_command(command)
-            self.logger.dev(f'Loading Parent Command: {parent_command}')
+            self.logger.dev(f'Added {sub_command} to Parent Command: {parent_command}')
             parent_command.add_command(sub_command)
         
         def default_embedmsg(self, title, context:commands.Context, description=None, field=None, field_value=None):
@@ -973,46 +969,47 @@ class botUtils():
                 if key == 'Whitelist_emoji_pending' or key == 'Whitelist_emoji_done':
                     if key_value != 'None':
                         emoji = self._client.get_emoji(int(key_value))
-                        embed.add_field(name=f'{key.replace("_"," ")}', value=emoji, inline=True)
+                        embed.add_field(name= f'{key.replace("_"," ")}', value=emoji, inline=True)
                     else:
-                        embed.add_field(name=f'{key.replace("_"," ")}', value='None', inline=True)
+                        embed.add_field(name= f'{key.replace("_"," ")}', value='None', inline=True)
 
                 if key == 'Whitelist_wait_time':
-                    embed.add_field(name='Whitelist Wait Time:', value=f'{key_value} Minutes', inline=False)
+                    embed.add_field(name= 'Whitelist Wait Time:', value=f'{key_value} Minutes', inline=False)
 
                 if key.lower() == 'permissions':
-                    embed.add_field(name='Permissions:', value=f'{key_value}', inline=True)
+                    embed.add_field(name= 'Permissions:', value=f'{key_value}', inline=True)
 
                 if key.lower() == 'db_version':
-                    embed.add_field(name='SQL Database Version:', value=f'{key_value}', inline=True)
+                    embed.add_field(name= 'SQL Database Version:', value=f'{key_value}', inline=True)
 
                 if key.lower() == 'bot_version':
-                    embed.add_field(name='Gatekeeper Version:', value=f'{key_value}', inline=True)
+                    embed.add_field(name= 'Gatekeeper Version:', value=f'{key_value}', inline=True)
 
                 if key.lower() == 'guild_id':
                     if self._client != None:
-                        key_value = f'**{self._client.get_guild(int(key_value)).name}**'
-                        if key_value == None:
+                        if key_value != None:
+                            key_value = f'**{self._client.get_guild(int(key_value)).name}**'
+                        else:
                             key_value = 'None'
-                        embed.add_field(name='Guild ID:', value=f'{key_value}', inline=False)
+                        embed.add_field(name= 'Guild ID:', value=f'{key_value}', inline=False)
 
                 if key.lower() == 'moderator_role_id':
-                    key_value = self.roleparse(key_value,context,context.guild.id)
+                    key_value = self.roleparse(key_value, context, context.guild.id)
                     if key_value == None:
                         key_value = 'None'
-                    embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
+                    embed.add_field(name= f'Moderator Role:', value=f'{key_value}',inline=False)
                     
                 if key.lower() == 'whitelist_channel':
-                    channel = self.channelparse(key_value,context,context.guild.id)
+                    channel = self.channelparse(key_value, context, context.guild.id)
                     if channel != None:
                         channel = f'<#{channel.id}>'
                     else:
                         channel = 'None'
-                    embed.add_field(name='Whitelist Channel', value=f'{channel}',inline=False)
+                    embed.add_field(name= 'Whitelist Channel', value=f'{channel}', inline=False)
 
                 if key_value == '0' or key_value == '1':
                     key_value = bool(key_value)
-                    embed.add_field(name=f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}',inline=False)
+                    embed.add_field(name= f'{list(value.keys())[0].replace("_", " ")}', value=f'{key_value}', inline=False)
 
             return embed
 
@@ -1048,7 +1045,7 @@ class botPerms():
         self._last_modified = 0
         self.permissions = None
         self.permission_roles = []
-
+        
         self.validate_and_load()
         self.get_roles()
         self.logger.info('**Success** Loading Bot Permissions')
@@ -1066,9 +1063,16 @@ class botPerms():
                         self.logger.critical(f'You are missing a role name, please do not leave role names empty..')
                         sys.exit(0)
 
+                    if role['discord_role_id'] == 'None':
+                        continue
+
                     #Verifies each role has a numeric discord_role_id or is equal to none.
-                    if not role['discord_role_id'].isalnum() or role['discord_role_id'] != "None":
-                        self.logger.critical(f'Your Discord Role ID for {role["name"]} does not appear to be all numbers. Please double check your config.')
+                    if type(role['discord_role_id']) != str:
+                        self.logger.critical(f'Your Discord Role ID for {role["name"]} does not appear to be string. Please check your bot_perms.json.')
+                        sys.exit(0) 
+
+                    elif not role['discord_role_id'].isalnum():
+                        self.logger.critical(f'Your Discord Role ID for {role["name"]} does not appear to be all numbers. Please check your bot_perms.json.')
                         sys.exit(0) 
 
             except json.JSONDecodeError:

@@ -47,7 +47,7 @@ class DB_User(commands.Cog):
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
-        self.pBot = utils.botPerms()
+
 
         self.uBot.sub_command_handler('bot',self.db_bot_donator)
 
@@ -179,26 +179,6 @@ class DB_User(commands.Cog):
         self.logger.command(f'{context.author.name} used User SteamID Function')
 
         await context.send(f'The SteamID of **{steam_name}** is: `{self.uBot.name_to_steam_id(steam_name)}`', ephemeral=True)
-    
-    @user.command(name='role')
-    @utils.role_check()
-    @app_commands.autocomplete(role= utils.autocomplete_permission_roles)
-    @app_commands.autocomplete(discord_name = utils.autocomplete_discord_users)
-    async def user_role(self, context:commands.Context, discord_name:str, role:str):
-        """Set a users Permission Role for commands."""
-        self.logger.command(f'{context.author.name} used User Role Function')
-
-        discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
-        if discord_user == None:
-            await context.send(f'We failed to find the User: {discord_name}, please make sure they are apart of the server..', ephemeral=True)
-            return
-
-        db_user = self.DB.GetUser(discord_user.id)
-        if db_user != None:
-            db_user.Role = role
-            await context.send(f"We set the User: **{discord_name}** permission's role to `{role}`.", ephemeral=True)
-        else:
-            await context.send(f'We failed to find the User: {discord_name}, please make sure they are in the DB.', ephemeral=True)
 
     @user.command(name='test')
     @utils.role_check()

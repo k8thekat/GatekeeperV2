@@ -24,7 +24,7 @@ import pathlib
 
 DisplayImageSources = ['Generic']
 class AMPGeneric(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {}, Handler=None):
         self.APIModule = 'Generic'
         
         super().__init__(instanceID, serverdata, Handler=Handler)
