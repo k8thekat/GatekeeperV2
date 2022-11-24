@@ -53,10 +53,6 @@ class Gatekeeper(commands.Bot):
         self.AMPHandler = AMP.getAMPHandler()
         self.AMP = AMP.getAMPHandler().AMP
     
-        #This validates and checks bot_perms.json()
-        if self.DBConfig.GetSetting('Permissions') == 'Custom':
-            self.bPerms = utils.get_botPerms()
-
         #Discord Specific
         intents = discord.Intents.default()
         intents.members = True
@@ -68,11 +64,15 @@ class Gatekeeper(commands.Bot):
     async def setup_hook(self):
         if self.Bot_Version != Version:
             self.update_loop.start()
-
+            
         import loader
         self.Handler = loader.Handler(self)
         await self.Handler.module_auto_loader()
         await self.Handler.cog_auto_loader()
+
+        #This Creates the Bot_perms Object and validates the File. Also Adds the Command.
+        if self.DBConfig.GetSetting('Permissions') == 'Custom':
+            await self.permissions_update()
     
     def self_check(self, message: discord.Message):
         return message.author == client.user
@@ -94,51 +94,70 @@ class Gatekeeper(commands.Bot):
             self.logger.error(f'It appears I cannot Sync your commands for you, please run {self.prefix}bot utils sync or `/bot utils sync` to update your command tree. Please see the readme if you encounter issues.')
         self.update_loop.stop()
     
-#This is my Template for Autocomplete
+    async def permissions_update(self):
+        """Loads the Custom Permission Cog and Validates the File."""
+        try:
+            await self.load_extension('cogs.Permissions_cog')
+
+        except discord.ext.commands.errors.ExtensionAlreadyLoaded:
+            pass
+        
+        except Exception as e:
+            self.logger.error(f'We ran into an Error Loading the Permissions_Cog. Error - {e}')
+            return False
+        
+        self.bPerms = utils.get_botPerms()
+        return True
+
 async def autocomplete_loadedcogs(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-    """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
+    """Cog Autocomplete template."""
     choice_list = []
     for key in client.cogs:
         if key not in choice_list:
             choice_list.append(key)
     return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
-client = Gatekeeper(Version=Version)
+client = Gatekeeper(Version= Version)
     
 @client.hybrid_group(name='bot')
 @utils.role_check()
 async def main_bot(context:commands.Context):
     if context.invoked_subcommand is None:
-        await context.send('Invalid command passed...', ephemeral=True)
+        await context.send('Invalid command passed...', ephemeral= True)
 
 @main_bot.command(name='moderator')
-@commands.has_guild_permissions(administrator=True)
-async def bot_moderator(context:commands.Context, role:str):
+@commands.has_guild_permissions(administrator= True)
+async def bot_moderator(context:commands.Context, role:discord.Role):
     """Set the Discord Role for Bot Moderation"""
     client.logger.command(f'{context.author.name} used Bot Moderator...')
 
-    guild_role = client.uBot.roleparse(parameter=role,context=context,guild_id=context.guild.id)
-    if guild_role == None:
-        await context.send(f'Unable to find role {role}, please try again.', ephemeral=True)
-
-    if client.DBConfig.GetSetting('Moderator_role_id') == None:
-        client.DBConfig.SetSetting('Moderator_role_id', guild_role.id)
-        
-    await context.send(f'Set Moderator Role to {guild_role.name}.', ephemeral=True)
+    client.DBConfig.SetSetting('Moderator_role_id', role.id)
+    
+    await context.send(f'Set Moderator Role to `{role.name}`.', ephemeral= True)
 
 @main_bot.command(name='permissions')
-@commands.has_guild_permissions(administrator=True)
-@app_commands.autocomplete(permission=utils.permissions_autocomplete)
+@commands.has_guild_permissions(administrator= True)
+@app_commands.autocomplete(permission= utils.permissions_autocomplete)
 async def bot_permissions(context:commands.Context, permission:str):
     """Set the Bot to use Default Permissions or Custom"""
     client.logger.command(f'{context.author.name} used Bot Permissions...')
 
+    if permission.lower() == 'default':
+        await context.send(f'You have selected `Default` permissions, removing permission commands.', ephemeral= True)
+        parent_command = client.get_command('user')
+        parent_command.remove_command('role')
+        await client.unload_extension('cogs.Permissions_cog')
+        
     if permission.lower() == 'custom':
-        await context.send(f'You have selected Custom Permissions, please make sure bot_perms.json is setup correctly!', ephemeral=True)
-        await context.send(f'Visit https://github.com/k8thekat/GatekeeperV2/blob/main/PERMISSIONS.md', ephemeral=True)
-
+        await context.send(f'You have selected `Custom` permissions, validating `bot_perms.json`', ephemeral= True)
+        #await context.send(f'Visit https://github.com/k8thekat/GatekeeperV2/blob/main/PERMISSIONS.md', ephemeral= True)
+        if not await client.permissions_update():
+            return await context.send(f'Error loading the Permissions Cog, please check your Console for errors.', ephemeral= True)
+        
+    client.tree.copy_global_to(guild= client.get_guild(client.guild_id))
+    await client.tree.sync(guild= client.get_guild(client.guild_id))
     client.DBConfig.Permissions = permission
-    await context.send(f'Looks like we set Bot Permissions to {permission}!', ephemeral=True)
+    await context.send(f'Finished setting Gatekeeper permissions to `{permission}`!', ephemeral= True)
 
 @main_bot.command(name='settings')
 @utils.role_check()

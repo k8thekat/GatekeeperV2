@@ -49,7 +49,7 @@ class Whitelist(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
         self.Parser = Parser()
-        self.bPerms = utils.botPerms()
+        
 
         self.Whitelist_Channel = None
         

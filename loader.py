@@ -98,11 +98,15 @@ class Handler():
         self.logger.info(f'**All Server Modules Loaded**')
 
     async def cog_auto_loader(self, reload= False):
-        """This will load all Cogs inside of the cogs folder needed for interaction with DB and AMP"""
+        """This will load all Cogs inside of the cogs folder."""
         path = f'cogs' #This gets us to the folder for the module specific scripts to load via the cog.
         try:
             cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
             for script in cog_file_list:
+                #Lets Ignore our Custom Permisisons Cog. We will load it on-demand.
+                if script.name == 'Permissions_cog.py':
+                    continue
+
                 if script.name.endswith('.py'):
                     cog = f'{path}.{script.name[:-3]}'
 
