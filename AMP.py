@@ -324,6 +324,7 @@ class AMPInstance():
 
             except:
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
+                pprint(result)
                 self.Running = False
                 return False
         return True
