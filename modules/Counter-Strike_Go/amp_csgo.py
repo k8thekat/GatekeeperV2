@@ -34,7 +34,7 @@ class AMPCsgo(AMP.AMPInstance):
         self.default_background_banner_path = 'resources/banners/CS_Go_Banner_3.png'
 
         if self.Avatar_url == None:
-            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12QI1dnEN4fFbspNLCHELcJIy6ar2cQUa'
+            self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/csgo_avatar.png?raw=true'
 
 class AMPCsgoConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPCsgo):

@@ -33,7 +33,7 @@ import AMP
 import DB
 import tokens
 
-Version = 'beta-4.3.7'
+Version = 'beta-4.3.8'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -150,7 +150,6 @@ async def bot_permissions(context:commands.Context, permission:str):
         
     if permission.lower() == 'custom':
         await context.send(f'You have selected `Custom` permissions, validating `bot_perms.json`', ephemeral= True)
-        #await context.send(f'Visit https://github.com/k8thekat/GatekeeperV2/blob/main/PERMISSIONS.md', ephemeral= True)
         if not await client.permissions_update():
             return await context.send(f'Error loading the Permissions Cog, please check your Console for errors.', ephemeral= True)
         
@@ -385,9 +384,11 @@ async def bot_banner_type(context:commands.Context, type:str):
     if type.lower() == 'discord embeds':
         client.DBConfig.SetSetting('Banner_Type', 'discord embeds')
         await context.send('Look at me, using Discord Embeds.. psht..I mean they atleast work.', ephemeral= True)
+
     if type.lower() == 'custom images':
         client.DBConfig.SetSetting('Banner_Type', 'custom images')
         await context.send('Looks like we are going to be using Custom Banner Images! Oooooh yea~', ephemeral= True)
+
     else:
         return await context.send('Hey, You gotta pick either `Discord Embeds` or `Custom Images`', ephemeral= True)    
 

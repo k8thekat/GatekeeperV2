@@ -33,7 +33,7 @@ class AMPGeneric(AMP.AMPInstance):
         self.default_background_banner_path = 'resources/banners/AMP_Banner.jpg'
 
         if self.Avatar_url == None:
-            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12XKmQwng3lNSDKxmvImyHIMQ1Ykg6XcQ'
+            self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/amp_avatar.jpg?raw=true'
 
 class AMPGenericConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPGeneric):

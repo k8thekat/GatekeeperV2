@@ -579,7 +579,7 @@ class Server(commands.Cog):
             if flag_reg == None:
                 return await context.send('Please use `true` or `false` for your flag.', ephemeral=True)
             
-            self.DB.GetServer(InstanceID= server.InstanceID).Donator = self.uBot.str_to_bool(flag)
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = self.uBot.str_to_bool(flag)
             amp_server._setDBattr() #This will update the AMPConsole Attributes
             return await context.send(f"Set **{server}** Donator Only to `{flag.capitalize()}`", ephemeral=True) 
         else:
