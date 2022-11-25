@@ -166,7 +166,7 @@ async def bot_permissions(context:commands.Context, permission:str):
     client.tree.copy_global_to(guild= client.get_guild(client.guild_id))
     await client.tree.sync(guild= client.get_guild(client.guild_id))
     client.DBConfig.Permissions = permission
-    await context.send(f'Finished setting Gatekeeper permissions to `{permission}`!', ephemeral= True, delete_after= client.Message_Timeout, delete_after= client.Message_Timeout)
+    await context.send(f'Finished setting Gatekeeper permissions to `{permission}`!', ephemeral= True, delete_after= client.Message_Timeout)
 
 @main_bot.command(name='settings')
 @utils.role_check()
