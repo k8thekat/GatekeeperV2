@@ -59,7 +59,7 @@ class Gatekeeper(commands.Bot):
         intents.message_content = True
         self.prefix = '$'
         super().__init__(intents= intents, command_prefix= self.prefix)
-        self.uBot = utils.botUtils(client=self)
+        self.uBot = utils.botUtils(client= self)
 
     async def setup_hook(self):
         if self.Bot_Version != Version:
@@ -153,8 +153,8 @@ async def bot_permissions(context:commands.Context, permission:str):
         if not await client.permissions_update():
             return await context.send(f'Error loading the Permissions Cog, please check your Console for errors.', ephemeral= True)
         
-    client.tree.copy_global_to(guild= client.get_guild(client.guild_id))
-    await client.tree.sync(guild= client.get_guild(client.guild_id))
+    client.tree.copy_global_to(guild= client.get_guild(context.guild.id))
+    await client.tree.sync(guild= client.get_guild(context.guild.id))
     client.DBConfig.Permissions = permission
     await context.send(f'Finished setting Gatekeeper permissions to `{permission}`!', ephemeral= True)
 
@@ -331,13 +331,13 @@ async def bot_utils_sync(context:commands.Context, local:str='true', reset:str='
         if local.lower() == 'true':
             #Local command tree reset
             client.tree.clear_commands(guild=context.guild)
-            client.logger.command(f'Bot Commands Reset Locally and Sync\'d: {await client.tree.sync(guild=context.guild)}')
+            client.logger.command(f'Bot Commands Reset Locally and Sync\'d: {await client.tree.sync(guild= context.guild)}')
             return await context.send('**WARNING** Resetting Gatekeeper Commands Locally...', ephemeral= True)
 
         elif context.author.id == 144462063920611328:
             #Global command tree reset
             client.tree.clear_commands(guild=None)
-            client.logger.command(f'Bot Commands Reset Globall and Sync\'d: {await client.tree.sync(guild=None)}')
+            client.logger.command(f'Bot Commands Reset Globall and Sync\'d: {await client.tree.sync(guild= None)}')
             return await context.send('**WARNING** Resetting Gatekeeper Commands Globally...', ephemeral= True)
         else:
             return await context.sned('**ERROR** You do not have permission to reset the commands.', ephemeral= True)
@@ -345,12 +345,12 @@ async def bot_utils_sync(context:commands.Context, local:str='true', reset:str='
     if local.lower() == 'true':
         #Local command tree sync
         client.tree.copy_global_to(guild=context.guild)
-        client.logger.command(f'Bot Commands Sync\'d Locally: {await client.tree.sync(guild=context.guild)}')
+        client.logger.command(f'Bot Commands Sync\'d Locally: {await client.tree.sync(guild= context.guild)}')
         return await context.send(f'Successfully Sync\'d Gatekeeper Commands to {context.guild.name}...', ephemeral= True)
 
     elif context.author.id == 144462063920611328:
         #Global command tree sync
-        client.logger.command(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild=None)}')
+        client.logger.command(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild= None)}')
         await context.send('Successfully Sync\'d Gatekeeper Commands Globally...', ephemeral= True)
 
 @main_bot.group(name='banner')

@@ -42,6 +42,8 @@ class AMP_Cog(commands.Cog):
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
 
+        self.bPerms = utils.get_botPerms()
+
         self.uBot = utils.botUtils(client)
         self.logger.info(f'**SUCCESS** Initializing {self.name.replace("amp","AMP")}')
         
