@@ -197,7 +197,8 @@ class DB_User(commands.Cog):
         """Sets the Donator Role for Donator Only AMP Server access."""
         self.logger.command(f'{context.author.name} used Bot Donator Role...')
         self.DBConfig = self.DB.GetConfig()
-        discord_role = self.uBot.roleparse(role,context,context.guild.id)
+        discord_role = self.uBot.roleparse(role, context, context.guild.id)
+
         if discord_role != None:
             self.DBConfig.SetSetting('Donator_role_id',discord_role.id)
             await context.send(f'You are all set! Donator Role is now set to {discord_role.name}', ephemeral=True)

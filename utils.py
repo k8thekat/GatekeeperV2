@@ -987,7 +987,7 @@ class botUtils():
 
                 if key.lower() == 'guild_id':
                     if self._client != None:
-                        if key_value != None:
+                        if key_value != 'None':
                             key_value = f'**{self._client.get_guild(int(key_value)).name}**'
                         else:
                             key_value = 'None'

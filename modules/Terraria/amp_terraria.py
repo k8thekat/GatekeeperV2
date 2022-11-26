@@ -34,7 +34,7 @@ class AMPTerraria(AMP.AMPInstance):
         self.default_background_banner_path = 'resources/banners/Terraria_Banner.png'
 
         if self.Avatar_url == None:
-            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12SJ2Z9BBuOKiTkdKSMgtRrsmOgWWZIz3'
+            self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/terraria_avatar.jpg?raw=true'
 
 class AMPTerrariaConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPTerraria):

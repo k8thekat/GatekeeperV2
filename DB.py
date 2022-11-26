@@ -747,6 +747,10 @@ class DBConfig:
         if name in self._ConfigNameToID:
             if (type(val) == str) and val.isnumeric():
                 val = int(val)
+                
+            if (type(val) == str) and val == 'None':
+                val = None
+
         return val
 
     # list(self._ConfigNameToID.keys())

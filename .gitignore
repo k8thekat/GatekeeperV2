@@ -29,3 +29,7 @@ discordBot v1.5.db
 .vscode/settings.json
 .gitignore
 discordBot-old.db
+utils.py
+discordBot-CB.db
+tokens-CB.py
+changelog
