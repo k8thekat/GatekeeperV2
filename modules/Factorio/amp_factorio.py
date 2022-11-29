@@ -40,7 +40,7 @@ class AMPFactorio(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12PQ8XlyDkjRcmktwGRtR3UrIweWYao9C'
             
-    def setup_AMPpermissions(self):
+    def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions for Factorio Modules"""
         self.logger.warning(f'Setting up {self.FriendlyName} Factorio Module permissions...')
         for perm in self.perms:

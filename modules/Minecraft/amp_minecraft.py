@@ -44,7 +44,7 @@ class AMPMinecraft(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12Gd4qUO1aLsYoQBqMR0JPPdkUOSAX94r'
          
-    def setup_AMPpermissions(self):
+    def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions for Minecraft Modules"""
         self.logger.warning(f'Setting up {self.FriendlyName} Minecraft Module permissions...')
         for perm in self.perms:
@@ -53,7 +53,7 @@ class AMPMinecraft(AMP.AMPInstance):
                 enabled = False
                 perm = perm[1:]
             #print(self.AMP_BotRoleID)
-            self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
+            self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled)
             self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
         return True
 
