@@ -101,16 +101,50 @@ class DB_Server(commands.Cog):
         """This will be used to swap Instance ID's with an existing AMP Instance"""
         self.logger.command(f'{context.author.name} used Database Instance swap...')
         #Get the new AMP Instance ID Information and Object.
-        amp_server = self.uBot.serverparse(replacement_server,context,context.guild.id)
+        amp_server = self.uBot.serverparse(replacement_server, context, context.guild.id)
         #Get its DB Object and Delete it from the DB
         db_server = self.DB.GetServer(amp_server.InstanceID)
-        db_server.delServer()
-
-        #!TODO! Need to finish this command.
-        #Replace the old_db server ID with the new one. This assume's that the AMP Instance is already gone.
         replacement_db_server  = self.DB.GetServer(server)
-        if replacement_db_server != None:
-            replacement_db_server.InstanceID = amp_server.InstanceID
+        if amp_server == None or replacement_db_server == None:
+            content = f'Failed to find '
+            if amp_server == None:
+                content += content + amp_server
+            
+            if replacement_db_server == None:
+                content += content + replacement_server
+            await context.send(content= content + ' please try your command again..', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+        message = await context.send(f'Found {db_server.FriendlyName} in our Database. To confirm deletetion, please react to this message using the checkmark else react using the cross mark.', ephemeral= True, delete_after= self._client.Message_Timeout)
+        message.add_reaction(emoji= 1047001263134478398) #:white_check_mark:
+        message.add_reaction(emoji= 1047001991135641640) #negative_squared_cross_mark:
+
+        def check(reaction:discord.Reaction, user:discord.Member):
+            if self._client.get_emoji(reaction.emoji.id) != None:
+
+                if user.id == context.author.id:
+                    if reaction.emoji.id == 1047001263134478398:
+                        db_server.delServer()
+                        return True
+
+                    if reaction.emoji.id == 1047001991135641640:
+                        return False
+            else:
+                raise Exception('Emoji not found!')
+                return False
+         
+        try:
+            reaction, user = await self._client.wait_for('reaction_add', check=check, timeout= 30)
+            if check == False:
+                await message.edit(content= f'Cancelling deletion of {server} and swap of AMP Instance in the Database.', delete_after= self._client.Message_Timeout)
+
+            await message.edit(content = f'Currently replacing {server} with {replacement_server}', delete_after= self._client.Message_Timeout)
+            if replacement_db_server != None:
+                replacement_db_server.InstanceID = amp_server.InstanceID
+
+        except Exception as e:
+            self.logger.error(f'Error: {e}')
+            await message.edit(content= 'Failed to react in time for Confirmation of AMP Instance Swap', delete_after= self._client.Message_Timeout) 
+
 
 async def setup(client):
     await client.add_cog(DB_Server(client))

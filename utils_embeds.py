@@ -64,7 +64,7 @@ class botEmbeds():
 
         avatar = await self.uBot.validate_avatar(db_server)
         if avatar != None:
-            embed.set_thumbnail(url=avatar)
+            embed.set_thumbnail(url= avatar)
 
         embed.add_field(name=f'Server IP: ', value=str(db_server.IP), inline=False)
         embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
@@ -75,19 +75,19 @@ class botEmbeds():
         embed.add_field(name='Filtered Console:', value= str(bool(db_server.Whitelist)), inline=True)
 
         if db_server.Discord_Console_Channel != None:
-            discord_channel = self.uBot.channelparse(db_server.Discord_Console_Channel, context, context.guild.id)
+            discord_channel = context.guild.get_channel(db_server.Discord_Console_Channel)
             embed.add_field(name='Console Channel:', value= discord_channel.name, inline=False)
         else:
             embed.add_field(name='Console Channel:', value= db_server.Discord_Console_Channel, inline=False)
 
         if db_server.Discord_Chat_Channel != None:
-            discord_channel = self.uBot.channelparse(db_server.Discord_Chat_Channel, context, context.guild.id)
+            discord_channel = context.guild.get_channel(db_server.Discord_Chat_Channel)
             embed.add_field(name='Chat Channel:', value= discord_channel.name, inline=True)
         else:
             embed.add_field(name='Chat Channel:', value= db_server.Discord_Chat_Channel, inline=True)
         
         if db_server.Discord_Event_Channel != None:
-            discord_channel = self.uBot.channelparse(db_server.Discord_Event_Channel, context, context.guild.id)
+            discord_channel = context.guild.get_channel(db_server.Discord_Event_Channel)
             embed.add_field(name='Event Channel:', value= discord_channel.name, inline=True)
         else:
             embed.add_field(name='Event Channel:', value= db_server.Discord_Event_Channel, inline=True)
@@ -233,38 +233,55 @@ class botEmbeds():
 
             if key == 'Whitelist_emoji_pending' or key == 'Whitelist_emoji_done':
                 if key_value != 'None':
-                    emoji = self._client.get_emoji(int(key_value))
+                    emoji = context.get_emoji(int(key_value))
                     embed.add_field(name=f'{key.replace("_"," ")}', value=emoji, inline=True)
                 else:
                     embed.add_field(name=f'{key.replace("_"," ")}', value='None', inline=True)
 
             if key == 'Whitelist_wait_time':
-                embed.add_field(name='Whitelist Wait Time:', value=f'{key_value} Minutes', inline=False)
+                embed.add_field(name='Whitelist Wait Time:', value=f'{key_value} Minutes', inline= False)
 
             if key.lower() == 'permissions':
-                embed.add_field(name='Permissions:', value=f'{key_value}', inline=True)
+
+                if key_value == 0:
+                    key_value = 'Default'
+                if key_value == 1:
+                    key_value = 'Custom'
+
+                embed.add_field(name='Permissions:', value=f'{key_value}', inline= True)
+            
+            if key.lower() == 'banner_type':
+                if key_value == 0:
+                    key_value = 'Discord Embeds'
+                if key_value == 1:
+                    key_value = 'Custom Banner Images'
+
+                embed.add_field(name='Banner Type:', value=f'{key_value}', inline= True)
 
             if key.lower() == 'db_version':
-                embed.add_field(name='SQL Database Version:', value=f'{key_value}', inline=True)
+                embed.add_field(name='SQL Database Version:', value=f'{key_value}', inline= True)
 
             if key.lower() == 'bot_version':
-                embed.add_field(name='Gatekeeper Version:', value=f'{key_value}', inline=True)
+                embed.add_field(name='Gatekeeper Version:', value=f'{key_value}', inline= True)
 
             if key.lower() == 'guild_id':
                 if self._client != None:
                     key_value = f'**{self._client.get_guild(int(key_value)).name}**'
                     if key_value == None:
                         key_value = 'None'
-                    embed.add_field(name='Guild ID:', value=f'{key_value}', inline=False)
+
+                    embed.add_field(name='Guild ID:', value=f'{key_value}', inline= False)
 
             if key.lower() == 'moderator_role_id':
-                key_value = self.uBot.roleparse(key_value,context,context.guild.id)
-                if key_value == None:
-                    key_value = 'None'
-                embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline=False)
+                role = context.guild.get_role(key_value)
+                if role == None:
+                    role = 'None'
+
+                embed.add_field(name=f'Moderator Role:', value=f'{key_value}',inline= False)
                 
             if key.lower() == 'whitelist_channel':
-                channel = self.uBot.channelparse(key_value,context,context.guild.id)
+                channel = context.guild.get_channel(key_value)
+                
                 if channel != None:
                     channel = f'<#{channel.id}>'
                 else:
@@ -285,10 +302,14 @@ class botEmbeds():
             embed.add_field(name='In Database:', value='True')
             if db_user.MC_IngameName != None:
                 embed.add_field(name='Minecraft IGN:', value=f'{db_user.MC_IngameName}',inline= False)
+
             if db_user.MC_UUID != None:
                 embed.add_field(name='Minecraft UUID:', value=f'{db_user.MC_UUID}',inline= True)
+
             if db_user.SteamID != None:
                 embed.add_field(name='Steam ID:', value=f'{db_user.SteamID}',inline=False)
+
             if db_user.Role != None:
                 embed.add_field(name='Permission Role:', value=f'{db_user.Role}', inline=False)
+                
         return embed

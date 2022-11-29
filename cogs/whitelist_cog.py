@@ -281,23 +281,18 @@ class Whitelist(commands.Cog):
  
     @db_bot_whitelist.command(name='channel')
     @utils.role_check()
-    @app_commands.autocomplete(channel= utils.autocomplete_discord_channels)
-    async def db_bot_whitelist_channel_set(self, context:commands.Context, channel:str):
+    async def db_bot_whitelist_channel_set(self, context:commands.Context, channel:discord.abc.GuildChannel):
         """Sets the Whitelist Channel for the Bot to monitor"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
-      
-        channel = self.uBot.channelparse(channel,context,context.guild.id)
-        if channel == None:
-            return await context.send(f'Unable to find the Discord Channel: **{channel}**', ephemeral= True, delete_after= self._client.Message_Timeout)
-        else:
-            self.DBConfig.SetSetting('Whitelist_channel',channel.id)
-            await context.send(f'Set Bot Channel Whitelist to **{channel.name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+    
+        self.DBConfig.SetSetting('Whitelist_channel',channel.id)
+        await context.send(f'Set Bot Channel Whitelist to **{channel.name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @db_bot_whitelist.command(name='waittime')
     @utils.role_check()
-    @app_commands.describe(time= 'Time in minutes to wait before Whitelisting a User')
-    async def db_bot_whitelist_wait_time_set(self, context:commands.Context, time:str):
-        """Set the Bots Whitelist wait time , this value is in minutes!"""
+    @app_commands.describe(time= 'Time in minutes Gatekeeper will wait before handling a Whitelist request.')
+    async def db_bot_whitelist_wait_time_set(self, context:commands.Context, time:app_commands.Range[int, 0, 60]= 5):
+        """Set Gatekeeper's Whitelist wait time , this value is in minutes!"""
         self.logger.command(f'{context.author.name} used Bot Whitelist wait time Set...')
         
         if time.isnumeric():
@@ -331,7 +326,7 @@ class Whitelist(commands.Cog):
         def check(reaction:discord.Reaction, user:discord.Member):
             if self._client.get_emoji(reaction.emoji.id) != None:
                 if user == context.author:
-                    self.DBConfig.SetSetting('Whitelist_emoji_pending',reaction.emoji.id)
+                    self.DBConfig.SetSetting('Whitelist_emoji_pending', reaction.emoji.id)
                     return True
             else:
                 raise Exception('Emoji not found!')

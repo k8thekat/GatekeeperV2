@@ -60,12 +60,12 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
 
     #This handles Custom Permissions for people with the flag set.
     #print('Permission Setting', DBConfig.GetSetting('Permissions'))
-    if DBConfig.GetSetting('Permissions') == 'Custom':
+    if DBConfig.GetSetting('Permissions') == 1: #0 is Default, 1 is Custom
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
        
         bPerms = get_botPerms()
-        bPerms.perm_node_check(perm_node,context)
+        bPerms.perm_node_check(perm_node, context)
         if bPerms.perm_node_check == False:
             logger.command(f'*Custom* Permission Check Failed on {author} missing {perm_node}')
             return False
@@ -131,56 +131,6 @@ def guild_check(guild_id:int=None):
             await context.send('You do not have permission to use that command...', ephemeral=True)
             return False
     return commands.check(predicate)
-
-async def permissions_autocomplete(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-    """This is for Default or Custom permission setting via /bot permissions"""
-    types = ['Default', 'Custom']
-    return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
-
-async def banner_type_autocomplete(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-    """This is for Default or Custom permission setting via /bot permissions"""
-    types = ['Discord Embeds', 'Custom Images']
-    return [app_commands.Choice(name=permission, value=permission) for permission in types if current.lower() in permission.lower()]
-
-async def autocomplete_bool(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-    """True or False Autocomplete reply"""
-    booleans = ['True', 'False']
-    return [app_commands.Choice(name=bool, value=bool) for bool in booleans if current.lower() in bool.lower()]
-
-async def autocomplete_discord_roles(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-    """This is for all the roles in the discord server. Returns the choice list"""
-    choice_list = []
-    for role in interaction.guild.roles:
-        choice_list.append(role.name)
-    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
-
-async def autocomplete_discord_channels(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-    """This is for all the channels in the discord server. Returns the choice list"""
-    choice_list = []
-    for channel in interaction.guild.channels:
-
-        if channel.category != None:
-            channel = f'{channel.category} -> ' + channel.name
-            
-            if channel not in choice_list:
-                choice_list.append(channel)
-
-        else:
-            choice_list.append(channel.name)
-
-    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
-
-async def autocomplete_discord_users(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-    """This is for all the users in the discord server. Returns the choice list"""
-    choice_list = []
-    for user in interaction.guild.members:
-        choice_list.append(user.name)
-    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
-
-#This is my Template for Autocomplete
-async def autocomplete_template(interaction:discord.Interaction, current:str, choice_list:list=None) -> list[app_commands.Choice[str]]:
-    """Default Autocomplete template, simply pass in a list of strings and it will handle it."""
-    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
 
 class discordBot():
     def __init__(self, client:commands.Bot):

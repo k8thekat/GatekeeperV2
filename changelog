@@ -1,0 +1,38 @@
+__**Update 4.4.0**__
+- Refactored `Gatekeeper` AMP Permission setup.
+    - Fixed issue with `Gatekeeper` not setting up proper `AMP` permissions. 
+    - Renamed the AMP bot role to `Gatekeeper`
+    - Fixed individual `AMP Instance` permission issues.
+    - Added `check_SessionPermissions` method for startup validation
+    - Renamed `check_AMPpermissions` to `check_GatekeeperRole_Permissions`
+    - Renamed `setup_AMPpermissions` to `setup_Gatekeeper_Permissions`
+    - Cleaned up `dev` logger prints and naming schemes for `info` messages.
+    - Added check for `-super` arg to bypass Instance permission checks.
+- Cleaned up code for `CallAPI` method inside of `AMP.py`
+- Refactored `Gatekeeper` AMP Instances to `DB` handling.
+    - Can now handle `Duplicate Instance Names` if `Friendly Name` is set for one of the Duplicate Instance and is unique.
+    - Updated `Server List` autocompletes to handle these changes.
+- Added `Exception` clause to `CallAPI` with `Unauthorized Access`
+- Removed setting `Super Admin ID` and `Gatekeeper Role ID` from `getRoleIDs`
+    - New method called `setRoleIDs` to handle setting `Role ID vars`
+- Changed `setAMPRolePermissions`
+    - Now checks API call properly and prints a `critical` if failed to set.
+- Added `forced quit` when two `AMP` Instances with the same Instance Name exist.
+- Refactored `Gatekeeper` throughout to use `slash types` for method parameters. This should provide a better choice list and autocomplete.
+- Updated `DB` to Version `2.5`
+    - Changed `DB` value `Banner Type` from `str` to `int`
+    - Changed `DB` value `Permissions` from `str` to `int`
+    - Updated all `Gatekeeper` slash commands to match these changes.
+    - Updated `bot settings` embed to reflect these changes.
+- Converted all cogs with `discord User`, `discord Role` and `discord Channel` command parameters to use `slash types` instead of autocompletes.
+- Cleaned up `utils_embeds.py` from using `custom channel/role parse` functions to using `context.guild` object respectively
+
+
+__**Hotfix Update 4.3.8**__
+- Fixed Issue with `/bot permissions` failing when used prior to syncing commands.
+- Refactored code inside of `discordBot.py` and `DB_user_Cog`
+- Fixed `type` issue with `/server donator` command. Thanks @Dann
+- Fixed `type` comparison with `/bot settings` command. Thanks @Dann
+- Fixed `URL` issue with AMP Instance not displaying the proper Banner Image. Thanks @Ice
+- Changed `avatar_urls` for AMP Modules to use Github.
+

@@ -29,7 +29,6 @@ import pathlib
 DisplayImageSources = ['steam:427520']
 class AMPFactorio(AMP.AMPInstance):
     def __init__(self, instanceID = 0, serverdata = {},Handler=None):
-        self.perms = []
         self.APIModule = 'Factorio'
         
         super().__init__(instanceID,serverdata, Handler=Handler)
@@ -49,9 +48,8 @@ class AMPFactorio(AMP.AMPInstance):
                 enabled = False
                 perm = perm[1:]
             #print(self.AMP_BotRoleID)
-            self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
-            self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
-        return True
+            if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
+                self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
 
     def Chat_Message(self, message:str, author:str=None, prefix:str=None):
         #See https://wiki.factorio.com/Rich_text

@@ -31,7 +31,7 @@ from DB import DBUser
 DisplayImageSources = ["internal:MinecraftJava"]
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
-    def __init__(self, instanceID = 0, serverdata = {}, Handler=None):
+    def __init__(self, instanceID = 0, serverdata = {}, Handler= None):
         self.perms = ['Minecraft.*','Minecraft.InGameActions.*','-Minecraft.PluginManagement.*']
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
 
@@ -53,9 +53,8 @@ class AMPMinecraft(AMP.AMPInstance):
                 enabled = False
                 perm = perm[1:]
             #print(self.AMP_BotRoleID)
-            self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled)
-            self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
-        return True
+            if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
+                self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
 
     def name_Conversion(self, name): 
         """Converts an IGN to a UUID/Name Table \n

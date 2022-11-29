@@ -126,7 +126,7 @@ class AMPInstance():
 
         self.url = self.AMPHandler.tokens.AMPurl + '/API/' #base url for AMP console /API/
 
-        if hasattr(self,"perms") == False:
+        if hasattr(self, "perms") == False:
             self.perms = ['Core.*','Core.RoleManagement.*','Core.UserManagement.*','Instances.*','ADS.*','Settings.*','ADS.InstanceManagement.*','FileManager.*','LocalFileBackup.*','Core.AppManagement.*']
 
         if hasattr(self,'APIModule') == False:
@@ -155,30 +155,38 @@ class AMPInstance():
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
 
-            if self.FriendlyName != None:
-                #This gets me the DB_Server object if it's not there; it adds the server.
-                self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
-                if self.DB_Server == None:
-                    self.logger.dev(f'Adding Name: {self.FriendlyName} to the Database, Instance ID: {self.InstanceID}')
-                    try:
-                        self.DB_Server = self.DB.AddServer(InstanceID = self.InstanceID, InstanceName = self.FriendlyName)
-                    except Exception as e:
-                        self.logger.warning(f'We failed to add the {self.FriendlyName} {self.InstanceID} to the DB -> {e}')
-                        sys.exit(1)
-                    
-                    self.logger.info(f'*SUCCESS** Added {self.FriendlyName} to the Database.')
-                else:
-                    self.logger.info(f'**SUCCESS** Found {self.FriendlyName} in the Database.')
 
-            self.logger.dev(f"Name: {self.FriendlyName} // InstanceID: {self.InstanceID} // Module: {self.Module} // Port: {self.Port} // DisplayImageSource: {self.DisplayImageSource}")
+            #This gets me the DB_Server object if it's not there; it adds the server.
+            self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
+            if self.DB_Server == None:
+                self.logger.dev(f'Adding Name: {self.InstanceName} to the Database, Instance ID: {self.InstanceID}')
+                try:
+                    self.DB_Server = self.DB.AddServer(InstanceID= self.InstanceID, InstanceName= self.InstanceName)
+                except Exception as e:
+                    self.logger.warning(f'We failed to add the {self.InstanceName} {self.InstanceID} to the DB. Attempting to use {self.FriendlyName} for Instance Name')
+                    
+                if self.FriendlyName == None:
+                    self.FriendlyName = self.InstanceName
+
+                try:
+                    self.DB_Server = self.DB.AddServer(InstanceID= self.InstanceID, InstanceName= self.FriendlyName)
+                except Exception as e:
+                    self.logger.critical(f'We failed to add the {self.InstanceName} {self.InstanceID} to the DB, exiting setup. Please consider changing the Friendly Name to something Unique.')
+                    sys.exit(1)
+                
+                
+
+                self.logger.info(f'*SUCCESS** Added {self.InstanceName} to the Database.')
+            else:
+                self.logger.info(f'**SUCCESS** Found {self.InstanceName} in the Database.')
+
+            self.logger.dev(f"Instance Name: {self.InstanceName} // InstanceID: {self.InstanceID} // Module: {self.Module} // Port: {self.Port} // DisplayImageSource: {self.DisplayImageSource}")
 
             #This sets all my DB_Server attributes.
             self._setDBattr()
             if self.Running:
                 self._ADScheck()
 
-        
-        
         #Lets see if we are the main AMP or if the Instance is Running
         if instanceID == 0 or self.Running:
             self._AMP_botRole_exists = False
@@ -193,7 +201,6 @@ class AMPInstance():
                 self.logger.critical(f'***ATTENTION*** {e} for {self.APIModule} on {self.FriendlyName}! Please consider giving us `Super Admins` and the bot will set its own permissions and role!')
                 #If the main AMP is missing permissions; lets quit!
                 if instanceID == 0:
-                    print('Exiting')
                     sys.exit(1)
 
             if permission:
@@ -217,6 +224,10 @@ class AMPInstance():
                         self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
 
                 if not role_perms:
+                    if not self._have_superAdmin:
+                        self.logger.critical(f'We do not have the Role `Super Admins` and are unable to set our Permissions for {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
+                        sys.exit(1)
+
                     #If for some reason we do have Gatekeeper Role and the permissions are NOT setup.
                     if self._AMP_botRole_exists and self._have_AMP_botRole:
                         self.setup_Gatekeeper_Permissions()
@@ -226,7 +237,7 @@ class AMPInstance():
                         self.setup_AMPbotrole()
 
                 else:
-                    self.logger.info(f'We have proper AMP permissions on {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
+                    self.logger.info(f'We have proper permissions on {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
 
         self.Initialized = True
 
@@ -251,9 +262,8 @@ class AMPInstance():
             if perm.startswith('-'):
                 enabled = False
                 perm = perm[1:]
-            self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled)
-            self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
-        return
+            if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
+                self.logger.dev(f'Set __{perm}__ for _Gatekeeper_ to `{enabled}` on {self.FriendlyName if self.InstanceID != 0 else "AMP"}')
 
     def check_GatekeeperRole_Permissions(self)-> bool:
         """- Will check `Gatekeeper Role` for `Permission Nodes` when we have `Super Admin` and `not InstanceID = 0`.\n
@@ -292,13 +302,12 @@ class AMPInstance():
 
                 if perm not in role_perms['result']:
                     if self._have_superAdmin:
-                        print(perm)
-                        self.logger.dev(f'We have Super Admins and we are missing Permissions, returning to setup Permissions.')
+                        self.logger.dev(f'We have `Super Admins` Role and we are missing Permissions, returning to setup Permissions.')
                         return False
                     
                     else:
                         end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
-                        self.logger.warning(f'Gatekeeper is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
+                        self.logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
                     failed = True
                     
             if not failed:
@@ -309,7 +318,7 @@ class AMPInstance():
     def check_SessionPermissions(self) -> bool:
         """These check AMP for the proper Permission Nodes.\n
         Returns `True` only if I have ALL the Required Permissions; Otherwise `False`."""
-        self.logger.warning(f'Checking {self.SessionID} for proper permissions...')
+        self.logger.warning(f'Checking Session: {self.SessionID} for proper permissions...')
         failed = False
         for perm in self.perms:
             #Skip the perm check on ones we "shouldn't have!"
@@ -318,15 +327,15 @@ class AMPInstance():
 
             check = self.CurrentSessionHasPermission(perm)
 
-            self.logger.dev(f'Permission check on {perm} is: {check}')
+            self.logger.dev(f'Session {"has" if check else "is missing" } permisson node: {perm}')
             
             if check != True:
                 if self.APIModule == 'AMP': #AKA the main (InstanceID == 0)
-                    self.logger.warning(f'Gatekeeper is missing the permission {perm} Please check under Configuration -> User Management for {self.AMPHandler.tokens.AMPUser}.')
+                    self.logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please check under Configuration -> User Management for {self.AMPHandler.tokens.AMPUser}.')
 
                 else:
                     end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
-                    self.logger.warning(f'Gatekeeper is missing the permission {perm} Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
+                    self.logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
                 failed = True
 
         if failed:
@@ -397,7 +406,6 @@ class AMPInstance():
 
             except:
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
-                pprint(result)
                 self.Running = False
                 return False
         return True
@@ -446,16 +454,17 @@ class AMPInstance():
         #Permission errors will trigger this, unsure what else.
         if "result" in post_req.json():
 
-            if type(post_req.json()['result']) == bool and post_req.json()['result'] == True:
-                return post_req.json()
+            if type(post_req.json()['result']) == bool:
+                if post_req.json()['result'] == True:
+                    return post_req.json()
 
-            if type(post_req.json()['result']) == bool and post_req.json()['result'] != True:
-                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
-                return post_req.json()
+                if post_req.json()['result'] != True:
+                    self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
+                    return post_req.json()
 
-            if type(post_req.json()['result']) == bool and "Status" in post_req.json()['result'] and (post_req.json()['result']['Status'] == False):
-                self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
-                return False
+                if "Status" in post_req.json()['result'] and (post_req.json()['result']['Status'] == False):
+                    self.logger.error(f'The API Call {APICall} failed because of Status: {post_req.json()}')
+                    return False
 
         if "Title" in post_req.json():
             if type(post_req.json()['Title']) == str and post_req.json()['Title'] == 'Unauthorized Access':
@@ -472,7 +481,6 @@ class AMPInstance():
         self.logger.debug('Server Check, Login Sucess: ' + str(Success))
         if Success:
             status = self.getLiveStatus()
-            pprint(status)
             self.logger.debug(f'{self.FriendlyName} ADS Running: {status}')
             self.ADS_Running = status
             return status
@@ -876,11 +884,13 @@ class AMPInstance():
         for role in roles:
             if roles[role].lower() == 'gatekeeper':
                 self.AMP_BotRoleID = role
-                self.logger.dev(f'Found Gatekeeper Role - ID: {self.AMP_BotRoleID}')
+                if self.InstanceID == 0:
+                    self.logger.dev(f'Found Gatekeeper Role - ID: {self.AMP_BotRoleID}')
 
             if roles[role].lower() == 'super admins':
                 self.super_AdminID = role
-                self.logger.dev(f'Found Super Admin Role - ID: {self.super_AdminID}')
+                if self.InstanceID == 0:
+                    self.logger.dev(f'Found Super Admin Role - ID: {self.super_AdminID}')
 
     def createRole(self, name:str, AsCommonRole=False):
         """Creates a AMP User role"""
@@ -922,13 +932,11 @@ class AMPInstance():
         }
         result = self.CallAPI('Core/SetAMPRolePermission', parameters)
 
-        # if not result['result']:
-        #     self.logger.critical(f'Unable to Set permissions {result}')
-
         if result['result']['Status'] == False:
-            self.logger.critical(f'Unable to Set Permission Node {PermissionNode} to {Enabled} for {RoleID}')
-
-        return result
+            self.logger.critical(f'Unable to Set Permission Node __{PermissionNode}__ to `{Enabled}` for {RoleID}')
+            return False
+      
+        return True
 
     #These are GENERIC Methods below this point ---------------------------------------------------------------------------
     def addWhitelist(self, name:str):
@@ -1021,7 +1029,10 @@ class AMPHandler():
             if self.AMP_Instances[server].DisplayName != None:
                 AMP_Instances_Names.append(self.AMP_Instances[server].DisplayName)
             else:
-                AMP_Instances_Names.append(self.AMP_Instances[server].FriendlyName)
+                if self.AMP_Instances[server].FriendlyName not in AMP_Instances_Names:
+                    AMP_Instances_Names.append(self.AMP_Instances[server].FriendlyName)
+                else:
+                    AMP_Instances_Names.append(self.AMP_Instances[server].InstanceName)
         return AMP_Instances_Names
     
     #Checks for Errors in Config

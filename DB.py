@@ -38,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.4
+DB_Version = 2.5
 
 class DBHandler():
     def __init__(self):
@@ -66,7 +66,7 @@ class DBHandler():
         #This handles version checks and calling all updates from version 1.0
         if self.DB_Version > float(self.DBConfig.GetSetting('DB_Version')):
             self.logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}")
-            self.DBUpdate = DBUpdate(self.DB,float(self.DBConfig.GetSetting('DB_Version')))
+            self.DBUpdate = DBUpdate(self.DB, float(self.DBConfig.GetSetting('DB_Version')))
         
         self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
 
@@ -213,7 +213,7 @@ class Database:
         self._AddConfig('DB_Version', DB_Version)
         self._AddConfig('Guild_ID', None)
         self._AddConfig('Moderator_role_id', None)
-        self._AddConfig('Permissions', 'Default')
+        self._AddConfig('Permissions', 0) #0 = Default | 1 = Custom
         self._AddConfig('Server_Info_Display', None)
         self._AddConfig('Whitelist_Channel', None)
         self._AddConfig('WhiteList_Wait_Time', 5)
@@ -221,7 +221,7 @@ class Database:
         self._AddConfig('Whitelist_Emoji_Pending', None)
         self._AddConfig('Whitelist_Emoji_Done', None)
         self._AddConfig('Banner_Auto_Update', True)
-        self._AddConfig('Banner_Type', 'Discord Embeds')
+        self._AddConfig('Banner_Type', 0) #0 = Discord embeds | 1 = Custom Banner Images
         self._AddConfig('Bot_Version', None)
         self._AddConfig('Message_Timeout', 60)
 
@@ -1024,7 +1024,7 @@ class DBUpdate:
             self.logger.info('**ATTENTION** Updating DB to Version 1.1')
             self.DBConfig.AddSetting('Guild_ID', None)
             self.DBConfig.AddSetting('Moderator_role_id', None)
-            self.DBConfig.AddSetting('Permissions', 'Default')
+            self.DBConfig.AddSetting('Permissions', 0)
             self.DBConfig.AddSetting('Whitelist_Channel', None)
             self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
             self.DBConfig.AddSetting('Auto_Whitelist', False)
@@ -1107,6 +1107,11 @@ class DBUpdate:
             self.server_console_filter_type()
             self.DBConfig.AddSetting('Message_Timeout', 60)
             self.DBConfig.SetSetting('DB_Version', '2.4')
+
+        if 2.5 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 2.5')
+            self.DBConfig.AddSetting('Banner_Type', 0)
+            self.DBConfig.SetSetting('DB_Version', '2.5')
 
     def user_roles(self):
         try:

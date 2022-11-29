@@ -21,6 +21,7 @@
 '''
 import os
 import logging
+from typing import Union
 
 import discord
 from discord.ext import commands
@@ -102,23 +103,16 @@ class DB_User(commands.Cog):
 
     @user.command(name='info')
     @utils.role_check()
-    @app_commands.autocomplete(name = utils.autocomplete_discord_users)
-    async def user_info(self, context:commands.Context, name:str):
+    async def user_info(self, context:commands.Context, user:Union[discord.Member, discord.User]):
         """Displays the Discord Users Database information"""
         self.logger.command(f'{context.author.name} used User Information')
+        db_user = self.DB.GetUser(user.id)
+        await context.send(embed= self.eBot.user_info_embed(db_user, user), ephemeral= True, delete_after= self._client.Message_Timeout)               
         
-        discord_user = self.uBot.userparse(name,context,context.guild.id)
-        if discord_user != None:
-            db_user = self.DB.GetUser(str(discord_user.id))
-            if db_user != None:
-                await context.send(embed= self.eBot.user_info_embed(db_user,discord_user), ephemeral= True, delete_after= self._client.Message_Timeout)
-            else:
-                await context.send(f'Unable to find the user {discord_user} in the Database, please add them.', ephemeral= True, delete_after= self._client.Message_Timeout)
-               
     @user.command(name='add')
     @utils.role_check()
-    @app_commands.autocomplete(discord_name = utils.autocomplete_discord_users)
-    async def user_add(self, context:commands.Context, discord_name:str, mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
+    
+    async def user_add(self, context:commands.Context, discord_name: Union[discord.Member, discord.User], mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
         """Adds the Discord Users information to the Database"""
         self.logger.command(f'{context.author.name} used User Add Function')
        
@@ -134,8 +128,7 @@ class DB_User(commands.Cog):
             
     @user.command(name='update')
     @utils.role_check()
-    @app_commands.autocomplete(discord_name = utils.autocomplete_discord_users)
-    async def user_update(self, context:commands.Context, discord_name:str, mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
+    async def user_update(self, context:commands.Context, discord_name: Union[discord.Member, discord.User], mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
         """Updated a Discord Users information in the Database"""
         self.logger.command(f'{context.author.name} used User Update Function')
        
@@ -194,17 +187,13 @@ class DB_User(commands.Cog):
 
     @commands.hybrid_command(name='donator')
     @utils.role_check()
-    @app_commands.autocomplete(role= utils.autocomplete_discord_roles)
-    async def db_bot_donator(self, context:commands.Context, role:str):
+    async def db_bot_donator(self, context:commands.Context, role:discord.Role):
         """Sets the Donator Role for Donator Only AMP Server access."""
         self.logger.command(f'{context.author.name} used Bot Donator Role...')
         self.DBConfig = self.DB.GetConfig()
-        discord_role = self.uBot.roleparse(role,context,context.guild.id)
-        if discord_role != None:
-            self.DBConfig.SetSetting('Donator_role_id',discord_role.id)
-            await context.send(f'You are all set! Donator Role is now set to {discord_role.name}', ephemeral= True, delete_after= self._client.Message_Timeout)
-        else:
-            await context.send(f'Hey! I was unable to find the role {role}, Please try again.', ephemeral= True, delete_after= self._client.Message_Timeout)
+        self.DBConfig.SetSetting('Donator_role_id', role.id)
+        await context.send(f'You are all set! Donator Role is now set to {role.name}', ephemeral= True, delete_after= self._client.Message_Timeout)
+
     
 
     #!TODO! Allow DMs to update a Users information
