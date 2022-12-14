@@ -27,30 +27,47 @@ import pathlib
 import aiohttp
 import sys
 import re
-import io
-import PIL
+
 from PIL import Image
 from typing import Union
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import Button,View,Select,Modal,TextInput
 import asyncio
 
 import DB
 import AMP
-import modules.banner_creator as BC
 
-async def async_rolecheck(context:commands.Context, perm_node:str=None):
+#GLOBAL VARS# DO NOT EDIT THESE! ONLY READ THEM
+__AMP_Handler = AMP.getAMPHandler()
+__DB_Handler = DB.getDBHandler()
+
+async def async_rolecheck(context: Union[commands.Context, discord.Interaction, discord.member.Member], perm_node:str= None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
     logger = logging.getLogger(__name__)
     logger.dev(f'Permission Context command node {str(context.command).replace(" ",".")}')
    
     author = context
+    #!TODO! Validate permissions for all commands.
+    #print(context, dir(context.user))
     if type(context) != discord.Member:
-        author = context.author
+        if hasattr(context, 'author'):
+            top_role_id = context.author.top_role.id
+            author = context.author
+
+        elif hasattr(context, 'user'):
+            top_role_id = context.user.top_role.id
+            author = context.user
+    
+    elif type(context) == discord.member.Member:
+        top_role_id = context.top_role.id
+        author = context.name
+    else:
+        #This is for on_message commands
+        top_role_id = context.message.author.top_role.id
+        author = context.message.author
 
     #This fast tracks role checks for Admins, which also allows the bot to still work without a Staff Role set in the DB
     admin = author.guild_permissions.administrator
@@ -81,15 +98,6 @@ async def async_rolecheck(context:commands.Context, perm_node:str=None):
 
     staff_role, author_top_role = 0,0
     guild_roles = context.guild.roles
-
-    if type(context) == discord.member.Member:
-        top_role_id = context.top_role.id
-        author = context.name
-
-    else:
-        #This is for on_message commands
-        top_role_id = context.message.author.top_role.id
-        author = context.message.author
 
     for i in range(0, len(guild_roles)):
         if guild_roles[i].id == top_role_id:
@@ -131,6 +139,14 @@ def guild_check(guild_id:int=None):
             await context.send('You do not have permission to use that command...', ephemeral=True)
             return False
     return commands.check(predicate)
+
+async def autocomplete_servers(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+        """Autocomplete for AMP Instance Names"""
+        choice_list = __AMP_Handler.get_AMP_instance_names()
+        if await async_rolecheck(interaction, perm_node= 'Staff') == True:
+            return [app_commands.Choice(name=f"{value}, ID: {key}", value= key)for key, value in choice_list.items()][:25]
+        else:
+            return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items()][:25]
 
 class discordBot():
     def __init__(self, client:commands.Bot):
@@ -241,6 +257,24 @@ class botUtils():
         #Underline
         message = message.replace('\x05', '__')
         message = message.replace('\x06', '__')
+        return message
+    
+    def whitelist_reply_handler(self,message:str, context:commands.Context, server:AMP.AMPInstance=None) -> str:
+        """Handles the reply message for the whitelist event\n
+        Supports the following: \n
+        `<user>` - Uses the Message Author's Name/IGN \n
+        `<server>` - Uses the AMP Server Name \n 
+        `<guild>` - Uses the Guild Name \n"""
+    
+        if message.find('<user>') != -1:
+            message = message.replace('<user>',context.author.name)
+        if message.find('<guild>') != -1:
+            message = message.replace('<guild>',context.guild.name)
+        if message.find('<server>') != -1 and server is not None:
+            server_name = server.FriendlyName
+            if server.DisplayName != None: 
+                server_name = server.DisplayName
+            message = message.replace('<server>',server_name)
         return message
 
     async def validate_avatar(self, db_server:AMP.AMPInstance) -> Union[str, None]:
@@ -425,40 +459,18 @@ class botUtils():
                     cur_member = member
             return cur_member
             
-    def serverparse(self, parameter, context:commands.Context=None, guild_id:int=None) -> Union[AMP.AMPInstance, None]:
+    def serverparse(self, instanceID= str, context:commands.Context=None, guild_id:int=None) -> Union[AMP.AMPInstance, None]:
         """This is the botUtils Server Parse function.
         **Note** Use context.guild.id \n
         Returns `AMPInstance[server] <object>`"""
         self.logger.dev('Bot Utility Server Parse')
         cur_server = None
-
-        #This is to handle Instance Names or Display Names with spaces, also removes quotes.
-        if type(parameter) == tuple:
-            parameter = ' '.join(parameter)
-        #parameter = parameter.replace(' ','_').replace("'",'').replace('"','')
-        parameter = parameter.replace("'",'').replace('"','')
-
-        #Lets check the DB First, this checks Nicknames and Display names.
-        cur_server = self.DB.GetServer(Name = parameter)
-        if cur_server != None:
-            self.logger.dev(f'DBGetServer -> DisplayName: {cur_server.DisplayName} InstanceName: {cur_server.InstanceName}')
-            #This converts the DB_Server object into our AMPInstance Object
-            cur_server = self.AMPInstances[cur_server.InstanceID]
-            return cur_server
-
-        #Since the DB came up empty; lets continue and try all AMPInstances Friendly Names!
-        for server in self.AMPInstances:
-            var = self.AMPInstances[server].FriendlyName.lower().find(parameter.lower())
-            self.logger.dev(f'{var}{self.AMPInstances[server].FriendlyName}')
-
-            if var != -1: #When its FOUND an entry
-                if cur_server != None:
-                    self.logger.error(f'**ERROR** Found multiple AMP Servers matching the provided name: {parameter}. Returning None')
-                    #await context.reply('Found multiple AMP Servers matching the provided name, please be more specific.')
-                    return None
-
-                self.logger.dev(f'Found the AMP Server {self.AMPInstances[server].FriendlyName}')
-                cur_server = self.AMPInstances[server]
+        #!TODO Decide a new layout for handling multiple servers with similar names.
+        for key, value in self.AMPHandler.AMP_Instances.items():
+            if key == instanceID:
+                cur_server = value
+                self.logger.dev(f'Selected Server is {value} - InstanceID: {key}')
+                break
 
         return cur_server #AMP instance object 
 
@@ -472,9 +484,9 @@ class botUtils():
         """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
         amp_server = self.serverparse(server, context, context.guild.id)
         
-        if amp_server == None:
-            await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True, delete_after= self._client.Message_Timeout)
-            return False
+        # if amp_server == None:
+        #     await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True, delete_after= self._client.Message_Timeout)
+        #     return False
 
         if online_only == False:
             return amp_server
@@ -482,7 +494,7 @@ class botUtils():
         if amp_server.Running and amp_server._ADScheck():
             return amp_server
         
-        await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral=True, delete_after= self._client.Message_Timeout)
+        await context.send(f'Well this is awkward, it appears the **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}** is `Offline`.', ephemeral=True, delete_after= self._client.Message_Timeout)
         return False
                     
 bPerms = None
@@ -527,7 +539,7 @@ class botPerms():
                         self.logger.critical(f'Your Discord Role ID for {role["name"]} does not appear to be string. Please check your bot_perms.json.')
                         sys.exit(0) 
 
-                    elif not role['discord_role_id'].isalnum():
+                    elif not role['discord_role_id'].isnumeric():
                         self.logger.critical(f'Your Discord Role ID for {role["name"]} does not appear to be all numbers. Please check your bot_perms.json.')
                         sys.exit(0) 
 

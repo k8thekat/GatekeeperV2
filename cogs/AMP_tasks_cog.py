@@ -29,7 +29,7 @@ import DB
 import discord
 from discord.ext import commands,tasks
 
-class AMP_Cog(commands.Cog):
+class AMP_Tasks(commands.Cog):
     def __init__ (self, client:commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
@@ -54,8 +54,8 @@ class AMP_Cog(commands.Cog):
         self.amp_server_console_event_messages_send.start()
         self.logger.dev('AMP_Cog Console Event Message Handler Running: ' + str(self.amp_server_console_event_messages_send.is_running()))
 
-        self.amp_server_instance_check.start()
-        self.logger.dev('AMP_Cog Instance Check Event Loop: ' + str(self.amp_server_instance_check.is_running()))
+        # self.amp_server_instance_check.start()
+        # self.logger.dev('AMP_Cog Instance Check Event Loop: ' + str(self.amp_server_instance_check.is_running()))
         
     @commands.Cog.listener('on_message')
     async def on_message(self, message:discord.Message):
@@ -98,12 +98,12 @@ class AMP_Cog(commands.Cog):
                        
         return message
 
-    @tasks.loop(seconds=30)
-    async def amp_server_instance_check(self):
-        """Checks for new AMP Instances every 30 seconds.."""
-        self.logger.dev('Checking AMP Instance(s) Status...')
-        self.AMPHandler.AMP._instanceValidation()
-        self.AMPHandler.AMP._instance_ThreadManager()
+    # @tasks.loop(seconds=30)
+    # async def amp_server_instance_check(self):
+    #     """Checks for new AMP Instances every 30 seconds.."""
+    #     self.logger.dev('Checking AMP Instance(s) Status...')
+    #     self.AMPHandler.AMP._instanceValidation()
+    #     self.AMPHandler.AMP._instance_ThreadManager()
 
     @tasks.loop(seconds=1)
     async def amp_server_console_messages_send(self):
@@ -313,4 +313,4 @@ class AMP_Cog(commands.Cog):
                             Server.Chat_Message(message= message_contents, author_prefix= author_prefix, author= author, server_prefix= AMPServer_Chat.Discord_Chat_Prefix)
 
 async def setup(client:commands.Bot):
-    await client.add_cog(AMP_Cog(client))
+    await client.add_cog(AMP_Tasks(client))

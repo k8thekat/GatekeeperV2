@@ -23,6 +23,9 @@ import sys
 import subprocess
 import argparse
 import pip
+import threading
+from threading import current_thread
+import time
 
 class Setup:
     def __init__(self):
@@ -39,6 +42,10 @@ class Setup:
         self.args = parser.parse_args()
 
         self.pip_install()
+
+        #Renaming Main Thread to "Gatekeeper"
+        Gatekeeper = current_thread()
+        Gatekeeper.name = 'Gatekeeper'
 
         #Custom Logger functionality.
         import logging 
@@ -62,11 +69,16 @@ class Setup:
 
         #This connects and creates all our AMP related parts
         import AMP
-        self.AMPHandler = AMP.getAMPHandler(args=self.args)
-        self.AMPHandler.setup_AMPInstances() 
-        self.AMP = self.AMPHandler.AMP
-        self.logger.info(f'AMP Connected: {self.AMP.AMPHandler.SuccessfulConnection}')
-    
+        self.AMP_Thread = threading.Thread(target= AMP.AMP_init, name= 'AMP', args= [self.args,])
+        self.AMP_Thread.start()
+
+        if self.args.discord:
+            while(AMP.AMP_setup == False):
+                time.sleep(.5)
+                
+            import discordBot
+            discordBot.client_run()
+      
     def python_ver_check(self):
         if not sys.version_info.major >= 3 and not sys.version_info.minor >= 10:
             self.logger.critical(f'Unable to Start Gatekeeper, Python Version is {sys.version_info.major + "." + sys.version_info.minor} we require Python Version >= 3.10')
@@ -84,8 +96,4 @@ class Setup:
 
 Start = Setup()
 
-#This has to be called outside of the init; its blocking and will cause issues inside of the Setup.init()
-if Start.args.discord:
-    import discordBot
-    discordBot.client_run()
     

@@ -21,9 +21,6 @@
 import AMP
 import requests
 import json
-import discord
-import os
-import pathlib
 
 from DB import DBUser
 
@@ -31,18 +28,18 @@ from DB import DBUser
 DisplayImageSources = ["internal:MinecraftJava"]
 class AMPMinecraft(AMP.AMPInstance):
     """This is Minecraft Specific API calls for AMP"""
-    def __init__(self, instanceID = 0, serverdata = {}, Handler= None):
+    def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
         self.perms = ['Minecraft.*','Minecraft.InGameActions.*','-Minecraft.PluginManagement.*']
         self.APIModule = 'MinecraftModule' #This is what AMP API calls the Module in the Web GUI API Documentation Browser
 
         
-        super().__init__(instanceID, serverdata,Handler= Handler)
+        super().__init__(instanceID, serverdata, Handler= Handler, TargetName=TargetName)
         self.Console = AMPMinecraftConsole(self)
         
         self.default_background_banner_path = 'resources/banners/Minecraft_banner.png'
         
         if self.Avatar_url == None:
-            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12Gd4qUO1aLsYoQBqMR0JPPdkUOSAX94r'
+            self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/mc_avatar.jpg?raw=true'
          
     def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions for Minecraft Modules"""
@@ -57,6 +54,7 @@ class AMPMinecraft(AMP.AMPInstance):
                 self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
 
     def name_Conversion(self, name): 
+        self.logger.dev(f'Converting IGN to UUID: {name}')
         """Converts an IGN to a UUID/Name Table \n
         `returns 'uuid'` else returns `None`, multiple results return `None`"""
         url = 'https://api.mojang.com/profiles/minecraft'
@@ -80,24 +78,11 @@ class AMPMinecraft(AMP.AMPInstance):
         post_req = requests.get(url)
         return post_req.json()[-1]
 
-    def addWhitelist(self, name:str= None, discord_user:discord.Member= None):
+    def addWhitelist(self, db_user: DBUser):
         """Adds a User to the Whitelist File *Supports IGN*"""
         self.Login()
-        check = False
-        if discord_user != None:
-            check = self.check_Whitelist(discord_user= discord_user)
-            db_user = self.DB.GetUser(discord_user.name)
-            if db_user.MC_IngameName == None:
-                name = db_user.MC_IngameName
-        else:
-            check = self.check_Whitelist(in_gamename= name)
-        
-        if check:
-            self.ConsoleMessage(f'whitelist add {name}')
-            return check
-        else:
-            return check
-        
+        self.ConsoleMessage(f'whitelist add {db_user.MC_IngameName}')
+
     def getWhitelist(self):
         """Returns a List of Dictionary Entries of all Whitelisted Users `{'name': 'IGN', 'uuid': '781a2971-c14b-42c2-8742-d1e2b029d00a'}`"""
         self.Login()
@@ -105,73 +90,43 @@ class AMPMinecraft(AMP.AMPInstance):
         result = self.CallAPI(f'{self.APIModule}/GetWhitelist',parameters)
         return result['result']
 
-    def removeWhitelist(self, name:str= None, discord_user:discord.Member= None):
+    def removeWhitelist(self, name:str):
         """Removes a User from the Whitelist File *Supports IGN*"""
         self.Login()
-        check = False
-        if discord_user != None:
-            check = self.check_Whitelist(discord_user= discord_user)
-            db_user = self.DB.GetUser(discord_user.name)
-            if db_user.MC_IngameName == None:
-                name = db_user.MC_IngameName
-        else:
-            check = self.check_Whitelist(in_gamename= name)
-            
-        #If Check is None, means we found a Match! Remove them.
-        if check == None:
-            self.ConsoleMessage(f'whitelist remove {name}')
-            return check
-        else:
-            return check
+        self.ConsoleMessage(f'whitelist remove {name}')
         
-    def check_Whitelist(self, discord_user:discord.Member= None, in_gamename:str= None):
+    def check_Whitelist(self, db_user: DBUser, in_gamename: str= None):
+        self.logger.dev(f'Checking if {db_user.DiscordName} is whitelisted on {self.FriendlyName}...')
         """Checks if the User is already in the whitelist file. Supports DB User and MC In game Name.\n
         Returns `None` if the UUID is whitelisted \n
         Returns `False` if no UUID exists \n
         Returns `True` if not in Whitelisted"""
-        user_uuid = None
-        if discord_user != None:
-            db_user = self.DB.GetUser(discord_user.name)
-            if db_user.MC_UUID == None:
-                return False
-            user_uuid = db_user.MC_UUID
-
-        if in_gamename != None:
+        #No IGN or UUID and they didnt provide one. Return False
+        if db_user.MC_IngameName == None and in_gamename == None:
+            return False
+        
+        if db_user.MC_IngameName == None and in_gamename != None:
             uuid = self.name_Conversion(in_gamename)
             if uuid == None:
                 return False
-            user_uuid = uuid 
+            
+            db_user.MC_IngameName = in_gamename
+            db_user.MC_UUID = uuid
+        
+        if db_user.MC_UUID == None:
+            uuid = self.name_Conversion(db_user.MC_IngameName)
+            if uuid == None:
+                return False
+            
+            db_user.MC_UUID = uuid
 
         self.Login()
         server_whitelist = self.getWhitelist()
         for entry in server_whitelist:
-            if user_uuid == entry['uuid'].replace('-',''):
+            if db_user.MC_UUID == entry['uuid'].replace('-',''):
                 return None
 
         return True
-
-    def whitelist_intake(self, discord_user:discord.Member, user_name:str):
-        """Handles checking the User is in the Database, and if not, adding them to the Database.
-        Returns False if UUID/IGN not found, <db_user> if found."""
-        #Try to find the DB user first.
-        db_user = self.DB.GetUser(discord_user.name)
-        user_uuid = self.name_Conversion(user_name)
-        if db_user != None:    
-            #Check if the UUID and IGN are in the DB.
-            if db_user.MC_UUID == None and db_user.MC_IngameName == None:
-                #Updates User info in the Database with all the required information.
-                if user_uuid != None:
-                    db_user.MC_UUID = user_uuid
-                    db_user.MC_IngameName = user_name
-                    return True
-                else:
-                    return False
-            else:
-                #This assumes the UUID and IGN are set in the DB
-                return True
-        else:
-            #Somehow the user isnt in the DB.
-            return False
 
     def getHeadbyUUID(self, UUID:str):
         """Gets a Users Player Head via UUID"""
@@ -234,60 +189,3 @@ class AMPMinecraft(AMP.AMPInstance):
 class AMPMinecraftConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPMinecraft):
         super().__init__(AMPInstance)
-
-
-    # def console_filter(self, message):
-    #     """This is what SHOULD be displayed if we filter the console!
-    #     By Default everything is excluded, so we need to include what we want to see."""
-    #     #Example Console Entry: {'Timestamp': '/Date(1658685241525)/', 'Source': 'Server thread/INFO', 'Type': 'Console', 'Contents': 'k8_thekat issued server command: /gamemode survival'}
-    #     #Return TRUE to Exclude message
-    #     if not self.AMPInstance.Console_Filtered:
-    #         return False
-    #     else:
-    #         if message['Type'] == 'Chat':
-    #             return False
-    #         #This list will be used to capture output that I want. These are best for partial finds.
-    #         message_finder_list = [
-    #             'Unkown command.', 
-    #             'players online:',
-    #             'Staff',
-    #             '?',
-    #             'Help', 
-    #             'left the game', 
-    #             'joined the game', 
-    #             'lost connection:',
-    #             'whitelisted players:',
-    #             'was slain by',
-    #             'game mode to']
-    #         for entry in message_finder_list:
-    #             if message['Contents'].find(entry) != -1:
-    #                 #print(f"Found {entry} in {message['Contents']}")
-    #                 return False
-    #         if message['Contents'].startswith('/'):
-    #             return False
-    #         if message['Contents'].startswith('Player Console banned') and message['Contents'].endswith('You have been banned:'):
-    #             return False
-    #         if message['Contents'].startswith('Player Console unbanned'):
-    #             return False
-    #         if message['Contents'].startswith('Added') and message['Contents'].endswith('to the whitelist'):
-    #             return False
-    #         if message['Contents'].startswith('Removed') and message['Contents'].endswith('from the whitelist'):
-    #             return False
-    #         else:
-    #             self.logger.dev(f'Filtered Message {message}')
-    #             return True
-    
-    # def console_events(self, message):
-    #     """ALWAYS RETURN FALSE! ALL events go to `.console_event_messages`"""
-    #     event_list = ['left the game', 'joined the game', 'tried to swim','completed the challenge','made the advancement', 'was slain by', 'fell off', 'was shot by']
-    #     #Event List Interations
-    #     for event in event_list:
-    #         if message['Contents'].find(event) != -1:
-    #             self.logger.dev(f'**{self.AMPInstance.APIModule} Event Message Found {event}**')
-    #             self.console_event_message_lock.acquire()
-    #             self.console_event_messages.append(message['Contents'])
-    #             self.console_event_message_lock.release()
-    #             return False
-
-    #     else:
-    #         return False

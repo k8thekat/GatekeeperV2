@@ -47,11 +47,6 @@ class DB_Server(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
 
-    async def autocomplete_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        """Autocomplete for AMP Instance Names"""
-        choice_list = self.AMPHandler.get_AMP_instance_names()
-        return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
-
     async def autocomplete_db_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Database Server Names"""
         choice_list = self.DB.GetAllServers()
@@ -86,7 +81,7 @@ class DB_Server(commands.Cog):
     @utils.role_check()
     @utils.guild_check(guild_id=602285328320954378)
     @app_commands.autocomplete(server= autocomplete_db_servers)
-    @app_commands.autocomplete(replacement_server= autocomplete_servers)
+    @app_commands.autocomplete(replacement_server= utils.autocomplete_servers)
     async def db_server_test(self, context:commands.Context, server:str, replacement_server:str):
         self.logger.command('Test Function for DB_Server')
       
@@ -95,8 +90,9 @@ class DB_Server(commands.Cog):
     @db_server.command(name='swap')
     #@utils.role_check()
     @utils.author_check(144462063920611328)
+    #!TODO! Need to update db_servers autocomplete to use new InstanceID method.
     @app_commands.autocomplete(server= autocomplete_db_servers)
-    @app_commands.autocomplete(replacement_server= autocomplete_servers)
+    @app_commands.autocomplete(replacement_server= utils.autocomplete_servers)
     async def db_server_instance_swap(self, context:commands.Context, server:str, replacement_server:str):
         """This will be used to swap Instance ID's with an existing AMP Instance"""
         self.logger.command(f'{context.author.name} used Database Instance swap...')

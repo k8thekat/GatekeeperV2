@@ -31,6 +31,8 @@ from discord import app_commands
 from discord.ext import commands
 
 import utils
+import utils_ui
+import utils_embeds
 import AMP as AMP
 import DB as DB
 import modules.banner_creator as BC
@@ -51,18 +53,14 @@ class Banner(commands.Cog):
         self.DBCOnfig = self.DB.GetConfig()
 
         self.uBot = utils.botUtils(client)
+        self.uiBot = utils_ui
         self.dBot = utils.discordBot(client)
         self.BC = BC
 
         #Leave this commented out unless you need to create a sub-command.
         self.uBot.sub_command_handler('server', self.amp_banner) #This is used to add a sub command(self,parent_command,sub_command)
         self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
-
-    async def autocomplete_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        """Autocomplete for AMP Instance Names"""
-        choice_list = self.AMPHandler.get_AMP_instance_names()
-        return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
-
+        
     async def autocomplete_banners(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """This is for a file listing of the `resources/banners` path."""
         banners = []
@@ -81,8 +79,8 @@ class Banner(commands.Cog):
         sent_msg = await context.send('Creating Banner Editor...', ephemeral= True, delete_after= 60)
 
         #Create my View first
-        editor_view = utils.Banner_Editor_View(db_banner=db_server_banner, amp_server= amp_server, banner_message = sent_msg)
-        banner_file = utils.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
+        editor_view = self.uiBot.Banner_Editor_View(db_banner=db_server_banner, amp_server= amp_server, banner_message = sent_msg)
+        banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
         await sent_msg.edit(content= '**Banner Editor**', attachments= [banner_file], view= editor_view)
    
     @commands.hybrid_group(name='banner')
@@ -92,8 +90,7 @@ class Banner(commands.Cog):
             await context.send('Invalid command passed...', ephemeral= True, delete_after= 30)
 
     @amp_banner.command(name= 'test')
-    @app_commands.autocomplete(server = autocomplete_servers)
-    #@app_commands.autocomplete(path= autocomplete_banners)
+    @app_commands.autocomplete(server = utils.autocomplete_servers)
     @utils.author_check(144462063920611328)
     async def amp_banner_test(self, context:commands.Context, server):
         """ Usage case is for test display of banners based upon the picked Server."""
@@ -102,10 +99,10 @@ class Banner(commands.Cog):
             return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
-        await context.send(file= utils.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_()))
+        await context.send(file= self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_()))
 
     @amp_banner.command(name='background')
-    @app_commands.autocomplete(server= autocomplete_servers)
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.autocomplete(image= autocomplete_banners)
     @utils.role_check()
     async def amp_banner_background(self, context:commands.Context, server, image):
@@ -123,7 +120,7 @@ class Banner(commands.Cog):
     
     @amp_banner.command(name= 'settings')
     @utils.role_check()
-    @app_commands.autocomplete(server= autocomplete_servers)
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
     async def amp_banner_settings(self, context:commands.Context, server):
         """Prompts the Banner Editor Menu"""
         self.logger.command(f'{context.author.name} used Server Banner Settings Editor...')

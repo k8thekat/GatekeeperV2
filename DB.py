@@ -38,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.5
+DB_Version = 2.6
 
 class DBHandler():
     def __init__(self):
@@ -112,10 +112,11 @@ class Database:
         cur.execute("""create table Servers (
                         ID integer primary key,
                         InstanceID text not null unique collate nocase,
-                        InstanceName text unique collate nocase,
-                        DisplayName text unique,
+                        InstanceName text,
+                        FriendlyName text,
+                        DisplayName text,
                         Description text,
-                        Display_IP text,
+                        Host text,
                         Whitelist integer not null,
                         Whitelist_disabled integer not null,
                         Donator integer not null,
@@ -129,13 +130,6 @@ class Database:
                         Discord_Role text collate nocase,
                         Avatar_url text,
                         Hidden integer not null
-                        )""")
-
-        cur.execute("""create table ServerNicknames (
-                        ID integer primary key,
-                        ServerID integer not null,
-                        Nickname text unique not null collate nocase,
-                        foreign key(ServerID) references Servers(ID)
                         )""")
 
         cur.execute("""create table RegexPatterns (
@@ -175,9 +169,8 @@ class Database:
                         background_path text,
                         blur_background_amount integer,
                         color_header text,
-                        color_nickname text,
                         color_body text,
-                        color_IP text,
+                        color_Host text,
                         color_whitelist_open text,
                         color_whitelist_closed text,
                         color_donator text,
@@ -218,8 +211,8 @@ class Database:
         self._AddConfig('Whitelist_Channel', None)
         self._AddConfig('WhiteList_Wait_Time', 5)
         self._AddConfig('Auto_Whitelist', False)
-        self._AddConfig('Whitelist_Emoji_Pending', None)
-        self._AddConfig('Whitelist_Emoji_Done', None)
+        self._AddConfig('Whitelist_Emoji_Pending', ':arrows_counterclockwise:')
+        self._AddConfig('Whitelist_Emoji_Done', ':ballot_box_with_check:')
         self._AddConfig('Banner_Auto_Update', True)
         self._AddConfig('Banner_Type', 0) #0 = Discord embeds | 1 = Custom Banner Images
         self._AddConfig('Bot_Version', None)
@@ -280,30 +273,18 @@ class Database:
         jdata = dump_to_json({"Type": "UserUpdate", "UserID": dbuser.ID, "Field": entry, "Value": args[entry]})
         self._logdata(jdata)
 
-    def AddServer(self, InstanceID:str, InstanceName:str=None): 
-        return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName)
+    def AddServer(self, InstanceID:str, InstanceName:str= None, FriendlyName:str = None): 
+        return DBServer(db=self, InstanceID= InstanceID, InstanceName= InstanceName, FriendlyName= FriendlyName)
     
-    def GetServer(self, InstanceID: str = None, Name: str = None):
-        if not InstanceID and not Name:
+    def GetServer(self, InstanceID: str = None):
+        if not InstanceID:
             return None
 
-        # we need to look for a server where the friendly name or nickname matches the provided name
-        if InstanceID:
-            (row, cur) = self._fetchone("select ID from Servers where InstanceID=?", (InstanceID,))
-        else:
-            (row, cur) = self._fetchone("select ID from Servers where InstanceName=? or DisplayName=?", (Name, Name))
-
-        # if no rows then try nicknames
+        (row, cur) = self._fetchone("select ID from Servers where InstanceID=?", (InstanceID,))
         if not row:
-            if Name:
-                cur.close()
-                (row, cur) = self._fetchone("select ServerID as ID from ServerNicknames where Nickname=?", (Name,))
-
-            if not row:
-                cur.close()
-                return None
-
-        # create a new user to return and let the object populate itself
+            cur.close()
+            return None
+        # create a new server to return and let the object populate itself
         ret = DBServer(ID=int(row["ID"]), db=self)
 
         cur.close()
@@ -688,9 +669,10 @@ class DBServer:
     """DB Server Attributes:
         `InstanceID: str` \n
         `InstanceName: str` \n
+        `FriendlyName: str` \n
         `DisplayName: str` \n
         `Description: str` \n
-        `IP: str` \n
+        `Host: str` \n
         `Whitelist: bool (0/1)` \n
         `Whitelist_disabled: bool` \n
         `Donator: bool (0/1)` \n
@@ -705,16 +687,34 @@ class DBServer:
         `Avatar_url: str` \n
         `Hidden: bool (0/1)` \n
         """
-    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, 
-    DisplayName: str = None, Description: str = None, IP: str = None, Whitelist: bool = False, Whitelist_disabled: bool = False, Donator: bool = False, 
-    Discord_Console_Channel: str = None, Discord_Chat_Channel: str = None, Discord_Chat_Prefix: str= None, Discord_Event_Channel: str = None,
-    Discord_Role: str = None, Console_Flag: bool = True, Console_Filtered: bool = True, Console_Filtered_Type: int = True, Avatar_url: str = None, Hidden: bool= False):
+    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, FriendlyName: str = None):
         # set defaults
         Params = locals()
         Params.pop("self")
         Params.pop("db")
         Params.pop("__class__")
         super().__setattr__("_db", db)
+        server_attr = {'DisplayName': None,
+                        'Description': None, 
+                        'Host': '192.168.1.1', 
+                        'Whitelist': False, 
+                        'Whitelist_disabled': 0, 
+                        'Donator': 0, 
+                        'Console_Flag': 1,
+                        'Console_Filtered': 0,
+                        'Console_Filtered_Type': 0,
+                        'Discord_Console_Channel': None,
+                        'Discord_Chat_Channel': None,
+                        'Discord_Chat_Prefix': None,
+                        'Discord_Event_Channel': None,
+                        'Discord_Role': None,
+                        'Avatar_url': None,
+                        'Hidden': 0
+                        }
+        
+        for key, value  in server_attr.items():
+            super().__setattr__(key, value)
+
         for entry in Params:
             super().__setattr__(entry, Params[entry])
 
@@ -740,16 +740,21 @@ class DBServer:
             if server:
                 raise Exception("InstanceID already found")
 
-            DBFields = Params
+           # DBFields = Params
 
             # create the sql line
             SQL = "insert into Servers ("
             SQLVars = []
 
-            for entry in DBFields:
-                if DBFields[entry] is not None:
-                    SQL += entry + ","
-                    SQLVars.append(DBFields[entry])
+            for key, value in Params.items():
+                if value is not None:
+                    SQL += key + ","
+                    SQLVars.append(value)
+            
+            for key, value in server_attr.items():
+                if value is not None:
+                    SQL += key + ","
+                    SQLVars.append(value)
 
             SQL = SQL[:-1] + ") values (" + ("?," * len(SQLVars))[:-1] + ")"
             # create the tuple needed
@@ -779,7 +784,7 @@ class DBServer:
             super().__setattr__("Discord_Role", int(self.Discord_Role))
         
     def __setattr__(self, name: str, value):
-        if (name in ["ID", "Nicknames"]) or (name[0] == "_"):
+        if (name in ["ID"]) or (name[0] == "_"):
             return
 
         elif name in ["Whitelist", "Donator", "Console_Flag", "Console_Filtered"]:
@@ -794,32 +799,8 @@ class DBServer:
         super().__setattr__(name, value)
         self._db._UpdateServer(self, **{name: value})
 
-    @property
-    def Nicknames(self):
-        # get all of the nicknames for this server
-        (rows, cur) = self._db._fetchall("Select Nickname from ServerNicknames where ServerID=?", (self.ID,))
-        Nicknames = []
-        for entry in rows:
-            Nicknames.append(entry["Nickname"])
-
-        return Nicknames
-
-    def AddNickname(self, Nickname: str):
-        try:
-            self._db._execute("Insert into ServerNicknames (ServerID, Nickname) values(?,?)", (self.ID, Nickname))
-            jdata = dump_to_json({"Type": "AddServerNickname", "ServerID": self.ID, "Nickname": Nickname})
-            self._db._logdata(jdata)
-        except Exception:
-            return False
-        return True
-
-    def RemoveNickname(self, Nickname: str):
-        self._db._execute("delete from ServerNicknames where ServerID=? and Nickname=?", (self.ID, Nickname))
-        jdata = dump_to_json({"Type": "DeleteServerNickname", "ServerID": self.ID, "Nickname": Nickname})
-        self._db._logdata(jdata)
-
     def delServer(self):
-        self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
+        #self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
         self._db._execute("delete from Servers where ID=?", (self.ID,))
 
     def setDisplayName(self, DisplayName: str):
@@ -954,9 +935,8 @@ class DBBanner:
                     'background_path': background_path,
                     'blur_background_amount': 2,
                     'color_header': "#85c1e9",
-                    'color_nickname': "#f2f3f4",
                     'color_body': "#f2f3f4",
-                    'color_IP': "#5dade2",
+                    'color_host': "#5dade2",
                     'color_whitelist_open': "#f7dc6f",
                     'color_whitelist_closed': "#cb4335",
                     'color_donator': "#212f3c",
@@ -1113,6 +1093,11 @@ class DBUpdate:
             self.DBConfig.AddSetting('Banner_Type', 0)
             self.DBConfig.SetSetting('DB_Version', '2.5')
 
+        if 2.6 > Version:
+            self.logger.info('**ATTENTION** Updating DB to Version 2.6')
+            self.server_Display_IP_rename()
+            self.DBConfig.SetSetting('DB_Version', '2.6')
+
     def user_roles(self):
         try:
             SQL = "alter table users add column Role text collate nocase default None"
@@ -1220,7 +1205,7 @@ class DBUpdate:
 
     def banner_table_creation(self):
         try:
-            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer not null default 0, color_header text, color_nickname text, color_body text,color_IP text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
+            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer not null default 0, color_header text, color_body text,color_Host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'banner_table_creation {e}')
@@ -1228,7 +1213,7 @@ class DBUpdate:
     
     def server_ip_name_change(self):
         try:
-            SQL = "alter table Servers rename column IP to Display_IP"
+            SQL = "alter table Servers rename column IP to Host"
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_ip_name_change {e}')
@@ -1272,4 +1257,12 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_console_filter_type {e}')
+            return
+        
+    def server_Display_IP_rename(self):
+        try:
+            SQL = 'alter table Servers rename column Display_IP to Host'
+            self.DB._execute(SQL, ())
+        except Exception as e:
+            self.logger.critical(f'server_Display_IP_rename {e}')
             return

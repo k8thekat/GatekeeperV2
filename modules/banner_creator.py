@@ -11,14 +11,13 @@ class fake_server():
     def __init__(self):
         self.DisplayName = 'All The Mods 7: To The Sky'
         self.Description = 'All the Mods 7 To the Sky is the sequel to the popular atm6 sky, we have taken feedback from the first iteration to make this pack the best we have to offer, adding in mods that were not in the first, such as Twilight Forest and Alchemistry, followed by the mod ex machinis, an automation addon for ex nihilo built in house by ATM to take you from early, all the way to end game automated resources.'
-        self.IP = '192.168.3.50:25565'
+        self.Host = '192.168.3.50:25565'
         self.Whitelist = 1#random.randint(0,1)
         self.Donator = 1#random.randint(0,1)
         self.Status = 1#random.randint(0,1)
         self.Player_Limit = random.randint(0,20)
         self.Players_Online = ['k8_thekat', 'Lightning', 'Alain', 'Dann', 'Saorie', 'IceofWraith', 'BigO','Steve','k8_thekat', 'Lightning', 'Alain', 'Dann', 'Saorie', 'IceofWraith', 'BigO','Steve']
-        self.Nicknames = ['ATM7 Sky', 'ATM7SKY','ATM7 to the Sky', 'All the Mods 7: Sky', 'ATM7:Sky', 'All The Mods 7: To the Sky']
-
+        
 class Banner_Generator():
     """Custom Banner Generator for Gatekeeper. """
     def __init__(self, AMPServer:AMP.AMPInstance, DBBanner:DB.DBBanner, Banner_path:str=None, blur_background:bool=None):
@@ -54,12 +53,6 @@ class Banner_Generator():
         self._font_Header = ImageFont.truetype(self._font, self._font_Header_size)
         self._font_Header_text_height = self._font_Header.getbbox('W')[-1]
 
-        self._font_Nickname_size = int(self._font_default_size * 2.5)
-        self._font_Nickname_color = DBBanner.color_nickname
-        # self._font_Nickname_color = "#f2f3f4"
-        self._font_Nickname = ImageFont.truetype(self._font, self._font_Nickname_size)
-        self._font_Nickname_text_height = self._font_Nickname.getbbox('W')[-1]
-
         self._font_Body_size = int(self._font_default_size * 2)
         self._font_Body_line_offset = 0
         self._font_Body_color = DBBanner.color_body #Off White
@@ -67,11 +60,11 @@ class Banner_Generator():
         self._font_Body = ImageFont.truetype(self._font, self._font_Body_size)
         self._font_Body_text_height = self._font_Body.getbbox('W')[-1]
 
-        self._font_IP_color = DBBanner.color_IP
+        self._font_Host_color = DBBanner.color_host
         # self._font_IP_color = "#5dade2"
-        self._font_IP_size = int(self._font_default_size * 3)
-        self._font_IP = ImageFont.truetype(self._font, self._font_IP_size)
-        self._font_IP_text_height = self._font_IP.getbbox('W')[-1]
+        self._font_Host_size = int(self._font_default_size * 3)
+        self._font_Host = ImageFont.truetype(self._font, self._font_Host_size)
+        self._font_Host_text_height = self._font_Host.getbbox('W')[-1]
 
         self._font_Whitelist_Donator_size = int(self._font_default_size * 3.5)
         self._font_Whitelist_color_open =  DBBanner.color_whitelist_open
@@ -112,11 +105,13 @@ class Banner_Generator():
         self._shadow_box()
         self._Server_Name()
         self._Server_Status()
-        self._Server_NickNames()
-        self._Server_Whitelist_Donator()
+
+        if not AMPServer.Whitelist_disabled:
+            self._Server_Whitelist_Donator()
+
         self._Server_Description()
         self._Server_Players_Online()
-        self._Server_IP()
+        self._Server_Host()
         #This MUST BE CALLED LAST
         self._round_corners()
 
@@ -232,25 +227,17 @@ class Banner_Generator():
 
         self._draw_text((x,y), name, self._font_Header, self._font_Header_color)
     
-    def _Server_NickNames(self):
-        self._font_Nicknames_y = self._font_Header_text_height + 5
-        if self._Server.Nicknames != None and len(self._Server.Nicknames) > 0:
-            x,y = (50, self._font_Nicknames_y)
-            text = "Nicknames: " + " , ".join(self._Server.Nicknames)
-            text = self._word_wrap(text, self._font, self._font_Nickname_size, (self._banner_shadow_box_x - x), ',' , True )
-            self._draw_text((x,y), text, self._font_Nickname, self._font_Nickname_color)
-
-    def _Server_IP(self):
-        self._font_IP_y = self._font_Nicknames_y + self._font_Body_text_height
-        if self._Server.Display_IP not in [None, '', 'None']:
-            text = 'Host: ' + self._Server.Display_IP
-            #offset = int(ImageFont.truetype(self._font, self._font_IP_size).getlength(text)/2)
+    def _Server_Host(self):
+        self._font_Host_y = self._font_Header_text_height + self._font_Body_text_height + 5
+        if self._Server.Host not in [None, '', 'None']:
+            text = 'Host: ' + self._Server.Host #offset = int(ImageFont.truetype(self._font, self._font_Host_size).getlength(text)/2)
     
-            x,y = (25, self._font_IP_y)
-            self._draw_text((x,y), text, self._font_IP, self._font_IP_color)
+            x,y = (25, self._font_Host_y)
+            self._draw_text((x,y), text, self._font_Host, self._font_Host_color)
 
     def _Server_Whitelist_Donator(self):
-        self._font_Whitelist_Donator_y = int(self._font_Header_text_height + self._font_Nickname_text_height + self._font_IP_text_height + 15)
+        #!TODO! Seperate the Donator and Whitelist into seperate functions.
+        self._font_Whitelist_Donator_y = int(self._font_Header_text_height  + self._font_Host_text_height + 15)
         text = 'Whitelist Closed'
         color = self._font_Whitelist_color_closed
         shadow_color = None

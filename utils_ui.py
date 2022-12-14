@@ -2,6 +2,7 @@ import logging
 import re
 import io
 from PIL import Image
+import random
 
 import discord
 from discord.ext import commands
@@ -128,28 +129,39 @@ class Banner_Editor_View(View):
 class Banner_Editor_Select(Select):
     def __init__(self, edited_db_banner: Edited_DB_Banner, view: Banner_Editor_View, amp_server: AMP.AMPInstance, banner_message: discord.Message, custom_id:str= None, min_values:int= 1, max_values:int= 1, row:int= None, disabled:bool= False, placeholder:str= None):
         self.logger = logging.getLogger()
+        options = []
         self._banner_view = view
 
         self._edited_db_banner = edited_db_banner
         self._banner_message = banner_message
 
         self._amp_server = amp_server
+
+        whitelist_options = [
+            discord.SelectOption(label= "Whitelist Open Font Color", value= 'color_whitelist_open'),
+            discord.SelectOption(label= "Whitelist Closed Font Color", value= 'color_whitelist_closed')]
+        donator_options = [
+            discord.SelectOption(label= "Donator Font Color", value= 'color_donator')]
+        
         options = [
             discord.SelectOption(label= "Blur Background Intensity", value= 'blur_background_amount'),
             discord.SelectOption(label= "Header Font Color", value= 'color_header'),
-            discord.SelectOption(label= "Nickname Font Color", value= 'color_nickname'),
             discord.SelectOption(label= "Body Font Color", value= 'color_body'),
-            discord.SelectOption(label= "IP Font Color", value= 'color_IP'),
-            discord.SelectOption(label= "Whitelist Open Font Color", value= 'color_whitelist_open'),
-            discord.SelectOption(label= "Whitelist Closed Font Color", value= 'color_whitelist_closed'),
-            discord.SelectOption(label= "Donator Font Color", value= 'color_donator'),
+            discord.SelectOption(label= "Host Font Color", value= 'color_Host'),
+            
             discord.SelectOption(label= "Server Online Font Color", value= 'color_status_online'),
             discord.SelectOption(label= "Server Offline Font Color", value= 'color_status_offline'),
             discord.SelectOption(label= "Player Limit Minimum Font Color", value= 'color_player_limit_min'),
             discord.SelectOption(label= "Player Limit Maximum Font Color", value= 'color_player_limit_max'),
             discord.SelectOption(label= "Players Online Font Color", value= 'color_player_online')
             ]
+        
+        #If Whitelist is disabled, remove the options from the list.
+        if not self._amp_server.Whitelist_disabled:
+            options = whitelist_options + options
+
         super().__init__(custom_id=custom_id, placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, disabled=disabled, row=row)
+        
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == 'blur_background_amount':
@@ -225,7 +237,7 @@ class Banner_Blur_Input(TextInput):
         super().__init__(label= label, style= style, placeholder= placeholder, default= default, required= required, min_length= min_length, max_length= max_length)
 
     async def callback(self):
-        if self.value.isalnum() and int(self.value) <= 99:
+        if self.value.isnumeric() and int(self.value) <= 99:
             self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} {self.value}')
             setattr(self._edited_db_banner, self._select_value, int(self.value[0]))
             return True
@@ -234,14 +246,14 @@ class Banner_Blur_Input(TextInput):
 
 class Save_Banner_Button(Button):
     """Saves the Banners current settings to the DB."""
-    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner,  style=discord.ButtonStyle.green):
+    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner,  style= discord.ButtonStyle.green):
         super().__init__(label='Save', style=style, custom_id='Save_Button')
         self.logger = logging.getLogger()
         self._amp_server = server
         self._banner_message = banner_message
         self._edited_db_banner = edited_banner
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         """This is called when a button is interacted with."""
         saved_banner = self._edited_db_banner.save_db()
         await interaction.response.defer()
@@ -250,14 +262,14 @@ class Save_Banner_Button(Button):
 
 class Reset_Banner_Button(Button):
     """Resets the Banners current settings to the original DB."""
-    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner, style=discord.ButtonStyle.blurple):
+    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner, style= discord.ButtonStyle.blurple):
         super().__init__(label='Reset', style=style, custom_id='Reset_Button')
         self.logger = logging.getLogger()
         self._amp_server = server
         self._banner_message = banner_message
         self._edited_db_banner = edited_banner
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         """This is called when a button is interacted with."""
         saved_banner = self._edited_db_banner.reset_db()
         await interaction.response.defer()
@@ -266,13 +278,76 @@ class Reset_Banner_Button(Button):
 
 class Cancel_Banner_Button(Button):
     """Cancels the Banner Settings View"""
-    def __init__(self, banner_message: discord.Message, style=discord.ButtonStyle.red):
+    def __init__(self, banner_message: discord.Message, style= discord.ButtonStyle.red):
         super().__init__(label='Cancel', style=style, custom_id='Cancel_Button')
         self.logger = logging.getLogger()
         self._banner_message = banner_message
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         """This is called when a button is interacted with."""
         await interaction.response.defer()
         await self._banner_message.edit(content='**Banner Settings Editor has been Cancelled.**', attachments= [], view= None)
     
+class Whitelist_view(View):
+    """Whitelist Request View"""
+    def __init__(self, client: discord.Client, discord_message: discord.Message, whitelist_message: discord.Message, amp_server: AMP.AMPInstance, context: commands.Context, timeout: float):
+        self.logger = logging.getLogger()
+        self.DB = DB.getDBHandler().DB
+        self._client = client
+        self._context = context
+        self._whitelist_message = whitelist_message
+        self._amp_server = amp_server
+        super().__init__(timeout= (timeout * 60))
+        self.add_item(Accept_Whitelist_Button(discord_message= discord_message, view= self, client= client, amp_server= amp_server))
+        self.add_item(Deny_Whitelist_Button(discord_message= discord_message, view = self, client= client, amp_server= amp_server))
+    
+    async def _whitelist_handler(self):
+        db_server = self.DB.GetServer(self._amp_server.InstanceID)
+        self.logger.dev(f'Whitelist Request; Attempting to Whitelist {self._whitelist_message.author.name} on {db_server.FriendlyName}')
+        #This handles all the Discord Role stuff.
+        if db_server != None and db_server.Discord_Role != None:
+            discord_role = self._client.uBot.roleparse(db_server.Discord_Role, self._context, self._context.guild.id)
+            discord_user = self._client.uBot.userparse(self._context.author.id, self._context, self._context.guild.id)
+            await discord_user.add_roles(discord_role, reason= 'Auto Whitelisting')
+
+        #This is for all the Replies
+        if len(self.DB.GetAllWhitelistReplies()) != 0:
+            whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
+            await self._context.message.channel.send(content= f'{self._context.author.mention} \n{self._client.uBot.whitelist_reply_handler(whitelist_reply)}', delete_after= self._client.Message_Timeout)
+        else:
+            await self._context.message.channel.send(content= f'You are all set! We whitelisted {self._context.author.mention} on **{db_server.FriendlyName}**', delete_after= self._client.Message_Timeout)
+
+class Accept_Whitelist_Button(Button):
+    """Accepts the Whitelist Request"""
+    def __init__(self, discord_message: discord.Message, view: Whitelist_view, client: discord.Client, amp_server: AMP.AMPInstance, style= discord.ButtonStyle.green):
+        super().__init__(label= 'Accept', style= style, custom_id= 'Accept_Button')
+        self._view = view
+        self._discord_message = discord_message
+        self._amp_server = amp_server
+        self._client = client
+
+    async def callback(self, interaction: discord.Interaction):
+        if await utils.async_rolecheck(context= interaction, perm_node= 'whitelist_buttons'):
+            self._view.logger.info(f'We Accepted a Whitelist Request by {self._view._whitelist_message.author.name}')
+            await self._discord_message.edit(content= f'**{interaction.user.name}** -> Approved __{self._view._whitelist_message.author.name}__ Whitelist Request', view= None)
+            await self._view._whitelist_handler()
+            #self._amp_server.addWhitelist(self._client.Whitelist_wait_list[self._view._whitelist_message.id]['dbuser'])
+            self._client.Whitelist_wait_list.pop(self._view._whitelist_message.id)
+            self.disabled = True
+
+class Deny_Whitelist_Button(Button):
+    """Denys the Whitelist Request"""
+    def __init__(self, discord_message: discord.Message, view: Whitelist_view, client: discord.Client, amp_server: AMP.AMPInstance,  style= discord.ButtonStyle.red):
+        super().__init__(label= 'Deny', style= style, custom_id= 'Deny_Button')
+        self._view = view
+        self._discord_message = discord_message
+        self._amp_server = amp_server
+        self._client = client
+
+    async def callback(self, interaction: discord.Interaction):
+        if await utils.async_rolecheck(context= interaction, perm_node= 'whitelist_buttons'):
+            self._view.logger.info(f'We Denied a Whitelist Request by {self._view._whitelist_message.author.name}')
+            await self._discord_message.edit(content= f'**{interaction.user.name}** -> Denied __{self._view._whitelist_message.author.name}__ Whitelist Request', view= None)
+            await self._view._whitelist_message.channel.send(content= f'**{interaction.user.name}** Denied {self._view._whitelist_message.author.mention} whitelist request. Please contact a Staff Member.')
+            self._client.Whitelist_wait_list.pop(self._view._whitelist_message.id)
+            self.disabled = True

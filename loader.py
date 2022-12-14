@@ -57,7 +57,7 @@ class Handler():
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
         #Just to make it easier; always load the Generic Module as a base.
         await self._client.load_extension('modules.Generic.generic')
-        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **modules.Generic.generic**')
+        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **Generic**')
         loaded.append('Generic')
 
         try:

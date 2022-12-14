@@ -24,25 +24,18 @@ import pathlib
 
 DisplayImageSources = ['steam:730']
 class AMPCsgo(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Handler=None):
+    def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
         self.perms = []
         self.APIModule = 'Counterstrike_GO'
         
-        super().__init__(instanceID, serverdata, Handler=Handler)
+        super().__init__(instanceID, serverdata, Handler=Handler, TargetName=TargetName)
         self.Console = AMPCsgoConsole(AMPInstance = self)
 
         self.default_background_banner_path = 'resources/banners/CS_Go_Banner_3.png'
 
         if self.Avatar_url == None:
-            self.DB_Server.Avatar_url = 'https://drive.google.com/uc?export=download&id=12QI1dnEN4fFbspNLCHELcJIy6ar2cQUa'
+            self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/csgo_avatar.png?raw=true'
 
 class AMPCsgoConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPCsgo):
         super().__init__(AMPInstance)
-
-    
-    def console_filter(self, message):
-        print()
-
-    def console_events(self, message):
-        print()

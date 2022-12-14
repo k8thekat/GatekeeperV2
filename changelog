@@ -12,6 +12,8 @@ __**Update 4.4.0**__
 - Refactored `Gatekeeper` AMP Instances to `DB` handling.
     - Can now handle `Duplicate Instance Names` if `Friendly Name` is set for one of the Duplicate Instance and is unique.
     - Updated `Server List` autocompletes to handle these changes.
+- AMP Instance Validation can now notice and handle deleted `AMP Instances` while running.
+    - Now handles sudden `starting` and `stopping` of Instances.
 - Added `Exception` clause to `CallAPI` with `Unauthorized Access`
 - Removed setting `Super Admin ID` and `Gatekeeper Role ID` from `getRoleIDs`
     - New method called `setRoleIDs` to handle setting `Role ID vars`
@@ -26,6 +28,23 @@ __**Update 4.4.0**__
     - Updated `bot settings` embed to reflect these changes.
 - Converted all cogs with `discord User`, `discord Role` and `discord Channel` command parameters to use `slash types` instead of autocompletes.
 - Cleaned up `utils_embeds.py` from using `custom channel/role parse` functions to using `context.guild` object respectively
+- Changed how discord based `Autocompletes` for AMP Servers is handled. 
+    - Added `TargetName` to `AMP` classes for helping identify similar named Instances.
+    - Rebuilt `AMPHandler.get_Instance_Names()` to handle new system.
+    - Rebuilt `utils.serverparse` to handle the new system.
+    - Should allow for duplicate `AMP Instance Names`
+- Changed `AMP` attr `IP` to `Host`
+    - Updated all related attr interactions.
+- Fixed issue with `/bot cog unload` not unloading cogs properly.
+- Removed `/whitelist channel` command
+- Added `/whitelist request` command.
+    - Removing `on_message event` whitelisting. 
+        - Players will now use a slash command to handle all whitelist requests.
+        - Respect all previous whitelist settings
+        - Gives `Staff` the ability to `Approve` or `Deny`
+- Added default `emojis` to `Whitelist Pending` and `Whitelist Done`
+- Added support for `expired` Session IDs with AMP Instances preventing Gatekeeper from interacting with said Instance.
+
 
 
 __**Hotfix Update 4.3.8**__
