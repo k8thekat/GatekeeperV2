@@ -44,6 +44,7 @@ __DB_Handler = DB.getDBHandler()
 async def async_rolecheck(context: Union[commands.Context, discord.Interaction, discord.member.Member], perm_node:str= None):
     DBHandler = DB.getDBHandler()
     DBConfig = DBHandler.DBConfig
+    _mod_role = DBConfig.GetSetting('Moderator_role_id') 
     logger = logging.getLogger(__name__)
     logger.dev(f'Permission Context command node {str(context.command).replace(" ",".")}')
    
@@ -87,23 +88,22 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
             return True
 
     #This is the final check before we attempt to use the "DEFAULT" permissions setup.
-    print(DBConfig.GetSetting('Moderator_role_id'))
-    if DBConfig.GetSetting('Moderator_role_id') == None:
+    if _mod_role == None:
         await context.send(f'Please have an Adminstrator run `/bot moderator (role)` or consider setting up Custom Permissons.', ephemeral=True)
         logger.error(f'DBConfig Moderator role has not been set yet!')
         return False
 
+    
     staff_role, author_top_role = 0,0
     guild_roles = context.guild.roles
-
     for i in range(0, len(guild_roles)):
         if guild_roles[i].id == top_role_id:
             author_top_role = i
 
-        if guild_roles[i].id == DBConfig.Moderator_role_id:
+        if guild_roles[i].id == _mod_role:
             staff_role = i
-            
-    if author_top_role > staff_role:
+    
+    if author_top_role >= staff_role:
         logger.command(f'*Default* Permission Check Okay on {author}')
         return True
         

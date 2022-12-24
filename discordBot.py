@@ -22,7 +22,6 @@
 from __future__ import annotations
 import sys
 import logging
-from pprint import pprint
 import traceback
 
 import discord
@@ -39,7 +38,7 @@ import DB
 import tokens
 from typing import Union
 
-Version = 'beta-4.4.3'
+Version = 'beta-4.4.4'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -154,7 +153,6 @@ async def bot_moderator(context:commands.Context, role:discord.Role):
     client.logger.command(f'{context.author.name} used Bot Moderator...')
 
     client.DBConfig.SetSetting('Moderator_role_id', role.id)
-    print(client.DBConfig.GetSetting('Moderator_role_id'))
     await context.send(f'Set Moderator Role to `{role.name}`.', ephemeral= True)
 
 @main_bot.command(name='permissions')

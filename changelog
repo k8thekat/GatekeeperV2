@@ -1,3 +1,19 @@
+__**Update 4.4.4**__
+- Fixed issue with `async_rolecheck()` failing if you had the `Moderator` role set by the Bot but nothing higher.
+- Removed un-used imports
+
+__**Update 4.4.3**__
+- Implemented a Hotfix for `cogs` failing to load and retrying to load the `cog`
+    - Added `failed_cog_load_list` and will retry failed to load `cogs`
+
+__**Update 4.4.2**__
+- Fixed issue with `DBConfig()` object handling causing issues with `GetSetting()` not returning proper values
+    - Pointed all class Objects to reference `DB.DBConfig`
+
+__**Update 4.4.1**__
+- Fixed issue with `-super` not being handled properly by the `DBHandler`
+    - Changed logic on `line 1056`
+
 __**Update 4.4.0**__
 - Refactored `AMP Instance` Permission setup.
     - Fixed issue with `Gatekeeper` not setting up proper `AMP` permissions. 
