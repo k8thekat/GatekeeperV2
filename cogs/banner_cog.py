@@ -51,7 +51,7 @@ class Banner(commands.Cog):
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
-        self.DBConfig = self.DB.GetConfig()
+        self.DBConfig = self.DB.DBConfig
 
         self.uBot = utils.botUtils(client)
         self.uiBot = utils_ui

@@ -44,7 +44,7 @@ class Csgo(commands.Cog):
         #use DBHandler for all DB related needs.
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
-        self.DBCOnfig = self.DB.GetConfig()
+        self.DBCOnfig = self.DB.DBConfig
 
         #utils.botUtils provide access to utility functions such as serverparse,roleparse,channelparse,userparse.
         self.uBot = utils.botUtils(client)

@@ -87,6 +87,7 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
             return True
 
     #This is the final check before we attempt to use the "DEFAULT" permissions setup.
+    print(DBConfig.GetSetting('Moderator_role_id'))
     if DBConfig.GetSetting('Moderator_role_id') == None:
         await context.send(f'Please have an Adminstrator run `/bot moderator (role)` or consider setting up Custom Permissons.', ephemeral=True)
         logger.error(f'DBConfig Moderator role has not been set yet!')

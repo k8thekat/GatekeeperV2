@@ -64,7 +64,7 @@ class Setup:
         import DB
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB
-        self.DB_Config = self.DB.GetConfig()
+        self.DB_Config = self.DB.DBConfig
         self.logger.info(f'SQL Database Version: {self.DB.DBHandler.DB_Version} // SQL Database: {self.DB.DBHandler.SuccessfulDatabase}')
 
         #This connects and creates all our AMP related parts

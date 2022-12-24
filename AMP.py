@@ -119,7 +119,7 @@ class AMPInstance():
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB
-        self.DBConfig = self.DB.GetConfig()
+        self.DBConfig = self.DB.DBConfig
 
         self.SessionID = 0
         #self.Index = Index

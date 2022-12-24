@@ -45,7 +45,7 @@ class DBHandler():
         global DB_Version
         self.logger = logging.getLogger(__name__)
         self.DB = Database(Handler = self)
-        self.DBConfig = self.DB.GetConfig()
+        self.DBConfig = self.DB.DBConfig
         self.SuccessfulDatabase = True
         self.Bot_Version = ''
         self.bot_sync_required = False
@@ -94,6 +94,7 @@ class Database:
         if pathlib.Path.exists(db_file):
             self.DBExists = True
 
+
         if Handler:
             self.DBHandler = Handler
         else:
@@ -104,6 +105,7 @@ class Database:
         if not self.DBExists:
             self._InitializeDatabase()
             # self._InitializeDefaultData()
+        self.DBConfig = self.GetConfig()
 
     def _InitializeDatabase(self):
         global DB_Version
@@ -481,8 +483,7 @@ class Database:
         return ID
 
     def GetConfig(self):
-        self.DBHandler.DBConfig = DBConfig(self)
-        return self.DBHandler.DBConfig
+        return DBConfig(self)
 
     def _DeleteConfig(self, ConfigID, ConfigName):
         self._execute("Delete from Config where ID=?", (ConfigID,))
@@ -988,7 +989,7 @@ class DBUpdate:
     def __init__(self, DB:Database, Version:float=None):
         self.logger = logging.getLogger(__name__)
         self.DB = DB
-        self.DBConfig = self.DB.GetConfig()
+        self.DBConfig = self.DB.DBConfig
 
         if Version == None:
             self.DBConfig.AddSetting('DB_Version', 1.0)
