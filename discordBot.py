@@ -39,7 +39,7 @@ import DB
 import tokens
 from typing import Union
 
-Version = 'beta-4.4.2'
+Version = 'beta-4.4.3'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):

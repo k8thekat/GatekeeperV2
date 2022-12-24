@@ -98,6 +98,7 @@ class Handler():
     async def cog_auto_loader(self, reload= False):
         """This will load all Cogs inside of the cogs folder."""
         path = f'cogs' #This gets us to the folder for the module specific scripts to load via the cog.
+        failed_cog_load_list = []
         try:
             cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
             for script in cog_file_list:
@@ -115,14 +116,30 @@ class Handler():
                             await self._client.load_extension(cog) 
 
                         self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
-                        continue
 
                     except discord.ext.commands.errors.ExtensionAlreadyLoaded:
                         continue
 
                     except Exception as e:
-                        self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
-                        continue
+                        self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** Will retry shortly... - {e}')
+                        failed_cog_load_list.append(cog)
+
+            #!TEMP HOTFIX 4.4.2 - FAILED TO LOAD COGS with DEPENDENCIES
+            for cog in failed_cog_load_list:
+                try:
+                    if reload:
+                        await self._client.reload_extension(cog)
+                    else:
+                        await self._client.load_extension(cog) 
+
+                    self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
+
+                except discord.ext.commands.errors.ExtensionAlreadyLoaded:
+                    continue
+
+                except Exception as e:
+                    self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
+
                 
         except FileNotFoundError as e:
             self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
