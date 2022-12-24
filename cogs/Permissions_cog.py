@@ -40,7 +40,7 @@ class Permissions(commands.Cog):
         #use DBHandler for all DB related needs.
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
-        self.DBCOnfig = self.DB.GetConfig()
+        self.DBCOnfig = self.DB.DBConfig
 
         self.uBot = utils.botUtils(client)
         self.bPerms = utils.get_botPerms()

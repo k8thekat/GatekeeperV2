@@ -39,14 +39,14 @@ import DB
 import tokens
 from typing import Union
 
-Version = 'beta-4.4.1'
+Version = 'beta-4.4.2'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
         self.logger = logging.getLogger()
         self.DBHandler = DB.getDBHandler()
         self.DB = DB.getDBHandler().DB
-        self.DBConfig = self.DB.GetConfig()
+        self.DBConfig = self.DBHandler.DBConfig
 
         self.guild_id = None 
         if self.DBConfig.GetSetting('Guild_ID') != None:
@@ -143,7 +143,7 @@ async def main_bot(context:commands.Context):
 async def bot_donator(context:commands.Context, role:discord.Role):
     """Sets the Donator Role for Donator Only AMP Server access."""
     client.logger.command(f'{context.author.name} used Bot Donator Role...')
-    client.DBConfig = client.DB.GetConfig()
+    client.DBConfig = client.DB.DBConfig
     client.DBConfig.SetSetting('Donator_role_id', role.id)
     await context.send(f'You are all set! Donator Role is now set to {role.mention}', ephemeral= True, delete_after= client.Message_Timeout)
 
@@ -154,7 +154,7 @@ async def bot_moderator(context:commands.Context, role:discord.Role):
     client.logger.command(f'{context.author.name} used Bot Moderator...')
 
     client.DBConfig.SetSetting('Moderator_role_id', role.id)
-    
+    print(client.DBConfig.GetSetting('Moderator_role_id'))
     await context.send(f'Set Moderator Role to `{role.name}`.', ephemeral= True)
 
 @main_bot.command(name='permissions')
