@@ -34,7 +34,7 @@ import DB as DB
 
 
 class Regex(commands.Cog):
-    def __init__ (self,client:commands.Bot):
+    def __init__ (self,client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger() #Point all print/logging statments here!
@@ -75,6 +75,9 @@ class Regex(commands.Cog):
 
     @regex_pattern.command(name='add')
     @utils.role_check()
+    @app_commands.describe(name= 'The Name to associate to the Regex pattern')
+    @app_commands.describe(filter_type= 'Either the Pattern will apply to `Server Console` or `Server Events`')
+    @app_commands.describe(pattern= 'AMP uses `re.search(pattern)` for filtering.')
     @app_commands.choices(filter_type= [Choice(name='Console', value= 0), Choice(name='Events', value= 1)])
     async def regex_pattern_add(self, context:commands.Context, name:str, filter_type: Choice[int], pattern:str):
         """Add a Regex Pattern to the Database"""
@@ -97,7 +100,7 @@ class Regex(commands.Cog):
         """Remove a Regex Pattern from the Database"""
         self.logger.command(f'{context.author.name} used Regex Pattern Delete')
         if self.DB.DelRegexPattern(Name= name):
-            await context.send(content= f'I removed Name `{name}` from the Database. Bye bye *waves*', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(content= f'I removed the Regex pattern `{name}` from the Database. Bye bye *waves*', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
             await context.send(content= f'Well this sucks, the Regex Pattern by the Name of `{name}` is not in my Database. Oops?', ephemeral= True, delete_after= self._client.Message_Timeout)
         
@@ -112,7 +115,7 @@ class Regex(commands.Cog):
         try:
             re.compile(pattern= pattern)
         except re.error as e:
-            self.logger.error(e)
+            self.logger.error(f'Regex Error: {e}')
             return await context.send(content= f'The Pattern you provided is invalid. \n `{pattern}`', ephemeral= True, delete_after= self._client.Message_Timeout)
         
         filter_value = None
@@ -121,7 +124,7 @@ class Regex(commands.Cog):
         if filter_type != None:
             filter_value = filter_type.value
             filter_name = filter_type.name
-            content_str = f'__**Type**__: {filter_name} \n'
+            content_str = f'\n__**Type**__: {filter_name}'
 
         if self.DB.UpdateRegexPattern(Pattern= pattern, Type= filter_value, Pattern_Name= name, Name= new_name):
             if new_name != None:
@@ -138,7 +141,7 @@ class Regex(commands.Cog):
         self.logger.command(f'{context.author.name} used Regex Pattern List')
         regex_patterns = self.DB.GetAllRegexPatterns()
         if not regex_patterns:
-            return await context.send(content= 'Hmph.. trying to get a list of Regex Pattern(s), but you have none yet.. ', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(content= 'Hmph.. trying to get a list of Regex Patterns, but you have none yet.. ', ephemeral= True, delete_after= self._client.Message_Timeout)
 
         embed_field = 0
         embed_list = []

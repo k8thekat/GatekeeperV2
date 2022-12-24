@@ -27,8 +27,6 @@ import pathlib
 import aiohttp
 import sys
 import re
-
-from PIL import Image
 from typing import Union
 
 import discord
@@ -50,8 +48,6 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
     logger.dev(f'Permission Context command node {str(context.command).replace(" ",".")}')
    
     author = context
-    #!TODO! Validate permissions for all commands.
-    #print(context, dir(context.user))
     if type(context) != discord.Member:
         if hasattr(context, 'author'):
             top_role_id = context.author.top_role.id
@@ -76,7 +72,7 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
         return True
 
     #This handles Custom Permissions for people with the flag set.
-    #print('Permission Setting', DBConfig.GetSetting('Permissions'))
+
     if DBConfig.GetSetting('Permissions') == 1: #0 is Default, 1 is Custom
         if perm_node == None:
             perm_node = str(context.command).replace(" ",".")
@@ -107,7 +103,6 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
             staff_role = i
             
     if author_top_role > staff_role:
-        print(staff_role, author_top_role)
         logger.command(f'*Default* Permission Check Okay on {author}')
         return True
         
@@ -144,12 +139,12 @@ async def autocomplete_servers(interaction:discord.Interaction, current:str) -> 
         """Autocomplete for AMP Instance Names"""
         choice_list = __AMP_Handler.get_AMP_instance_names()
         if await async_rolecheck(interaction, perm_node= 'Staff') == True:
-            return [app_commands.Choice(name=f"{value}, ID: {key}", value= key)for key, value in choice_list.items()][:25]
+            return [app_commands.Choice(name=f"{value} | ID: {key}", value= key)for key, value in choice_list.items()][:25]
         else:
             return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items()][:25]
 
 class discordBot():
-    def __init__(self, client:commands.Bot):
+    def __init__(self, client:discord.Client):
         self.botLogger = logging.getLogger(__name__)
         self._client = client
         self.botLogger.debug(f'Utils Discord Loaded')
@@ -226,7 +221,7 @@ class discordBot():
 
 class botUtils():
     """Gatekeeper Utility Class"""
-    def __init__ (self, client:commands.Bot=None):
+    def __init__ (self, client:discord.Client= None):
         self._client = client
         self.logger = logging.getLogger(__name__)
         self.logger.debug('Utils Bot Loaded')
@@ -344,7 +339,7 @@ class botUtils():
         returns `<role>` object if True, else returns `None`
         **Note** Use context.guild.id"""
         self.logger.dev('Role Parse Called...')
-        #print(dir(self._client),self._client.get_guild(guild_id),guild_id)
+  
         guild = self._client.get_guild(guild_id)
         role_list = guild.roles
         
@@ -465,7 +460,6 @@ class botUtils():
         Returns `AMPInstance[server] <object>`"""
         self.logger.dev('Bot Utility Server Parse')
         cur_server = None
-        #!TODO Decide a new layout for handling multiple servers with similar names.
         for key, value in self.AMPHandler.AMP_Instances.items():
             if key == instanceID:
                 cur_server = value
@@ -484,10 +478,6 @@ class botUtils():
         """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
         amp_server = self.serverparse(server, context, context.guild.id)
         
-        # if amp_server == None:
-        #     await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral=True, delete_after= self._client.Message_Timeout)
-        #     return False
-
         if online_only == False:
             return amp_server
 
@@ -576,9 +566,7 @@ class botPerms():
         roles = self.permissions['Roles']
         for role in roles:
             if user_role.lower() in role['name'].lower() or role['discord_role_id'] in user_discord_role_ids:
-                #print('Found Role in permissions list',user_role,role['name'])
                 if command_super_node in role['permissions']:
-                    #print('Found Super perm node',command_super_node)
                     command_perm_node_false_check = '-' + command_perm_node
                     if command_perm_node_false_check in role['permissions']:
                         if command_perm_node_false_check[1:] == command_perm_node:

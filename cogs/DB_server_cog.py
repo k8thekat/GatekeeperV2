@@ -21,17 +21,19 @@
 '''
 import os
 import logging
+from typing import Union
 
 import discord
 from discord.ext import commands
 from discord import app_commands
 
 import utils
+import utils_ui
 import AMP 
 import DB
 
 class DB_Server(commands.Cog):
-    def __init__ (self,client:commands.Bot):
+    def __init__ (self,client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger() #Point all print/logging statments here!
@@ -45,12 +47,16 @@ class DB_Server(commands.Cog):
         self.DBConfig = self.DBHandler.DBConfig
 
         self.uBot = utils.botUtils(client)
+        self.uiBot = utils_ui
         self.dBot = utils.discordBot(client)
 
     async def autocomplete_db_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        """Autocomplete for Database Server Names"""
-        choice_list = self.DB.GetAllServers()
-        return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
+        """Autocomplete for Database Server Names for Change Instance IDs"""
+        db_server_list = self.DB.GetAllServers()
+        for key, value in self.DB.GetAllServers().items():
+            if key in self.AMPInstances:
+                db_server_list.pop(key)
+        return [app_commands.Choice(name=f"{value} | ID: {key}", value= key)for key, value in db_server_list.items()][:25]
 
     @commands.hybrid_group(name='dbserver')
     @utils.role_check()
@@ -67,8 +73,8 @@ class DB_Server(commands.Cog):
         amp_instance_keys = self.AMPInstances.keys()
         db_server_list = self.DB.GetAllServers()
         found_server = False
-        for server in db_server_list:
-            db_server = self.DB.GetServer(Name= server)
+        for key, value in db_server_list.items():
+            db_server = self.DB.GetServer(InstanceID= key)
             if db_server != None and db_server.InstanceID not in amp_instance_keys:
                 db_server.delServer()
                 found_server = True
@@ -77,69 +83,25 @@ class DB_Server(commands.Cog):
         if not found_server:
             await context.send('Hmm, it appears you don\'t have any Servers to cleanup..', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @db_server.command(name='test')
+    @db_server.command(name='change_instance_id')
     @utils.role_check()
-    @utils.guild_check(guild_id=602285328320954378)
-    @app_commands.autocomplete(server= autocomplete_db_servers)
-    @app_commands.autocomplete(replacement_server= utils.autocomplete_servers)
-    async def db_server_test(self, context:commands.Context, server:str, replacement_server:str):
-        self.logger.command('Test Function for DB_Server')
-      
-        await context.send('Test Function for DB_Server used...', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @db_server.command(name='swap')
-    #@utils.role_check()
-    @utils.author_check(144462063920611328)
-    #!TODO! Need to update db_servers autocomplete to use new InstanceID method.
-    @app_commands.autocomplete(server= autocomplete_db_servers)
-    @app_commands.autocomplete(replacement_server= utils.autocomplete_servers)
-    async def db_server_instance_swap(self, context:commands.Context, server:str, replacement_server:str):
-        """This will be used to swap Instance ID's with an existing AMP Instance"""
+    @app_commands.autocomplete(from_server= autocomplete_db_servers) #The DB Information we want to copy onto the Destination Server
+    @app_commands.autocomplete(to_server= utils.autocomplete_servers)
+    @app_commands.describe(from_server= 'The DB Server Information we are moving')
+    @app_commands.describe(to_server= 'The Server you want the DB Server Information to belong too.')
+    async def db_server_changeinstanceid(self, context: Union[commands.Context, discord.Interaction], from_server:str, to_server:str):
+        """This will be used to replace a DB Instance ID with an existing AMP Instance"""
         self.logger.command(f'{context.author.name} used Database Instance swap...')
-        #Get the new AMP Instance ID Information and Object.
-        amp_server = self.uBot.serverparse(replacement_server, context, context.guild.id)
-        #Get its DB Object and Delete it from the DB
-        db_server = self.DB.GetServer(amp_server.InstanceID)
-        replacement_db_server  = self.DB.GetServer(server)
-        if amp_server == None or replacement_db_server == None:
-            content = f'Failed to find '
-            if amp_server == None:
-                content += content + amp_server
-            
-            if replacement_db_server == None:
-                content += content + replacement_server
-            await context.send(content= content + ' please try your command again..', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-        message = await context.send(f'Found {db_server.FriendlyName} in our Database. To confirm deletetion, please react to this message using the checkmark else react using the cross mark.', ephemeral= True, delete_after= self._client.Message_Timeout)
-        message.add_reaction(emoji= 1047001263134478398) #:white_check_mark:
-        message.add_reaction(emoji= 1047001991135641640) #negative_squared_cross_mark:
+        from_db_server  = self.DB.GetServer(InstanceID= from_server)
 
-        def check(reaction:discord.Reaction, user:discord.Member):
-            if self._client.get_emoji(reaction.emoji.id) != None:
+        to_db_server = self.DB.GetServer(to_server)
 
-                if user.id == context.author.id:
-                    if reaction.emoji.id == 1047001263134478398:
-                        db_server.delServer()
-                        return True
+        content = f'We are going to move **{from_db_server.InstanceName}** information to **{to_db_server.InstanceName}**, which will remove the **{to_db_server.InstanceName}** Information from the Database.'
+        message = await context.send(content, delete_after= self._client.Message_Timeout, ephemeral= True)
 
-                    if reaction.emoji.id == 1047001991135641640:
-                        return False
-            else:
-                raise Exception('Emoji not found!')
-                return False
-         
-        try:
-            reaction, user = await self._client.wait_for('reaction_add', check=check, timeout= 30)
-            if check == False:
-                await message.edit(content= f'Cancelling deletion of {server} and swap of AMP Instance in the Database.', delete_after= self._client.Message_Timeout)
-
-            await message.edit(content = f'Currently replacing {server} with {replacement_server}', delete_after= self._client.Message_Timeout)
-            if replacement_db_server != None:
-                replacement_db_server.InstanceID = amp_server.InstanceID
-
-        except Exception as e:
-            self.logger.error(f'Error: {e}')
-            await message.edit(content= 'Failed to react in time for Confirmation of AMP Instance Swap', delete_after= self._client.Message_Timeout) 
+        _view = self.uiBot.DB_Instance_ID_Swap(discord_message= message, timeout= self._client.Message_Timeout, from_db_server= from_db_server, to_db_server= to_db_server)
+        await message.edit(view= _view)
 
 
 async def setup(client):

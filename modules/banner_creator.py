@@ -33,12 +33,14 @@ class Banner_Generator():
             if Banner_path == None:
                 Banner_path = AMPServer.default_background_banner_path
 
+        self._Server = AMPServer
+        self._DBBanner = DBBanner
+
         self._banner_limit_size_x = 1800
         self._banner_limit_size_y = 600
         self.banner_image = self._validate_image(pathlib.Path(Banner_path).as_posix())
 
-        self._Server = AMPServer
-        
+    
         if DBBanner.blur_background_amount != 0:
             self._blur_background(blur_power= DBBanner.blur_background_amount)
 
@@ -128,7 +130,10 @@ class Banner_Generator():
                 image = image.convert(mode= 'RGBA')
             return image
         except:
-            raise
+            self._logger.error(f'We Failed to find the Existing Image Path, resetting {self._Server.InstanceName} background path to default.')
+            self._Server.background_banner_path = self._Server.default_background_banner_path
+            self._DBBanner.back
+            return self._validate_image(path= self._Server.default_background_banner_path)
 
     def _blur_background(self, blur_power:int=2):
         """Blurs the Background Image with GaussianBlur"""
@@ -236,8 +241,7 @@ class Banner_Generator():
             self._draw_text((x,y), text, self._font_Host, self._font_Host_color)
 
     def _Server_Whitelist_Donator(self):
-        #!TODO! Seperate the Donator and Whitelist into seperate functions.
-        self._font_Whitelist_Donator_y = int(self._font_Header_text_height  + self._font_Host_text_height + 15)
+        self._font_Whitelist_Donator_y = int(self._font_Header_text_height  + self._font_Host_text_height + self._font_Whitelist_Donator_text_height + 5)
         text = 'Whitelist Closed'
         color = self._font_Whitelist_color_closed
         shadow_color = None
@@ -258,8 +262,8 @@ class Banner_Generator():
     def _Server_Description(self):
         x,y= (15, (self._banner_limit_size_y - (self._font_Body_text_height * 2) - 8))
 
-        if self._Server.Display_Description != None:
-            text = self._word_wrap(self._Server.Display_Description, self._font, self._font_Body_size, (self._banner_shadow_box_x - x), ' ', False)
+        if self._Server.Description != None:
+            text = self._word_wrap(self._Server.Description, self._font, self._font_Body_size, (self._banner_shadow_box_x - x), ' ', False)
             if type(text) == list:
                 for entry in text:
                     self._draw_text((x,y), entry, self._font_Body, self._font_Body_color)

@@ -138,6 +138,15 @@ async def main_bot(context:commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...', ephemeral=True, delete_after= client.Message_Timeout)
 
+@main_bot.command(name='donator')
+@utils.role_check()
+async def bot_donator(context:commands.Context, role:discord.Role):
+    """Sets the Donator Role for Donator Only AMP Server access."""
+    client.logger.command(f'{context.author.name} used Bot Donator Role...')
+    client.DBConfig = client.DB.GetConfig()
+    client.DBConfig.SetSetting('Donator_role_id', role.id)
+    await context.send(f'You are all set! Donator Role is now set to {role.mention}', ephemeral= True, delete_after= client.Message_Timeout)
+
 @main_bot.command(name='moderator')
 @commands.has_guild_permissions(administrator= True)
 async def bot_moderator(context:commands.Context, role:discord.Role):
@@ -150,7 +159,6 @@ async def bot_moderator(context:commands.Context, role:discord.Role):
 
 @main_bot.command(name='permissions')
 @commands.has_guild_permissions(administrator= True)
-
 @app_commands.choices(permission= [Choice(name='Default', value= 0), Choice(name='Custom', value= 1)])
 async def bot_permissions(context:commands.Context, permission: Choice[int]):
     """Set the Bot to use Default Permissions or Custom"""
@@ -187,20 +195,11 @@ async def bot_utils(context:commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...', ephemeral=True, delete_after= client.Message_Timeout)
 
-@bot_utils.command(name='test')
-@utils.role_check()
-@utils.guild_check(guild_id= 602285328320954378)
-@app_commands.autocomplete(server= utils.autocomplete_servers)
-async def bot_utils_test(context:commands.Context, server, user: Union[discord.Member, discord.User]= None, channel: discord.abc.GuildChannel= None, role: discord.Role= None):
-    client.logger.command(f'{context.author.name} used Bot Test...')
-    """Test Async Function..."""
-    message = await context.send('Test Function Used', ephemeral= True, delete_after= client.Message_Timeout)
-    await message.edit(view= client.uiBot.Whitelist_view(client = client, discord_message= message, amp_server= server, timeout= client.DBConfig.GetSetting('Whitelist_Wait_Time')))
-
 @bot_utils.command(name='clear')
 @app_commands.choices(all= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
+@app_commands.describe(all='Default\'s to True, removes ALL commands from selected Channel regardless of who sent them.')
 @utils.role_check()
-async def bot_utils_clear(context:commands.Context, channel: discord.abc.GuildChannel, amount: app_commands.Range[int, 0, 100]= 25, all:Choice[int]= True):
+async def bot_utils_clear(context:commands.Context, channel: discord.abc.GuildChannel, amount: app_commands.Range[int, 0, 100]= 25, all:Choice[int]= 1):
     """Cleans up Messages sent by the Bot. Limit 100"""
     client.logger.command(f'{context.author.name} used Bot Utils Clear...')
 
@@ -247,6 +246,15 @@ async def bot_utils_userid(context: commands.Context, user: Union[discord.User, 
 #         await context.send(content= f'**{name}** has the Steam ID of `{steam_id}`', ephemeral= True, delete_after= client.Message_Timeout)
 #     else:
 #         await context.send(content= f'Well I was unable to find that Steam User {name}.', ephemeral= True, delete_after= client.Message_Timeout)
+
+@bot_utils.command(name='uuid')
+@utils.role_check()
+async def bot_utils_uuid(context:commands.Context, mc_ign:str):
+    """This will convert a Minecraft IGN to a UUID if it exists"""
+    client.logger.command(f'{context.author.name} used Bot Utils UUID...')
+
+    await context.send(f'The UUID of **{mc_ign}** is: `{client.uBot.name_to_uuid_MC(mc_ign)}`', ephemeral= True, delete_after= client.Message_Timeout)
+
 
 @bot_utils.command(name='ping')
 @utils.role_check()
@@ -384,45 +392,6 @@ async def bot_cog_reload(context:commands.Context):
 
     await client.Handler.cog_auto_loader(reload= True)
     await context.send(f'**SUCCESS** Reloading All Extensions ', ephemeral= True, delete_after= client.Message_Timeout) 
-
-@main_bot.group(name='banner')
-async def bot_banner(context:commands.Context):
-    if context.invoked_subcommand is None:
-        await context.send('Invalid command passed...', ephemeral=True, delete_after= client.Message_Timeout)
-
-@bot_banner.command(name='auto_update')
-@utils.role_check()
-@app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
-async def bot_banner_autoupdate( context:commands.Context, flag: Choice[int]= 1):
-    """Toggles Auto Updating of Banners On or Off. (Only for `/server Display`)"""
-    client.logger.command(f'{context.author.name} used Bot Display Banners Auto Update...')
-    
-    if flag.value == 1:
-        client.DBConfig.SetSetting('Banner_Auto_Update', True)
-        return await context.send(f'All set! The bot will __Auto Update the Banners__ from `/server display` every minute.', ephemeral= True, delete_after= client.Message_Timeout)
-    if flag.value == 0:
-        client.DBConfig.SetSetting('Banner_Auto_Update', False)
-        return await context.send(f"Well, I guess I won't update the Banners anymore.", ephemeral= True, delete_after= client.Message_Timeout)
-    else:
-        return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral= True, delete_after= client.Message_Timeout)
-
-@bot_banner.command(name='type')
-@utils.role_check()
-@app_commands.choices(type= [Choice(name='Custom Banner Images', value= 1), Choice(name='Discord Embeds', value= 0)])
-async def bot_banner_type(context:commands.Context, type:Choice[int]= 0):
-    """Selects which type of Server Banner(s) to Display, either Embeds or Images"""
-    client.logger.command(f'{context.author.name} used Bot Banners Type...')
-    
-    if type.value == 0:
-        client.DBConfig.SetSetting('Banner_Type', 0)
-        return await context.send('Look at me, using __Discord Embeds__.. psht..I mean they atleast work.', ephemeral= True, delete_after= client.Message_Timeout)
-
-    if type.value == 1:
-        client.DBConfig.SetSetting('Banner_Type', 1)
-        return await context.send('Looks like we are going to be using __Custom Banner Images__! Oooooh yea~', ephemeral= True, delete_after= client.Message_Timeout)
-
-    else:
-        return await context.send('Hey, You gotta pick either `Discord Embeds` or `Custom Images`', ephemeral= True, delete_after= client.Message_Timeout)    
 
 def client_run():
     client.logger.info('Gatekeeper v2 Intializing...')

@@ -20,24 +20,22 @@
 
 '''
 import os
-import asyncio
 import logging
 import pathlib
 import importlib.util
 
 #prebuilt packages
-from discord.ext import commands
 import discord
 
 #custom scripts
 import AMP
 
-loop = asyncio.new_event_loop()
+#loop = asyncio.new_event_loop()
 loaded = []
 
 class Handler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
-    def __init__(self, client:commands.Bot):
+    def __init__(self, client:discord.Client):
         self._client = client
 
         self._cwd = pathlib.Path.cwd()

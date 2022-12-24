@@ -351,3 +351,37 @@ class Deny_Whitelist_Button(Button):
             await self._view._whitelist_message.channel.send(content= f'**{interaction.user.name}** Denied {self._view._whitelist_message.author.mention} whitelist request. Please contact a Staff Member.')
             self._client.Whitelist_wait_list.pop(self._view._whitelist_message.id)
             self.disabled = True
+
+class DB_Instance_ID_Swap(View):
+    """DB Instance ID Swap View"""
+    def __init__(self, discord_message: discord.Message, timeout: float, from_db_server: DB.DBServer, to_db_server: DB.DBServer):
+        super().__init__(timeout= timeout)
+        self._from_db_server= from_db_server
+        self._to_db_server = to_db_server
+        self.add_item(Approve_Button(view= self, discord_message= discord_message))
+        self.add_item(Cancel_Button(view= self, discord_message= discord_message))
+
+class Approve_Button(Button):
+    def __init__(self, view: View, discord_message: discord.Message, style= discord.ButtonStyle.green):
+        self._view = view
+        self.message = discord_message
+        super().__init__(label= 'Approve', style= style, custom_id= 'Approve_Button')
+
+    async def callback(self, interaction: discord.Interaction):
+        to_db_server_ID = self._view._to_db_server.InstanceID
+        to_db_server_Name= self._view._to_db_server.InstanceName
+        self._view._to_db_server.delServer()
+        self._view._from_db_server.InstanceID = to_db_server_ID
+        await self.message.edit(content = f'Replaced **{self._view._from_db_server.InstanceName} ID: {self._view._from_db_server.InstanceID}** with **{to_db_server_Name} ID: {to_db_server_ID}**', view= None)
+    
+class Cancel_Button(Button):
+    def __init__(self, view: View, discord_message: discord.Message, style= discord.ButtonStyle.red) :
+        self._view = view
+        self.message = discord_message
+        super().__init__(label= 'Cancel', style= style, custom_id= 'Cancel_Button')
+
+    async def callback(self, interaction: discord.Interaction):
+        return await self.message.edit(content= f'Cancelling change of **{self._view._from_db_server.InstanceName}** Instance ID. ', view= None)
+      
+    
+

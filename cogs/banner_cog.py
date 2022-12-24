@@ -29,6 +29,7 @@ import re
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.app_commands import Choice
 
 import utils
 import utils_ui
@@ -39,7 +40,7 @@ import modules.banner_creator as BC
 
 
 class Banner(commands.Cog):
-    def __init__ (self, client:commands.Bot):
+    def __init__ (self, client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger() #Point all print/logging statments here!
@@ -50,7 +51,7 @@ class Banner(commands.Cog):
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
-        self.DBCOnfig = self.DB.GetConfig()
+        self.DBConfig = self.DB.GetConfig()
 
         self.uBot = utils.botUtils(client)
         self.uiBot = utils_ui
@@ -59,6 +60,7 @@ class Banner(commands.Cog):
 
         #Leave this commented out unless you need to create a sub-command.
         self.uBot.sub_command_handler('server', self.amp_banner) #This is used to add a sub command(self,parent_command,sub_command)
+        self.uBot.sub_command_handler('bot', self.banner)
         self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
         
     async def autocomplete_banners(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
@@ -89,18 +91,6 @@ class Banner(commands.Cog):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral= True, delete_after= 30)
 
-    @amp_banner.command(name= 'test')
-    @app_commands.autocomplete(server = utils.autocomplete_servers)
-    @utils.author_check(144462063920611328)
-    async def amp_banner_test(self, context:commands.Context, server):
-        """ Usage case is for test display of banners based upon the picked Server."""
-        amp_server = self.uBot.serverparse(server, context, context.guild.id)
-        if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
-
-        db_server = self.DB.GetServer(amp_server.InstanceID)
-        await context.send(file= self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_()))
-
     @amp_banner.command(name='background')
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.autocomplete(image= autocomplete_banners)
@@ -115,8 +105,9 @@ class Banner(commands.Cog):
         banner = db_server.getBanner()
         image_path = pathlib.Path.cwd().joinpath('resources/banners').as_posix() + '/' + image
         banner.background_path = image_path
+        amp_server._setDBattr()
         my_image = Image.open(image_path)
-        await context.send(content= f'Set **{amp_server.FriendlyName}** Banner Image to', file = utils.banner_file_handler(my_image), ephemeral= True, delete_after= self._client.Message_Timeout)
+        await context.send(content= f'Set **{amp_server.FriendlyName}** Banner Image to', file = self.uiBot.banner_file_handler(my_image), ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @amp_banner.command(name= 'settings')
     @utils.role_check()
@@ -129,6 +120,43 @@ class Banner(commands.Cog):
             return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
 
         await self.banner_editor(context, amp_server)
+
+    @commands.hybrid_group(name='banner_settings')
+    async def banner(self, context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Invalid command passed...', ephemeral=True, delete_after= self._client.Message_Timeout)
+
+    @banner.command(name='auto_update')
+    @utils.role_check()
+    @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
+    async def banner_autoupdate(self, context:commands.Context, flag: Choice[int]= 1):
+        """Toggles Auto Updating of Banners On or Off. (Only for `/server Display`)"""
+        self.logger.command(f'{context.author.name} used Bot Display Banners Auto Update...')
+        
+        if flag.value == 1:
+            self.DBConfig.SetSetting('Banner_Auto_Update', True)
+            return await context.send(f'All set! The bot will __Auto Update the Banners__ from `/server display` every minute.', ephemeral= True, delete_after= self._client.Message_Timeout)
+        if flag.value == 0:
+            self.DBConfig.SetSetting('Banner_Auto_Update', False)
+            return await context.send(f"Well, I guess I won't update the Banners anymore.", ephemeral= True, delete_after= self._client.Message_Timeout)
+        else:
+            return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @banner.command(name='type')
+    @utils.role_check()
+    @app_commands.choices(type= [Choice(name='Custom Banner Images', value= 1), Choice(name='Discord Embeds', value= 0)])
+    async def banner_type(self, context:commands.Context, type:Choice[int]= 0):
+        """Selects which type of Server Banner(s) to Display, either Embeds or Images"""
+        self.logger.command(f'{context.author.name} used Bot Banners Type...')
+        
+        if type.value == 0:
+            self.DBConfig.SetSetting('Banner_Type', 0)
+            return await context.send('Look at me, using **Discord Embeds**.. psht..I mean they atleast work.', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+        if type.value == 1:
+            self.DBConfig.SetSetting('Banner_Type', 1)
+            return await context.send('Looks like we are going to be using **Custom Banner Images**! Oooooh yea~', ephemeral= True, delete_after= self._client.Message_Timeout) 
+
 
 async def setup(client):
     await client.add_cog(Banner(client))

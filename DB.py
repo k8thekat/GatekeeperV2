@@ -53,7 +53,7 @@ class DBHandler():
         #Always update this value when changing Tables!
         self.DB_Version = DB_Version
 
-        #self.DBConfig.SetSetting('DB_Version', 2.3)
+        self.DBConfig.SetSetting('DB_Version', 2.5)
         #This should ONLY BE TRUE on new Database's going forward. 
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
             DBUpdate(self.DB, 1.0)
@@ -115,7 +115,6 @@ class Database:
                         InstanceName text,
                         FriendlyName text,
                         DisplayName text,
-                        Description text,
                         Host text,
                         Whitelist integer not null,
                         Whitelist_disabled integer not null,
@@ -151,7 +150,7 @@ class Database:
                         ID integer primary key,
                         DiscordID text not null unique collate nocase,
                         DiscordName text collate nocase,
-                        MC_IngameName text collate nocase,
+                        MC_IngameName text unique collate nocase,
                         MC_UUID text unique collate nocase,
                         SteamID text unique collate nocase,
                         Role text collate nocase
@@ -208,11 +207,11 @@ class Database:
         self._AddConfig('Moderator_role_id', None)
         self._AddConfig('Permissions', 0) #0 = Default | 1 = Custom
         self._AddConfig('Server_Info_Display', None)
-        self._AddConfig('Whitelist_Channel', None)
+        self._AddConfig('Whitelist_Request_Channel', None)
         self._AddConfig('WhiteList_Wait_Time', 5)
         self._AddConfig('Auto_Whitelist', False)
-        self._AddConfig('Whitelist_Emoji_Pending', ':arrows_counterclockwise:')
-        self._AddConfig('Whitelist_Emoji_Done', ':ballot_box_with_check:')
+        #self._AddConfig('Whitelist_Emoji_Pending', ':arrows_counterclockwise:')
+        #self._AddConfig('Whitelist_Emoji_Done', ':ballot_box_with_check:')
         self._AddConfig('Banner_Auto_Update', True)
         self._AddConfig('Banner_Type', 0) #0 = Discord embeds | 1 = Custom Banner Images
         self._AddConfig('Bot_Version', None)
@@ -237,8 +236,8 @@ class Database:
                 time.sleep(0.1)
                 continue
 
-            except Exception as ex:
-                raise Exception(ex)
+            except Exception as e:
+                raise e
 
     def _fetchone(self, SQL, params):
         cur = self._db.cursor()
@@ -292,13 +291,13 @@ class Database:
     
     def GetAllServers(self):
         """Gets all Servers current in the DB"""
-        serverlist = []
+        serverlist = {}
         SQLArgs = []
         
         (rows, cur) = self._fetchall("Select ID from Servers", tuple(SQLArgs))
         for entry in rows:
             Server = DBServer(self, ID=entry["ID"])
-            serverlist.append(Server.InstanceName)
+            serverlist[Server.InstanceID] = ('InstanceName: ' + Server.InstanceName)
 
         cur.close()
         return serverlist
@@ -991,12 +990,6 @@ class DBUpdate:
         self.DB = DB
         self.DBConfig = self.DB.GetConfig()
 
-        # try:
-        #     SQL = 'alter table ServerRegexPatterns add column UNIQUE(ServerID, RegexPatternID)'
-        #     self.DB._execute(SQL, ())
-        # except Exception as e:
-        #     print(e)
-
         if Version == None:
             self.DBConfig.AddSetting('DB_Version', 1.0)
 
@@ -1005,7 +998,7 @@ class DBUpdate:
             self.DBConfig.AddSetting('Guild_ID', None)
             self.DBConfig.AddSetting('Moderator_role_id', None)
             self.DBConfig.AddSetting('Permissions', 0)
-            self.DBConfig.AddSetting('Whitelist_Channel', None)
+            self.DBConfig.AddSetting('Whitelist_Request_Channel', None)
             self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
             self.DBConfig.AddSetting('Auto_Whitelist', False)
             self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
@@ -1096,7 +1089,11 @@ class DBUpdate:
         if 2.6 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 2.6')
             self.server_Display_IP_rename()
+            #self.user_MC_IngameName_unique_constraint()
+            self.DBConfig.DeleteSetting('Whitelist_Emoji_Pending')
+            self.DBConfig.DeleteSetting('Whitelist_Emoji_Done')
             self.DBConfig.SetSetting('DB_Version', '2.6')
+        
 
     def user_roles(self):
         try:
@@ -1266,3 +1263,11 @@ class DBUpdate:
         except Exception as e:
             self.logger.critical(f'server_Display_IP_rename {e}')
             return
+        
+    # def user_MC_IngameName_unique_constraint(self):
+    #     try:
+    #         SQL = 'alter table Users add constraint MC_IngameName unique'
+    #         self.DB._execute(SQL, ())
+    #     except Exception as e:
+    #         self.logger.critical(f'user_MC_IngameName_unique_constraint {e}')
+    #         return

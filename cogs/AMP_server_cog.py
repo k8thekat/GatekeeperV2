@@ -22,9 +22,7 @@
 import os
 import logging
 from datetime import datetime,timezone
-import re
 import asyncio
-from typing import Union
 
 import discord
 from discord.ext import commands,tasks
@@ -39,7 +37,7 @@ import utils_embeds
 import modules.banner_creator as BC
 
 class AMP_Server(commands.Cog):
-    def __init__(self, client:commands.Bot):
+    def __init__(self, client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
@@ -83,11 +81,6 @@ class AMP_Server(commands.Cog):
                 if self.server_display_update.is_running():
                     self.server_display_update.stop()
 
-    async def autocomplete_message_type(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        """Autocomplete for AMP Console Message Types"""
-        choice_list = ['Announcement','Broadcast','Maintenance','Info','Warning']
-        return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
-
     async def autocomplete_regex(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Regex Pattern Names"""
         choice_list = []
@@ -102,7 +95,7 @@ class AMP_Server(commands.Cog):
         choice_list = []
         
         if interaction.namespace.server != None:
-            db_server = self.DB.GetServer(Name= interaction.namespace.server)
+            db_server = self.DB.GetServer(InstanceID= interaction.namespace.server)
             regex_patterns = db_server.GetServerRegexPatterns()
 
             if len(regex_patterns):
@@ -121,7 +114,7 @@ class AMP_Server(commands.Cog):
 
         for curpos in range(0, len(message_list)):
             try:
-                await message_list[curpos].edit(embeds=embed_list[curpos*10:(curpos+1)*10])
+                await message_list[curpos].edit(embeds=embed_list[curpos*10:(curpos+1)*10], attachments= [])
             except discord.errors.NotFound:
                 self.logger.error(f'Embed Banner Messages were deleted, removing {discord_channel.name}and stopping the loop.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
@@ -144,7 +137,7 @@ class AMP_Server(commands.Cog):
         
         for curpos in range(0, len(message_list)):
             try:
-                await message_list[curpos].edit(attachments= banner_image_list[curpos*10:(curpos+1)*10])
+                await message_list[curpos].edit(attachments= banner_image_list[curpos*10:(curpos+1)*10], embed= None)
             except discord.errors.NotFound:
                 self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
@@ -182,16 +175,6 @@ class AMP_Server(commands.Cog):
     async def server(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Please try your command again...', ephemeral= True, delete_after= self._client.Message_Timeout)
-    
-    @server.command(name='test')
-    @utils.role_check()
-    @utils.guild_check(guild_id=602285328320954378)
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def amp_server_test(self, context:commands.Context, server):
-        """This is a test function."""
-        self.logger.command(f'{context.author.name} used AMP Server Test')
-        amp_server = self.uBot.serverparse(server, context,context.guild.id)
-        await context.send(f'This is a test command **{server}**', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server.command(name='update')
     @utils.role_check()
@@ -202,24 +185,22 @@ class AMP_Server(commands.Cog):
         if new_server:
             await context.send(f'Found a new Server: {new_server}', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send('Uhh.. No new instance was found. Hmmm...', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send('Uhh.. No new instances were found. Hmmm...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server.command(name='broadcast')
     @utils.role_check()
-    @app_commands.autocomplete(type= autocomplete_message_type)
-    async def amp_server_broadcast(self, context:commands.Context, type:str, message:str):
+    @app_commands.choices(prefix= [Choice(name= x, value= x) for x in ['Announcement','Broadcast','Maintenance','Info','Warning']])
+    async def amp_server_broadcast(self, context:commands.Context, prefix:Choice[str], message:str):
         """This sends a message to every online AMP Server"""
         self.logger.command(f'{context.author.name} used AMP Server Broadcast')
         discord_message = await context.send('Sending Broadcast...', ephemeral= True)
         for amp_server in self.AMPInstances:
-
             if self.AMPInstances[amp_server].Running:
                 if self.AMPInstances[amp_server]._ADScheck():
-                    self.AMPInstances[amp_server].Broadcast_Message(message, prefix= type)
-                    await discord_message.edit(content='Broadcast Sent!', delete_after= self._client.Message_Timeout)
+                    self.AMPInstances[amp_server].Broadcast_Message(message, prefix= prefix.value)
 
-                else:
-                    await discord_message.edit(content=f'Oops, it appears **{self.AMPInstances[amp_server].FriendlyName}** is not Online.', delete_after= self._client.Message_Timeout)
+        await discord_message.edit(content= f'{prefix.value} Sent!')
+        await discord_message.delete(delay= self._client.Message_Timeout)
 
     @server.group(name='settings')
     @utils.role_check()
@@ -247,7 +228,7 @@ class AMP_Server(commands.Cog):
         self.logger.command(f'{context.author.name} used AMP Display List...')
 
         await context.defer()
-
+   
         if self.DBConfig.GetSetting('Banner_Type') == 1:
             banner_image_list = []
             for server in self.AMPInstances:
@@ -287,18 +268,13 @@ class AMP_Server(commands.Cog):
         self.logger.command(f'{context.author.name} used AMP Server Started...')
 
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
-        if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
-
-        if amp_server.Running == False:
-            return await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
         if not amp_server._ADScheck():
             amp_server.StartInstance()
             amp_server.ADS_Running = True
-            await context.send(f'Starting the AMP Dedicated Server **{server}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Starting the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            return await context.send(f'Hmm it appears the server is already running..', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f'Hmm it appears the server is already `Running..`', ephemeral= True, delete_after= self._client.Message_Timeout)
       
     @server.command(name='stop')
     @utils.role_check()
@@ -311,7 +287,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             amp_server.StopInstance()
             amp_server.ADS_Running = False
-            await context.send(f'Stopping the AMP Dedicated Server **{server}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Stopping the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server.command(name='restart')
     @utils.role_check()
@@ -324,7 +300,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             amp_server.RestartInstance()
             amp_server.ADS_Running = True
-            await context.send(f'Restarting the AMP Dedicated Server **{server}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Restarting the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @server.command(name='kill')
     @utils.role_check()
@@ -337,7 +313,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             amp_server.KillInstance()
             amp_server.ADS_Running = False
-            await context.send(f'Killing the AMP Dedicated Server **{server}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Killing the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server.command(name='msg')
     @utils.role_check()
@@ -345,10 +321,11 @@ class AMP_Server(commands.Cog):
     async def amp_server_message(self, context:commands.Context, server, message:str):
         """Sends a message to the Console, can be anything the Server Console supports.(Commands/Messages)"""
         self.logger.command(f'{context.author.name} used AMP Server Message...')
-
+        
         amp_server = await self.uBot._serverCheck(context, server)
         if amp_server:
             amp_server.ConsoleMessage(message)
+        await context.send(f'Sent {message} to {amp_server.InstanceName}', ephemeral= True, delete_after= self._client.Message_Timeout)
    
     @server.command(name='backup')
     @utils.role_check()
@@ -362,8 +339,8 @@ class AMP_Server(commands.Cog):
             title = f"Backup by {context.author.display_name}"
             time = str(datetime.now(tz= timezone.utc))
             description = f"Created at {time} by {context.author.display_name}"
-            display_description = f'Created at **{str(datetime.now(tz= timezone.utc))}**(utc) by **{context.author.display_name}**'
-            await context.send(f'Creating a backup of **{server}**  // **Description**: {display_description}', ephemeral= True, delete_after= self._client.Message_Timeout)
+            display_description = f'Created at **{str(datetime.now(tz= timezone.utc).strftime("%Y-%m-%d %H:%M"))}**(utc) by **{context.author.display_name}**'
+            await context.send(f'Creating a backup of **{server.InstanceName}**  // **Description**: {display_description}', ephemeral= True, delete_after= self._client.Message_Timeout)
             amp_server.takeBackup(title, description)
    
     @server.command(name='status')
@@ -376,10 +353,10 @@ class AMP_Server(commands.Cog):
 
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f"Hey, we uhh can't find the server **{amp_server.InstanceName}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
 
         if amp_server.Running == False:
-            await context.send(f'Well this is awkward, it appears the **{server}** is `Offline`.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Well this is awkward, it appears the **{amp_server.InstanceName}** is `Offline`.', ephemeral= True, delete_after= self._client.Message_Timeout)
         
         if amp_server._ADScheck():
             tps,Users,cpu,Memory,Uptime = amp_server.getMetrics()
@@ -435,12 +412,12 @@ class AMP_Server(commands.Cog):
             db_server = self.DB.GetServer(InstanceID= amp_server.InstanceID)
             db_server.Avatar_url = url
             if url == 'None':
-                await context.send(f"Removed **{server}** Avatar Icon.", ephemeral= True, delete_after= self._client.Message_Timeout)
+                await context.send(f"Removed **{amp_server.InstanceName}** Avatar Icon.", ephemeral= True, delete_after= self._client.Message_Timeout)
                 amp_server._setDBattr()
                 return
             if await self.uBot.validate_avatar(db_server) != None:
                 amp_server._setDBattr() #This will update the AMPInstance Attributes
-                await context.send(f"Set **{server}** Avatar Icon url to `{url}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+                await context.send(f"Set **{amp_server.InstanceName}** Avatar Icon. {url}", ephemeral= True, delete_after= self._client.Message_Timeout)
             else:
                 await context.send(f'I encountered an issue using that url, please try again. Heres your url: {url}', ephemeral= True, delete_after= self._client.Message_Timeout)
  
@@ -456,7 +433,7 @@ class AMP_Server(commands.Cog):
             db_server = self.DB.GetServer(InstanceID= amp_server.InstanceID)
             if db_server.setDisplayName(name) != False:
                 amp_server._setDBattr() #This will update the AMPInstance Attributes
-                await context.send(f"Set **{server}** Display Name to `{name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+                await context.send(f"Set **{amp_server.InstanceName}** Display Name to `{name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
             else:
                 await context.send(f'The Display Name provided is not unique, this server or another server already has this name.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
@@ -485,7 +462,7 @@ class AMP_Server(commands.Cog):
             db_server = self.DB.GetServer(InstanceID= amp_server.InstanceID)
             db_server.Host = hostname
             amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f"Set **{server}** Host to `{hostname}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f"Set **{amp_server.InstanceName}** Host to `{hostname}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_settings.command(name='donator')
     @utils.role_check()
@@ -497,9 +474,9 @@ class AMP_Server(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server: 
-            self.DB.GetServer(InstanceID= server.InstanceID).Donator = flag
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = flag
             amp_server._setDBattr() #This will update the AMPConsole Attributes
-            return await context.send(f"Set **{server}** Donator Only to `{flag.capitalize()}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f"Set **{amp_server.InstanceName}** Donator Only to `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server.group(name='console')
     @utils.role_check()
@@ -518,7 +495,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             self.DB.GetServer(InstanceID= amp_server.InstanceID).Discord_Console_Channel = channel.id
             amp_server._setDBattr() #This will update the AMPConsole Attribute
-            await context.send(f'Set **{server}** Console channel to `{channel.name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Console channel to {channel.mention}', ephemeral= True, delete_after= self._client.Message_Timeout)
       
     @db_server_console.command(name='filter')
     @utils.role_check()
@@ -535,7 +512,7 @@ class AMP_Server(commands.Cog):
             db_server.Console_Filtered = flag.value
             db_server.Console_Filtered_Type = filter_type.value
             amp_server._setDBattr() #This will update the AMPConsole Attributes
-            return await context.send(f'Set **{server}** Console Filtering to `{flag.name}` using `{filter_type.name}` filtering.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f'Set **{amp_server.InstanceName}** Console Filtering to `{flag.name}` using `{filter_type.name}` filtering.', ephemeral= True, delete_after= self._client.Message_Timeout)
      
     @server.group(name='chat')
     @utils.role_check()
@@ -554,7 +531,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             self.DB.GetServer(amp_server.InstanceID).Discord_Chat_Channel = channel.id
             amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f'Set **{server}** Chat channel to `{channel.name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Chat channel to {channel.mention}', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server.group(name='event')
     @utils.role_check()
@@ -573,7 +550,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             self.DB.GetServer(amp_server.InstanceID).Discord_Event_Channel = channel.id
             amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f'Set **{server}** Event channel to `{channel.name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Event channel to {channel.mention}', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_settings.command(name='role')
     @utils.role_check()
@@ -586,7 +563,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             self.DB.GetServer(amp_server.InstanceID).Discord_Role = role.id
             amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f'Set **{server}** Discord Role to `{role.name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Discord Role to `{role.name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_settings.command(name='prefix')
     @utils.role_check()
@@ -599,7 +576,7 @@ class AMP_Server(commands.Cog):
         if amp_server:
             self.DB.GetServer(amp_server.InstanceID).Discord_Chat_prefix = server_prefix
             amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f'Set **{server}** Discord Chat Prefix to `{server_prefix}`', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Discord Chat Prefix to `{server_prefix}`', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_settings.command(name='hidden')
     @utils.role_check()
@@ -614,10 +591,8 @@ class AMP_Server(commands.Cog):
         if amp_server:
             self.DB.GetServer(InstanceID= amp_server.InstanceID).Hidden = flag.value
             amp_server._setDBattr() #This will update the AMPConsole Attributes
-            if flag.value == 1:
-                return await context.send(f"The **{server}** will now be Hidden", ephemeral= True, delete_after= self._client.Message_Timeout)
-            else:
-                return await context.send(f'The **{server}** will now be Shown', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f"The **{amp_server.InstanceName}** will now be {'Hidden' if flag.value == 1 else 'Shown'}", ephemeral= True, delete_after= self._client.Message_Timeout)
+            
 
 
     ## -------------------- REGEX Commands --------------------------------
@@ -631,11 +606,12 @@ class AMP_Server(commands.Cog):
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.autocomplete(name= autocomplete_regex)
-    async def server_regex_add(self, context:commands.Context, server:str, name:str):
+    async def server_regex_add(self, context:commands.Context, server, name:str):
         """Adds a Regex Pattern to the Server Regex List."""
         self.logger.command(f'{context.author.name} used Server Regex Pattern Add')
 
-        db_server = self.DB.GetServer(Name= server)
+        amp_server = self.uBot.serverparse(server, context, context.guild.id)
+        db_server = self.DB.GetServer(InstanceID= server)
         if db_server != None:
             if db_server.AddServerRegexPattern(Name= name):
                 regex = self.DB.GetRegexPattern(Name= name)
@@ -645,9 +621,9 @@ class AMP_Server(commands.Cog):
                     if regex['Type'] == 1:
                         pattern_type = 'Events'
 
-                    await context.send(f'We added the Regex Pattern `{name}` to the `{server}`. \n __**Name**__: {regex["Name"]} \n __**Type**__: {pattern_type} \n __**Pattern**__: {regex["Pattern"]}', ephemeral= True, delete_after= self._client.Message_Timeout)
+                    await context.send(f'We added the Regex Pattern `{name}` to the `{amp_server.InstanceName}`. \n __**Name**__: {regex["Name"]} \n __**Type**__: {pattern_type} \n __**Pattern**__: {regex["Pattern"]}', ephemeral= True, delete_after= self._client.Message_Timeout)
             else:
-                await context.send(f'Uhh, I ran into an issue adding the pattern `{name}` to `{server}`. It looks like the Server already has this pattern.', ephemeral= True, delete_after= self._client.Message_Timeout)
+                await context.send(f'Uhh, I ran into an issue adding the pattern `{name}` to `{amp_server.InstanceName}`. It looks like the Server already has this pattern.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_regex.command(name='delete')
     @utils.role_check()
@@ -657,7 +633,8 @@ class AMP_Server(commands.Cog):
         """Deletes a Regex Pattern from the Server Regex List"""
         self.logger.command(f'{context.author.name} used Server Regex Pattern Delete.')
 
-        db_server = self.DB.GetServer(Name= server)
+        amp_server = self.uBot.serverparse(server, context, context.guild.id)
+        db_server = self.DB.GetServer(InstanceID= server)
         if db_server != None:
             if name != 'None':
                 if db_server.DelServerRegexPattern(Name= name):
@@ -666,9 +643,9 @@ class AMP_Server(commands.Cog):
                         pattern_type = 'Console'
                     if regex['Type'] == 1:
                         pattern_type = 'Events'
-                    await context.send(f'We Removed the Regex Pattern `{name}` from the `{server}`. \n __**Name**__: {regex["Name"]} \n __**Type**__: {pattern_type} \n __**Pattern**__: {regex["Pattern"]}', ephemeral= True, delete_after= self._client.Message_Timeout)   
+                    await context.send(f'We Removed the Regex Pattern `{name}` from the `{amp_server.InstanceName}`. \n __**Name**__: {regex["Name"]} \n __**Type**__: {pattern_type} \n __**Pattern**__: {regex["Pattern"]}', ephemeral= True, delete_after= self._client.Message_Timeout)   
             else:
-                await context.send(f'Uhh, I ran into an issue removing the pattern `{name}` to `{server}`. It looks like the Server already has this pattern.', ephemeral= True, delete_after= self._client.Message_Timeout)
+                await context.send(f'Uhh, I ran into an issue removing the pattern `{name}` to `{amp_server.InstanceName}`. It looks like the Server already has this pattern.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_regex.command(name= 'list')
     @utils.role_check()
@@ -677,7 +654,7 @@ class AMP_Server(commands.Cog):
         """Displays an Embed list of all the Server Regex patterns."""
         self.logger.command(f'{context.author.name} used Server Regex List')
 
-        db_server = self.DB.GetServer(Name= server)
+        db_server = self.DB.GetServer(InstanceID= server)
         if db_server != None:
             regex_patterns = db_server.GetServerRegexPatterns()
         if not regex_patterns:
@@ -693,7 +670,7 @@ class AMP_Server(commands.Cog):
             if regex_patterns[pattern]['Type'] == 1:
                 pattern_type = 'Events'
       
-            embed.add_field(name= f"__**Name**:__ {regex_patterns[pattern]['Name']}\n__**Type**__: {pattern_type}", value= regex_patterns[pattern]['Pattern'])
+            embed.add_field(name= f"__**Name**:__ {regex_patterns[pattern]['Name']}\n__**Type**__: {pattern_type}", value= regex_patterns[pattern]['Pattern'], inline= False)
 
             if embed_field >= 25:
                 embed_list.append(embed)

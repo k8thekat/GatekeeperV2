@@ -49,7 +49,7 @@ class AMPMinecraft(AMP.AMPInstance):
             if perm.startswith('-'):
                 enabled = False
                 perm = perm[1:]
-            #print(self.AMP_BotRoleID)
+
             if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
                 self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
 

@@ -168,8 +168,6 @@ class AMPInstance():
 
         if instanceID != 0:
             #This gets all the dictionary values tied to AMP and makes them attributes of self.
-            #!TODO! Dev print of serverdata
-            #pprint(serverdata)
             for entry in serverdata:
                 setattr(self, entry, serverdata[entry])
             
@@ -368,8 +366,6 @@ class AMPInstance():
         """This is used to set/update the DB attributes for the AMP server"""
         self.DB_Server = self.DB.GetServer(InstanceID = self.InstanceID)
         self.DisplayName = self.DB_Server.DisplayName
-        #!TODO! Replace DB_Server Description with AMPs Description from `ServerData`
-        self.Display_Description = self.DB_Server.Description
         self.Host = self.DB_Server.Host
         self.Whitelist = self.DB_Server.Whitelist
         self.Whitelist_disabled = self.DB_Server.Whitelist_disabled
@@ -479,7 +475,6 @@ class AMPInstance():
         if "Title" in post_req.json():
             if type(post_req.json()['Title']) == str and post_req.json()['Title'] == 'Unauthorized Access':
                 self.logger.error(f'["Title"]: The API Call {APICall} failed because of {post_req.json()}')
-                #!TODO! This needs to be validated as a solution to this json error.
                 #Resetting the Session ID for the Instance; forcing a new login/SessionID
                 self.AMPHandler.SessionIDlist.pop(self.InstanceID)
                 self.SessionID = 0
@@ -521,10 +516,8 @@ class AMPInstance():
                     for amp_instance in self.AMPHandler.AMP_Instances:
                         #This should be the <AMP Instance Object> comparing to the Instance Objects we got from `getInstances()`
                         if self.AMPHandler.AMP_Instances[amp_instance].InstanceID == instance['InstanceID']:
-                            #print('Found Instance', amp_instance.InstanceID, amp_instance.FriendlyName)
                             ##This gets all the dictionary values tied to AMP and makes them attributes of self.
                             for entry in instance:
-                                #print(amp_instance, entry, instance[entry])
                                 setattr(self.AMPHandler.AMP_Instances[amp_instance], entry, instance[entry])
                             break
 
@@ -613,7 +606,6 @@ class AMPInstance():
         self.Login()
         parameters = {}
         result = self.CallAPI('ADSModule/GetInstances',parameters)
-        #pprint(result)
         return result     
 
     def ConsoleUpdate(self) -> dict:
@@ -761,7 +753,7 @@ class AMPInstance():
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetModuleInfo', parameters)
-        pprint(result)
+        
         return result
 
     def copyFile(self, source:str, destination:str):
@@ -1133,7 +1125,6 @@ class AMPHandler():
                 for script in file_list:
                     module_name = script.name[4:-3].capitalize()
                     try:
-                        #print(script)
                         spec = importlib.util.spec_from_file_location(module_name, script)
                         class_module = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(class_module)
@@ -1161,7 +1152,6 @@ class AMPHandler():
         if len(data["result"][0]['AvailableInstances']) != 0:
             self.InstancesFound = True
             for Target in data["result"]:
-                #print(Target['FriendlyName'])
                 for amp_instance in Target['AvailableInstances']: #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
 
                     #This exempts the AMPTemplate Gatekeeper *hopefully*
@@ -1299,9 +1289,7 @@ class AMPConsole:
                     last_entry_time = entry_time
                     continue
                 
-                self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} DisplayImageSource: {self.AMPInstance.DisplayImageSource} Console Entry: {entry}')
-                self.logger.dev(f'Console Filtered: {bool(self.AMPInstance.Console_Filtered)} ConsoleFiltered Type: {self.AMPInstance.Console_Filtered_Type} Console Channel: {self.AMPInstance.Discord_Console_Channel}')
-                self.logger.dev(f"Chat Channel: {self.AMPInstance.Discord_Chat_Channel} Chat Prefix: {self.DB_Server.Discord_Chat_Prefix} Event Channel: {self.AMPInstance.Discord_Event_Channel}")
+                self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} | DisplayImageSource: {self.AMPInstance.DisplayImageSource} | Console Channel: {self.AMPInstance.Discord_Console_Channel} \n Console Entry: {entry}')
                 #This will add the Servers Discord_Chat_Prefix to the beginning of any of the messages.
                 #Its done down here to prevent breaking of any exisiting filtering.
                 if self.DB_Server.Discord_Chat_Prefix != None:
@@ -1366,6 +1354,7 @@ class AMPConsole:
     def console_filter(self, message):
         """Controls what will be sent to the Discord Console Channel via AMP Console. \n
         Return `True` to Continue, `False` to Return Message"""
+        self.logger.dev(f'Console Filtered: {bool(self.AMPInstance.Console_Filtered)} | ConsoleFiltered Type: {self.AMPInstance.Console_Filtered_Type}')
         if self.AMPInstance.Console_Filtered:
             
             #This is to prevent Regex filtering on Chat Messages.
@@ -1403,6 +1392,7 @@ class AMPConsole:
         Format's Server Chat Messages for better readability to the Console"""
         #{'Timestamp': '/Date(1657587898574)/', 'Source': 'IceOfWraith', 'Type': 'Chat', 'Contents': 'This is a local message','Prefix': 'Discord_Chat_Prefix}
         #Currently all servers set "Type" to Chat! So lets use those.
+        self.logger.dev(f"Chat Channel: {self.AMPInstance.Discord_Chat_Channel} | Chat Prefix: {self.DB_Server.Discord_Chat_Prefix} | Event Channel: {self.AMPInstance.Discord_Event_Channel}")
         if message["Type"] == 'Chat':
       
             #Removed the odd character for color idicators on text

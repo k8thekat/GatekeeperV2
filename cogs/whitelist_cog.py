@@ -19,7 +19,7 @@
    02110-1301, USA. 
 
 '''
-from datetime import datetime,timedelta,timezone
+from datetime import datetime, timedelta, timezone
 import os
 import logging
 import random
@@ -27,7 +27,7 @@ import random
 import discord
 from discord import app_commands
 from discord.app_commands import Choice
-from discord.ext import commands,tasks
+from discord.ext import commands, tasks
 
 import AMP
 import DB
@@ -36,9 +36,8 @@ import utils
 import utils_embeds
 import utils_ui
 
-
 class Whitelist(commands.Cog):
-    def __init__(self,client:commands.Bot):
+    def __init__(self,client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
@@ -54,7 +53,7 @@ class Whitelist(commands.Cog):
         self.dBot = utils.discordBot(client)
         self.eBot = utils_embeds.botEmbeds(client)
 
-        self.Whitelist_Channel = None
+        self.Whitelist_Request_Channel = None
         
         self.failed_whitelist = []
         self._client.Whitelist_wait_list = {} #[message.id] : {'ampserver' : amp_server, 'context' : context, 'dbuser' : db_user}
@@ -64,15 +63,15 @@ class Whitelist(commands.Cog):
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
     def __getattribute__(self, __name: str):
-        if __name == 'Whitelist_Channel':
-            db_get = self.DBConfig.GetSetting('Whitelist_Channel')
+        if __name == 'Whitelist__Request_Channel':
+            db_get = self.DBConfig.GetSetting('Whitelist_Request_Channel')
             if db_get != None:
                 db_get = int(db_get)
             return db_get
         return super().__getattribute__(__name)
 
     # Discord Auto Completes ---------------------------------------------------------------------------------------------------------------
-    async def autocomplete_whitelist_replies(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+    async def autocomplete_whitelist_replies(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Whitelist Replies"""
         choice_list = self.DB.GetAllWhitelistReplies()
         return [app_commands.Choice(name=self.whitelist_reply_formatter(choice), value=self.whitelist_reply_formatter(choice)) for choice in choice_list if current.lower() in choice.lower()]
@@ -82,42 +81,12 @@ class Whitelist(commands.Cog):
             return parameter[0:96] + '...'
         return parameter
 
-    # Discord Listener Events --------------------------------------------------------------------------------------------------------------
-    @commands.Cog.listener('on_message_edit')
-    async def on_message_edit(self, message_before:discord.Message, message_after:discord.Message):
-        """Called when a Message receives an update event. If the message is not found in the internal message cache, then these events will not be called. Messages might not be in cache if the message is too old or the client is participating in high traffic guilds."""
-        if message_before.author != self._client.user:
-            #This handles edited whitelist requests!
-            if message_before in self.failed_whitelist and message_before.channel.id == self.Whitelist_Channel:
-                context = await self._client.get_context(message_before)
-                await self.on_message_whitelist(message_after,context)
-
-            self.logger.dev(f'Edited Message Event for {self.name}')
-            return message_before,message_after
-            
-    @commands.Cog.listener('on_message')
-    async def on_message(self, message:discord.Message):
-        
-        #This is purely for testing!
-        if message.content.startswith('test_emoji') and message.author.id == 144462063920611328: #This is my Discord ID(k8_thekat)
-            if self.DBConfig.Whitelist_emoji_pending != None:
-                emoji = self._client.get_emoji(int(self.DBConfig.GetSetting('Whitelist_Emoji_Pending')))
-                await message.add_reaction(emoji)
-                emoji = self._client.get_emoji(int(self.DBConfig.GetSetting('Whitelist_Emoji_Done')))
-                await message.add_reaction(emoji)
-       
-        if self.Whitelist_Channel is not None and message.author != self._client.user:
-            if message.channel.id == self.Whitelist_Channel:  # This is AMP Specific; for handling whitelist requests to any server.
-                self.logger.dev(f'On Message Event for {self.name}')
-                context = await self._client.get_context(message)
-                await self.on_message_whitelist(message, context)
-     
+    # Discord Listener Events -------------------------------------------------------------------------------------------------------------
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self, member:discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
         self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
         
-        #for index in range(0, len(self._client.Whitelist_wait_list)):
         for key, value in self._client.Whitelist_wait_list.items():
             if member.id == value['context'].message.author.id:
                 self._client.Whitelist_wait_list.pop(key)
@@ -254,14 +223,14 @@ class Whitelist(commands.Cog):
         for reply in replies:
             await context.send(f'{reply}', ephemeral= True, delete_after= self._client.Message_Timeout)
  
-    # @db_bot_whitelist.command(name='channel')
-    # @utils.role_check()
-    # async def db_bot_whitelist_channel_set(self, context:commands.Context, channel:discord.abc.GuildChannel):
-    #     """Sets the Whitelist Channel for the Bot to monitor"""
-    #     self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
+    @db_bot_whitelist.command(name='request_channel')
+    @utils.role_check()
+    async def db_bot_whitelist_request_channel_set(self, context:commands.Context, channel:discord.abc.GuildChannel):
+        """Sets the Whitelist Request Channel for the Bot to send Whitelist Requests for Staff Approval"""
+        self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
     
-    #     self.DBConfig.SetSetting('Whitelist_channel',channel.id)
-    #     await context.send(f'Set Bot Channel Whitelist to **{channel.name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+        self.DBConfig.SetSetting('Whitelist_request_channel',channel.id)
+        await context.send(f'Set Bot Whitelist Request Channel to **{channel.name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @db_bot_whitelist.command(name='wait_time')
     @utils.role_check()
@@ -286,50 +255,6 @@ class Whitelist(commands.Cog):
             self.DBConfig.SetSetting('Auto_Whitelist', flag.value)
             return await context.send('Waaah? Looks like I am not handling Whitelisting anymore.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @db_bot_whitelist.command(name='pending_emoji')
-    @utils.role_check()
-    async def db_bot_whitelist_pending_emjoi_set(self, context:commands.Context):
-        """This sets the Whitelist pending emoji, you MUST ONLY use your Servers Emojis'"""
-        self.logger.command(f'{context.author.name} used Bot Whitelist Pending Emoji...')
-      
-        message = await context.send('Please react to this message with the emoji you want for pending Whitelist requests!\n Only use Emojis from this Discord Server!', delete_after= self._client.Message_Timeout)
-        
-        def check(reaction:discord.Reaction, user:discord.Member):
-            if self._client.get_emoji(reaction.emoji.id) != None:
-                if user == context.author:
-                    self.DBConfig.SetSetting('Whitelist_emoji_pending', reaction.emoji.id)
-                    return True
-            else:
-                raise Exception('Emoji not found!')
-        try:
-            reaction, user = await self._client.wait_for('reaction_add', check= check)
-            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}')
-        except Exception as e:
-            self.logger.error(f'Error: {e}')
-            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!')    
-
-    @db_bot_whitelist.command(name='done_emoji')
-    @utils.role_check()
-    async def db_bot_whitelist_done_emjoi_set(self, context:commands.Context):
-        """This sets the Whitelist completed emoji, you MUST ONLY use your Servers Emojis'"""
-        self.logger.command(f'{context.author.name} used Bot Whitelist Done Emoji...')
-
-        message = await context.send('Please react to this message with the emoji you want for completed Whitelist requests!\n Only use Emojis from this Discord Server!', delete_after= self._client.Message_Timeout)
-
-        def check(reaction:discord.Reaction, user:discord.Member):
-            if self._client.get_emoji(reaction.emoji.id) != None:
-                if user == context.author:
-                    self.DBConfig.SetSetting('Whitelist_emoji_done', reaction.emoji.id)
-                    return True
-            else:
-                raise Exception('Emoji not found!')
-        try:
-            reaction, user = await self._client.wait_for('reaction_add', check=check)
-            await message.edit(content = f'Woohoo! Set your **Whitelist Pending Emoji** to {reaction}')
-        except Exception as e:
-            self.logger.error(f'Error: {e}')
-            await message.edit(content= 'Failed to set the Whitelist done emoji, it must be apart of this Discord Server!')      
-
     @db_bot_whitelist.command(name= 'request')
     @app_commands.autocomplete(server = utils.autocomplete_servers)
     async def db_bot_whitelist_request(self, context:commands.Context, server, ign:str= None):
@@ -340,6 +265,10 @@ class Whitelist(commands.Cog):
         if amp_server:
             #if this succeeds, then we can check if the user is whitelisted since we have updated the DB
             message = await context.send('Handling your request, please wait...', ephemeral= True)# delete_after= self._client.Message_Timeout)
+            for key, value in self._client.Whitelist_wait_list.items():
+                if value['context'].author.id == context.author.id and value['ampserver'].InstanceID == amp_server.InstanceID:
+                    await context.send(f'Hey, I already have a whitelist request pending from you on {amp_server.InstanceName if amp_server.FriendlyName == None else amp_server.FriendlyName}')
+
             await self.whitelist_request_handler(context = context, message= message, discord_user= context.author, server= amp_server, ign= ign)
     
     async def whitelist_request_handler(self, context:commands.Context, message: discord.Message, discord_user:discord.Member, server:AMP.AMPInstance, ign:str= None):
@@ -393,10 +322,9 @@ class Whitelist(commands.Cog):
             self.logger.dev(f'MessageID: {context.message.id}')
             
             #Send view to specific channel
-            #!TODO! Turn this into a DB setting and make the proper slash command.
-            test_channel = self._client.get_channel(909650262464004136) #Whitelist Channel #This will point to a Staff Channel/Similar
-            test_message = await test_channel.send(content= f'Whitelist Request from `{message.author.name}` for Server: **{server.FriendlyName}**...')
-            await test_message.edit(view= self.uiBot.Whitelist_view(client= self._client, discord_message= test_message, whitelist_message= context.message, amp_server= server, context= context, timeout= wait_time_value))
+            whitelist_request_channel = self._client.get_channel(self.DBConfig.GetSetting('Whitelist_Request_Channel')) #Whitelist Channel #This will point to a Staff Channel/Similar
+            whitelist_request_message = await whitelist_request_channel.send(content= f'Whitelist Request from `{message.author.name}` for Server: **{server.FriendlyName}**...')
+            await whitelist_request_message.edit(view= self.uiBot.Whitelist_view(client= self._client, discord_message= whitelist_request_message, whitelist_message= context.message, amp_server= server, context= context, timeout= wait_time_value))
 
             #Checks if the Tasks is running, if not starts the task.
             if not self.whitelist_waitlist_handler.is_running():
@@ -406,7 +334,7 @@ class Whitelist(commands.Cog):
         server.addWhitelist(db_user = db_user)
         if len(self.DB.GetAllWhitelistReplies()) != 0:
             whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
-            await message.edit(content= self.uBot.whitelist_reply_handler(whitelist_reply))
+            await message.edit(content= self.uBot.whitelist_reply_handler(whitelist_reply, context, server))
         else:
             await message.edit(content= f'You are all set! We whitelisted `{context.author.name}` on **{db_server.FriendlyName}**')
         if db_server.Discord_Role != None:
@@ -451,7 +379,7 @@ class Whitelist(commands.Cog):
                     if len(self.DB.GetAllWhitelistReplies()) != 0:
                         whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
                         #
-                        await cur_message_context.channel.send(content= f'{cur_message_context.author.mention} \n{self.uBot.whitelist_reply_handler(whitelist_reply)}', reference= cur_message, delete_after= self._client.Message_Timeout)
+                        await cur_message_context.channel.send(content= f'{cur_message_context.author.mention} \n{self.uBot.whitelist_reply_handler(whitelist_reply, cur_message_context, cur_amp_server)}', reference= cur_message, delete_after= self._client.Message_Timeout)
                     else:
                         await cur_message_context.channel.send(content= f'You are all set! We whitelisted {cur_message_context.author.mention} on **{db_server.FriendlyName}** ', reference= cur_message, delete_after= self._client.Message_Timeout)
 

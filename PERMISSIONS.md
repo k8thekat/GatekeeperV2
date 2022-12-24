@@ -89,6 +89,7 @@ ___
 ___
 ```py
 "staff", #This is used specifically to change how Instances Show up with Autocomplete.
+
 "bot.*",
 "bot.permissions",
 "bot.settings",
@@ -117,7 +118,7 @@ ___
 "bot.banner.type",
 
 "whitelist.*",
-"whitelist.buttons",
+"whitelist.buttons", #This is for Whitelist Request Buttons.
 "whitelist.auto",
 "whitelist.channel",
 "whitelist.wait_time",

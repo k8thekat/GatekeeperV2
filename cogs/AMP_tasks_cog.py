@@ -30,7 +30,7 @@ import discord
 from discord.ext import commands,tasks
 
 class AMP_Tasks(commands.Cog):
-    def __init__ (self, client:commands.Bot):
+    def __init__ (self, client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()

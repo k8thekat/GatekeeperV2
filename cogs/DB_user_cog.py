@@ -22,10 +22,10 @@
 import os
 import logging
 from typing import Union
+import sqlite3
 
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 import utils
 import utils_embeds
@@ -33,7 +33,7 @@ import AMP
 import DB
 
 class DB_User(commands.Cog):
-    def __init__ (self,client:commands.Bot):
+    def __init__ (self,client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
 
@@ -51,8 +51,6 @@ class DB_User(commands.Cog):
         self.dBot = utils.discordBot(client)
 
         self.eBot = utils_embeds.botEmbeds(client)
-
-        self.uBot.sub_command_handler('bot', self.db_bot_donator)
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.replace("db","DB")}')
 
@@ -111,104 +109,72 @@ class DB_User(commands.Cog):
         
     @user.command(name='add')
     @utils.role_check()
-    
-    async def user_add(self, context:commands.Context, discord_name: Union[discord.Member, discord.User], mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
+    async def user_add(self, context:commands.Context, user: Union[discord.Member, discord.User], mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
         """Adds the Discord Users information to the Database"""
         self.logger.command(f'{context.author.name} used User Add Function')
        
         if mc_ign != None:
             mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
 
-        discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
-        if discord_user != None:
-            self.DB.AddUser(DiscordID=discord_user.id, DiscordName=discord_user.name, MC_IngameName=mc_ign, MC_UUID=mc_uuid, SteamID=steamid)
-            await context.send(f'Added **{discord_user.name}** to the Database!', ephemeral= True, delete_after= self._client.Message_Timeout)
+        db_user = self.DB.GetUser(user.id)
+        if db_user == None:
+            self.DB.AddUser(DiscordID= user.id, DiscordName=user.name, MC_IngameName=mc_ign, MC_UUID=mc_uuid, SteamID=steamid)
+            await context.send(f'Added **{user.name}** to the Database!', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send(f'Unable to find the {discord_name} you provided, please try again.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send(f'**{user.name}** already exists in the Database.', ephemeral= True, delete_after= self._client.Message_Timeout)
+      
             
     @user.command(name='update')
     @utils.role_check()
-    async def user_update(self, context:commands.Context, discord_name: Union[discord.Member, discord.User], mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
+    async def user_update(self, context:commands.Context, user: Union[discord.Member, discord.User], mc_ign:str=None, steamid:str=None):
         """Updated a Discord Users information in the Database"""
         self.logger.command(f'{context.author.name} used User Update Function')
        
-        discord_user = None
         db_user = None
+        updated_vals = []
         params = locals()
-        db_params = {'discord_name': 'DiscordName',
+        db_params = {'user': 'DiscordName',
                     'mc_ign' : 'MC_IngameName',
                     'mc_uuid' : 'MC_UUID',
                     'steamid' : 'SteamID'
                     }
 
+        params['mc_uuid'] = None
         if mc_ign != None:
-            mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
-            params['mc_uuid'] = mc_uuid
-
-        discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
-        if discord_user != None:
-            db_user = self.DB.GetUser(discord_user.id)
-            if db_user != None:
-                for entry in db_params:
-                    if params[entry] != None:
-                        setattr(db_user,db_params[entry],params[entry])
-
-                await context.send(f'We Updated the Database User: **{db_user.DiscordName}**', ephemeral= True, delete_after= self._client.Message_Timeout)
+            if mc_ign.lower() == 'none':
+                params['mc_uuid'] = 'none'
             else:
-                await context.send('Looks like this user is not in the Database, please use `/user add`', ephemeral= True, delete_after= self._client.Message_Timeout)
+                mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
+                params['mc_uuid'] = mc_uuid
+
+        db_user = self.DB.GetUser(user.id)
+        if db_user != None:
+            for entry in db_params:
+                if params[entry] == None:
+                    continue
+                elif entry == 'user':
+                    continue
+                elif params[entry].lower() == 'none':
+                    setattr(db_user, db_params[entry], None)
+                    updated_vals.append(f'> **{db_params[entry]}** - `None`')
+                    
+                else:
+                    try:
+                        setattr(db_user, db_params[entry], params[entry])
+                        updated_vals.append(f'> **{db_params[entry]}** -> {params[entry]}')
+
+                    except sqlite3.IntegrityError as e:
+                        if "UNIQUE constraint failed" in e.args:
+                            self.logger.error(f'SQLITE Exception {e}')
+                            await context.send(f'The **{db_params[entry]}** must be Unique for {db_user.DiscordName}', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+            updated_vals = "\n".join(updated_vals)
+            await context.send(f'We Updated the Database User: **{db_user.DiscordName}**\n{updated_vals}', ephemeral= True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send(f'Hey I was unable to find the User: {discord_name}', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @user.command(name='uuid')
-    @utils.role_check()
-    async def user_uuid(self, context:commands.Context, mc_ign:str):
-        """This will convert a Minecraft IGN to a UUID if it exists"""
-        self.logger.command(f'{context.author.name} used User UUID Function')
-
-        await context.send(f'The UUID of **{mc_ign}** is: `{self.uBot.name_to_uuid_MC(mc_ign)}`', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @user.command(name='steamid')
-    @utils.role_check()
-    async def user_steamid(self, context:commands.Context, steam_name:str):
-        """This will convert a Steam Display Name to a SteamID if it exists"""
-        self.logger.command(f'{context.author.name} used User SteamID Function')
-
-        await context.send(f'The SteamID of **{steam_name}** is: `{self.uBot.name_to_steam_id(steam_name)}`', ephemeral=True)
-
-    @user.command(name='test')
-    @utils.role_check()
-    async def user_test(self, context:commands.Context, user:str):
-        """DB User Test Function"""
-        self.logger.command(f'{context.author.name} used User Test Function')
-        cur_user = self.uBot.userparse(context = context,guild_id=context.guild.id,parameter = user)
-        DB_user = self.DB.GetUser(cur_user.id)
-        print('DB User Role', DB_user.Role)
-        await context.send(cur_user, ephemeral=True, delete_after= self._client.Message_Timeout)
-
-    @commands.hybrid_command(name='donator')
-    @utils.role_check()
-    async def db_bot_donator(self, context:commands.Context, role:discord.Role):
-        """Sets the Donator Role for Donator Only AMP Server access."""
-        self.logger.command(f'{context.author.name} used Bot Donator Role...')
-        self.DBConfig = self.DB.GetConfig()
-        self.DBConfig.SetSetting('Donator_role_id', role.id)
-        await context.send(f'You are all set! Donator Role is now set to {role.name}', ephemeral= True, delete_after= self._client.Message_Timeout)
+            await context.send('Looks like this user is not in the Database, please use `/user add`', ephemeral= True, delete_after= self._client.Message_Timeout)
+  
 
     
-
-    #!TODO! Allow DMs to update a Users information
-    # @commands.command()
-    # @commands.dm_only()
-    # async def com(self, ctx):
-    #     await ctx.send("You used the command. Say something.")
-    #     def check(m):
-    #         return True
-    #     try:
-    #         msg = await self.bot.wait_for('message', check = check, timeout = 10.0) # waits for 10 seconds 
-    #     except asyncio.TimeoutError:
-    #         await ctx.send("You took too long...")
-    #     else:
-    #         await ctx.send(f"You said `{msg.content}`")
 
 async def setup(client):
     await client.add_cog(DB_User(client))
