@@ -1,23 +1,18 @@
 '''
    Copyright (C) 2021-2022 Katelynn Cadwallader.
-
    This file is part of Gatekeeper, the AMP Minecraft Discord Bot.
-
    Gatekeeper is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3, or (at your option)
    any later version.
-
    Gatekeeper is distributed in the hope that it will be useful, but WITHOUT
    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
    License for more details.
-
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
    02110-1301, USA. 
-
 '''
 import AMP as AMP
 import discord
@@ -25,11 +20,11 @@ from DB import DBUser
 
 DisplayImageSources = ['Template']
 class AMPTemplate(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Index = 0,Handler=None):
+    def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
         self.perms = []
         self.APIModule = 'Template'
         
-        super().__init__(instanceID,serverdata,Index,Handler=Handler)
+        super().__init__(instanceID, serverdata, Handler= Handler, TargetName= TargetName)
         self.Console = AMPTemplateConsole(AMPInstance = self)
 
         if self.Avatar_url == None:
@@ -58,11 +53,6 @@ class AMPTemplate(AMP.AMPInstance):
         """Any Special formatting for Messages to be sent to the Servers Chat"""
         return message
 
-    def get_IGN_Avatar(self, db_user:DBUser=None, user:str=None):
-        """Handles converting discord information into something unique for the server if needed."""
-        #Anything like formatting or replacing a users display name to be attached to the Chat_message().
-        return False
-
     def whitelist_intake(self, discord_user:discord.Member, user_name:str):
         """Customized Setup for handling Whitelist requests depending on the server Type. AMP has a built in Generic handler. 
         Override this method for more customization."""
@@ -78,35 +68,3 @@ class AMPTemplate(AMP.AMPInstance):
 class AMPTemplateConsole(AMP.AMPConsole):
     def __init__(self, AMPInstance = AMPTemplate):
         super().__init__(AMPInstance)
-
-    def console_events(self, message):
-        """This will handle all player join/leave/disconnects and other achievements. THIS SHOULD ALWAYS RETURN FALSE!
-        ALL events go to `self.console_event_messages` """
-        #Any specific events that need to be caught, like achievements, player deaths.
-        #Anything that is deemed an "event" worth monitoring and displaying to a different discord channel.
-        #Example:
-        # if message['Contents'].endswith('has joined the game'):
-        #     self.console_event_message_lock.acquire()
-        #     self.console_event_messages.append(message['Contents'])
-        #     self.console_event_message_lock.release()
-        #     return False
-        return False
-    
-    def console_filter(self, message):
-        """Controls what will be sent to the Discord Console Channel via AMP Console."""
-        #You can remove specific console messages that get output to the Discord Console Channel.
-        #Return TRUE if you want to PREVENT the message from being displayed. 
-        #Usually you return True by default and use this as a whitelist.
-        #Example:
-        #This list will be used to capture output that I want. These are best for partial finds.
-        # message_finder_list = ['Unkown command.', 'players online:','Staff','?','Help', 'left the game', 'joined the game', 'lost connection:']
-        # for entry in message_finder_list:
-        #     if message['Contents'].find(entry) != -1:
-        #         return False
-
-        if not self.AMPInstance.Console_Filtered:
-            return False
-        return True
-
-
-    

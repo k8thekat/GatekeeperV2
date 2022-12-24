@@ -20,24 +20,22 @@
 
 '''
 import os
-import asyncio
 import logging
 import pathlib
 import importlib.util
 
 #prebuilt packages
-from discord.ext import commands
 import discord
 
 #custom scripts
 import AMP
 
-loop = asyncio.new_event_loop()
+#loop = asyncio.new_event_loop()
 loaded = []
 
 class Handler():
     """This is the Basic Module Loader for AMP to Discord Integration/Interactions"""
-    def __init__(self, client:commands.Bot):
+    def __init__(self, client:discord.Client):
         self._client = client
 
         self._cwd = pathlib.Path.cwd()
@@ -57,7 +55,7 @@ class Handler():
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
         #Just to make it easier; always load the Generic Module as a base.
         await self._client.load_extension('modules.Generic.generic')
-        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **modules.Generic.generic**')
+        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **Generic**')
         loaded.append('Generic')
 
         try:

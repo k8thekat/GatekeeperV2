@@ -22,16 +22,17 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+
 import os
 import logging
+from typing import Union
 
 import utils
 import AMP as AMP
 import DB as DB
 
-
 class Permissions(commands.Cog):
-    def __init__ (self,client:commands.Bot):
+    def __init__ (self,client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger() #Point all print/logging statments here!
@@ -57,22 +58,16 @@ class Permissions(commands.Cog):
     @commands.hybrid_command(name='role')
     @utils.role_check()
     @app_commands.autocomplete(role= autocomplete_permission_roles)
-    @app_commands.autocomplete(discord_name = utils.autocomplete_discord_users)
-    async def user_role(self, context:commands.Context, discord_name:str, role:str):
+    async def user_role(self, context:commands.Context, user:Union[discord.User, discord.Member], role: str):
         """Set a users Permission Role for commands."""
         self.logger.command(f'{context.author.name} used User Role Function')
 
-        discord_user = self.uBot.userparse(discord_name,context,context.guild.id)
-        if discord_user == None:
-            await context.send(f'We failed to find the User: {discord_name}, please make sure they are apart of the server..', ephemeral=True)
-            return
-
-        db_user = self.DB.GetUser(discord_user.id)
+        db_user = self.DB.GetUser(user.id)
         if db_user != None:
             db_user.Role = role
-            await context.send(f"We set the User: **{discord_name}** permission's role to `{role}`.", ephemeral=True)
+            await context.send(f"We set the User: **{user.name}** permission's role to `{role}`.", ephemeral=True, delete_after= self._client.Message_Timeout)
         else:
-            await context.send(f'We failed to find the User: {discord_name}, please make sure they are in the DB.', ephemeral=True)
+            await context.send(f'We failed to find the User: {user.name}, please make sure they are in the DB.', ephemeral=True, delete_after= self._client.Message_Timeout)
 
 async def setup(client):
     await client.add_cog(Permissions(client))

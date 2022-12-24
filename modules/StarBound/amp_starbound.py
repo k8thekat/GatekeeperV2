@@ -24,11 +24,11 @@ import pathlib
 
 DisplayImageSources = ['steam:211820']
 class AMPStarbound(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {}, Handler=None):
+    def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
         self.perms = []
         self.APIModule = 'Starbound'
         
-        super().__init__(instanceID,serverdata, Handler=Handler)
+        super().__init__(instanceID,serverdata, Handler=Handler, TargetName=TargetName)
         self.Console = AMPStarboundConsole(AMPInstance = self)
 
         self.default_background_banner_path = 'resources/banners/Starbound_banner.jpg'

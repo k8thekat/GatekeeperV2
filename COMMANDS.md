@@ -119,9 +119,9 @@ ___
     - **TIP**: You can use the `display name` in place of any `server` paramater for commands.
 - `/server settings description (server, description)` - Sets the description of the AMP Dedicated server in the Database.
     - **ATTENTION**: This is only used and displayed when commands such as `/server status` and `/server list`.
-- `/server settings IP (server, IP)` - Sets the IP of the AMP Dedicated server in the Database.
+- `/server settings Host (server, Host)` - Sets the Host of the AMP Dedicated server in the Database.
     - **ATTENTION**: This is only used and displayed when commands such as `/server status` and `/server list`.
-    - **TIP**: `IP` is what you want your players to use to connect to the server!
+    - **TIP**: `Host` is what you want your players to use to connect to the server!
 - `/server settings role (server, role)` - Sets the role of the AMP Dedicated Server in the Database.
     - **ATTENTION**: This is the Discord Role the bot will give the User when requesting whitelist on said AMP Dedicated Server.
     - **TIP**: `role` can be a Discord Role ID or Discord Role Name.

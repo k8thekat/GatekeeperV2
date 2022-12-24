@@ -88,6 +88,8 @@ ___
 - This list may be missing permissions. You have been warned, check your logger for permission nodes.
 ___
 ```py
+"staff", #This is used specifically to change how Instances Show up with Autocomplete.
+
 "bot.*",
 "bot.permissions",
 "bot.settings",
@@ -104,6 +106,7 @@ ___
 "bot.utils.restart",
 "bot.utils.status",
 "bot.utils.sync",
+"bot.utils.message_timeout",
 
 "bot.cog.*",
 "bot.cog.load",
@@ -115,11 +118,12 @@ ___
 "bot.banner.type",
 
 "whitelist.*",
+"whitelist.buttons", #This is for Whitelist Request Buttons.
 "whitelist.auto",
 "whitelist.channel",
-"whitelist.waittime",
-"whitelist.pendingemoji",
-"whitelist.doneemoji",
+"whitelist.wait_time",
+"whitelist.pending_emoji",
+"whitelist.done_emoji",
 "whitelist.reply.*",
 "whitelist.reply.add",
 "whitelist.reply.remove",
@@ -172,14 +176,20 @@ ___
 "server.whitelist.*",
 "server.whitelist.true",
 "server.whitelist.false",
+"server.whitelist.disabled",
 "server.whitelist.add",
 "server.whitelist.remove",
 
-"server.nickname.*",
-"server.nickname.add",
-"server.nickname.remove",
-"server.nickname.list",
-
 "server.banner.settings",
-"server.banner.background"
+"server.banner.background",
+
+"server.regex.add",
+"server.regex.delete",
+"server.regex.list",
+
+"bot.regex_pattern.add",
+"bot.regex_pattern.delete",
+"bot.regex_pattern.update",
+"bot.regex_pattern.list"
+
 ```

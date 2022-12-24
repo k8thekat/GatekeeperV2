@@ -28,11 +28,10 @@ import pathlib
 
 DisplayImageSources = ['steam:427520']
 class AMPFactorio(AMP.AMPInstance):
-    def __init__(self, instanceID = 0, serverdata = {},Handler=None):
-        self.perms = []
+    def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
         self.APIModule = 'Factorio'
         
-        super().__init__(instanceID,serverdata, Handler=Handler)
+        super().__init__(instanceID,serverdata, Handler=Handler, TargetName=TargetName)
         self.Console = AMPFactorioConsole(AMPInstance = self)
 
         self.default_background_banner_path = 'resources/banners/Factorio_Banner.jpg'
@@ -40,7 +39,7 @@ class AMPFactorio(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/factorio_avatar.png?raw=true'
             
-    def setup_AMPpermissions(self):
+    def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions for Factorio Modules"""
         self.logger.warning(f'Setting up {self.FriendlyName} Factorio Module permissions...')
         for perm in self.perms:
@@ -48,10 +47,9 @@ class AMPFactorio(AMP.AMPInstance):
             if perm.startswith('-'):
                 enabled = False
                 perm = perm[1:]
-            #print(self.AMP_BotRoleID)
-            self.setAMPRolePermissions(self.AMP_BotRoleID,perm,enabled)
-            self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
-        return True
+     
+            if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
+                self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
 
     def Chat_Message(self, message:str, author:str=None, prefix:str=None):
         #See https://wiki.factorio.com/Rich_text

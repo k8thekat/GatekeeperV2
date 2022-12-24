@@ -9,27 +9,11 @@ test*
 todo.txt
 hybrid*
 discordBot.db
-/dev/scrap
-/dev/**-REDO
-/dev/bot_test
-/dev/cog_template
-/dev/console*
-/dev/chat*
-/dev/endReset*
-/dev/gitUpdate.py
-/dev/timehandler
-/dev/bot_test.py
-
+/dev
 .vscode/launch.json
 discordBot copy.db
-dev/Patreon development.txt
-discordBot copy.db
-dev/guildhandler.py
 discordBot v1.5.db
 .vscode/settings.json
-.gitignore
 discordBot-old.db
-utils.py
-discordBot-CB.db
-tokens-CB.py
+tokens_dev.py
 changelog
