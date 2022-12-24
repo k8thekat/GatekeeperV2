@@ -10,12 +10,10 @@ todo.txt
 hybrid*
 discordBot.db
 /dev
-
 .vscode/launch.json
 discordBot copy.db
 discordBot v1.5.db
 .vscode/settings.json
 discordBot-old.db
-tokens-Ice.py
-discordBot-CB.db
 tokens_dev.py
+changelog
