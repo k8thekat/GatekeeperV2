@@ -1053,7 +1053,7 @@ class AMPHandler():
         self.getAMPInstances(amp= self.AMP)
 
         #This removes Super Admins from the bot user! Controlled through parser args!
-        if self.args.super or not self.args.dev:
+        if not self.args.super and not self.args.dev:
             self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID, self.AMP.super_AdminID, False) 
             self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
     
