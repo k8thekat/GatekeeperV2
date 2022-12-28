@@ -35,10 +35,9 @@ import utils_embeds
 import utils_ui
 import AMP
 import DB
-import tokens
 from typing import Union
 
-Version = 'beta-4.4.4'
+Version = 'beta-4.4.5'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -77,6 +76,7 @@ class Gatekeeper(commands.Bot):
         self.Handler = loader.Handler(self)
         await self.Handler.module_auto_loader()
         await self.Handler.cog_auto_loader()
+        
 
         #This Creates the Bot_perms Object and validates the File. Also Adds the Command.
         if self.DBConfig.GetSetting('Permissions') == 'Custom':
@@ -194,20 +194,27 @@ async def bot_utils(context:commands.Context):
         await context.send('Invalid command passed...', ephemeral=True, delete_after= client.Message_Timeout)
 
 @bot_utils.command(name='clear')
-@app_commands.choices(all= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
+@app_commands.choices(all=[Choice(name='True', value=1), Choice(name='False', value=0)])
 @app_commands.describe(all='Default\'s to True, removes ALL commands from selected Channel regardless of who sent them.')
 @utils.role_check()
-async def bot_utils_clear(context:commands.Context, channel: discord.abc.GuildChannel, amount: app_commands.Range[int, 0, 100]= 25, all:Choice[int]= 1):
-    """Cleans up Messages sent by the Bot. Limit 100"""
-    client.logger.command(f'{context.author.name} used Bot Utils Clear...')
-
+async def clear(context: commands.Context, channel: discord.abc.GuildChannel = None, amount: app_commands.Range[int, 0, 100] = 50, all: Choice[int] = 1):
+    """Cleans up Messages sent by the Kuma. Limit 100"""
+    client.logger.info(f'{context.author.name} used {context.command.name}...')
+    client.context = context
     await context.defer()
-    if all.value == 1:
-        messages = await channel.purge(limit= amount, bulk= False)
-    else:
-        messages = await channel.purge(limit= amount, check= client.self_check, bulk= False)
 
-    return await channel.send(f'Cleaned up **{len(messages)} message(s)**. Wow, look at all this space!', delete_after= client.Message_Timeout)
+    if channel == None:
+        channel = context.channel
+
+    if type(all) == Choice:
+        all = all.value
+
+    if all == 1:
+        messages = await channel.purge(limit=amount, bulk=False)
+    else:
+        messages = await channel.purge(limit=amount, check= client.self_check, bulk=False)
+
+    return await channel.send(f'Cleaned up **{len(messages)} {"messages" if len(messages) > 1 else "message"}**. Wow, look at all this space!', delete_after=client.message_timeout)
 
 @bot_utils.command(name='roleid')
 @utils.role_check()
@@ -391,7 +398,7 @@ async def bot_cog_reload(context:commands.Context):
     await client.Handler.cog_auto_loader(reload= True)
     await context.send(f'**SUCCESS** Reloading All Extensions ', ephemeral= True, delete_after= client.Message_Timeout) 
 
-def client_run():
+def client_run(tokens):
     client.logger.info('Gatekeeper v2 Intializing...')
     client.logger.info(f'Discord Version: {discord.__version__}  // Gatekeeper v2 Version: {client.Bot_Version} // Python Version {sys.version}')
     client.run(tokens.token, reconnect = True, log_handler= None)

@@ -288,8 +288,11 @@ class AMP_Tasks(commands.Cog):
                                 self.logger.dev('Using Discord Server Information')
                                 name, avatar = discord_user.name, discord_user.avatar
 
-                    if db_author == None:
+                    #!TODO! Test these changes.
+                    if db_author == None and AMPServer_Chat.get_IGN_Avatar(user= author):
                         self.logger.dev('Using Message Information')
+                        name, avatar = AMPServer_Chat.get_IGN_Avatar(user= author)
+                    else:
                         name, avatar = author, AMPServer_Chat.Avatar_url
 
                     if author_prefix != None:

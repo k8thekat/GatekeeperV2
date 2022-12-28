@@ -1,3 +1,24 @@
+__**Update 4.4.5**__
+- Fixed issue with `/bot utils clear` failing if you do not provide an `amount` parameter.
+    - Added `Default channel` if not provided to the channel the command was run in and `type` check the `all` parameter
+- Updated `Permissions.md` with all new Permission Nodes.
+- Updated `AMP_server_cog.py`
+    - Added `Error handler` for `_embed_generator()` when the Bot User is missing Discord Permissions.
+    - Added `Error handler` for `_banner_generator()` when the Bot User is missing Discord Permissions.
+    - Fixed issue with `amp_server_display` not respecting the `Hidden` attr of an AMP Server.
+- Updated `whitelist_cog.py`
+    - Fixed issue with `/server whitelist add` and `/server whitelist remove`. Thanks @Dann
+        - Added `Whitelist check` back to both methods.
+            - Currently there is an issue with the AMP API; unable to resolve at this time. See https://github.com/CubeCoders/AMP/issues/806
+    - Fixed issue with `/whitelist request` using the wrong autocomplete list for servers. Thanks @Dann
+- Updated `AMP.py` / `amp_minecraft.py`
+    - Changed parameters for `AMP` object `check_whitelist`, `addWhitelist` and `removeWhitelist`
+        - Fixed issue with `logger.dev()` statement.
+- Updated `AMP_tasks_cog.py`
+    - Changed logic for when a In-Game message comes through to use the users Avatar first instead of using the Servers avatar Icon.
+- Updated `start.py`
+    - Added someo development args for handling tokens.
+
 __**Update 4.4.4**__
 - Fixed issue with `async_rolecheck()` failing if you had the `Moderator` role set by the Bot but nothing higher.
 - Removed un-used imports

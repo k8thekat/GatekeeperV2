@@ -26,6 +26,7 @@ import pip
 import threading
 from threading import current_thread
 import time
+import pathlib
 
 class Setup:
     def __init__(self):
@@ -75,9 +76,15 @@ class Setup:
         if self.args.discord:
             while(AMP.AMP_setup == False):
                 time.sleep(.5)
+
+            if self.args.dev and pathlib.Path('tokens_dev.py').exists():
+                import tokens_dev as tokens
+
+            else:
+                import tokens
                 
             import discordBot
-            discordBot.client_run()
+            discordBot.client_run(tokens)
       
     def python_ver_check(self):
         if not sys.version_info.major >= 3 and not sys.version_info.minor >= 10:

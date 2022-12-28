@@ -148,8 +148,9 @@ class Whitelist(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server)
         if amp_server:
-            whitelist = amp_server.addWhitelist(name)
+            whitelist = amp_server.check_Whitelist(in_gamename= name)
             if whitelist:
+                amp_server.addWhitelist(in_gamename= name)
                 await context.send(f'**{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**: Whitelisted `{name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
             if whitelist == False:
                 await context.send(f'I was unable to find the UUID of that **{name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
@@ -165,12 +166,13 @@ class Whitelist(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server)
         if amp_server:
-            whitelist = amp_server.removeWhitelist(name= name)
+            whitelist = amp_server.check_Whitelist(in_gamename= name)
             if whitelist:
                 await context.send(f'Oops, it appears this user is not whitelisted! **{name}** is not here~', ephemeral= True, delete_after= self._client.Message_Timeout)
             if whitelist == False:
                 await context.send(f'I was unable to find the UUID of that **{name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
             if whitelist == None:
+                amp_server.removeWhitelist(in_gamename= name)
                 await context.send(f'**{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**: Removed `{name}` from the Whitelist', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     #All DBConfig Whitelist Specific function settings --------------------------------------------------------------
@@ -256,7 +258,7 @@ class Whitelist(commands.Cog):
             return await context.send('Waaah? Looks like I am not handling Whitelisting anymore.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @db_bot_whitelist.command(name= 'request')
-    @app_commands.autocomplete(server = utils.autocomplete_servers)
+    @app_commands.autocomplete(server = utils.autocomplete_servers_public)
     async def db_bot_whitelist_request(self, context:commands.Context, server, ign:str= None):
         """Allows a user to request  Whitelist for a Specific Server."""
         self.logger.command(f'{context.author.name} used Bot Whitelist Request...')

@@ -143,6 +143,11 @@ async def autocomplete_servers(interaction:discord.Interaction, current:str) -> 
             return [app_commands.Choice(name=f"{value} | ID: {key}", value= key)for key, value in choice_list.items()][:25]
         else:
             return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items()][:25]
+        
+async def autocomplete_servers_public(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+        """Autocomplete for AMP Instance Names"""
+        choice_list = __AMP_Handler.get_AMP_instance_names()
+        return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items()][:25]
 
 class discordBot():
     def __init__(self, client:discord.Client):
