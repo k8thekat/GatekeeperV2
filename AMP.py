@@ -974,7 +974,7 @@ class AMPInstance():
         return True
 
     #These are GENERIC Methods below this point ---------------------------------------------------------------------------
-    def addWhitelist(self, db_user):
+    def addWhitelist(self, db_user, in_gamename: str= None):
         """Base Function for AMP.addWhitelist"""
         #Use the DB_User object and get the required IGN depending on the server type.
         return False
@@ -983,7 +983,7 @@ class AMPInstance():
         """Base Function for AMP.getWhitelist"""
         return False
 
-    def removeWhitelist(self, name:str):
+    def removeWhitelist(self, db_user, in_gamename: str= None):
         """Base Function for AMP.removeWhitelist"""
         return False
   
@@ -995,8 +995,8 @@ class AMPInstance():
         """Base Function for AMP.name_History"""
         return user
 
-    def check_Whitelist(self, db_user, in_gamename:str= None):
-        self.logger.dev(f'Checking if {db_user.name} is whitelisted on {self.FriendlyName}...')
+    def check_Whitelist(self, db_user=None, in_gamename:str= None):
+        self.logger.dev(f'Checking if {in_gamename if db_user == None else db_user.DiscordName} is whitelisted on {self.FriendlyName}...')
         """Returns `None` if the ign is whitelisted \n
         Returns `False` if no UUID exists \n
         Returns `True` if not in Whitelisted"""

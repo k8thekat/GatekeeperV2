@@ -115,8 +115,8 @@ class AMP_Server(commands.Cog):
         for curpos in range(0, len(message_list)):
             try:
                 await message_list[curpos].edit(embeds=embed_list[curpos*10:(curpos+1)*10], attachments= [])
-            except discord.errors.NotFound:
-                self.logger.error(f'Embed Banner Messages were deleted, removing {discord_channel.name}and stopping the loop.')
+            except discord.errors.Forbidden:
+                self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
             self.server_display_update.stop()
@@ -138,10 +138,10 @@ class AMP_Server(commands.Cog):
         for curpos in range(0, len(message_list)):
             try:
                 await message_list[curpos].edit(attachments= banner_image_list[curpos*10:(curpos+1)*10], embed= None)
-            except discord.errors.NotFound:
-                self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
-                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
+            except discord.errors.Forbidden:
+                self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
             await asyncio.sleep(5)
 
     @tasks.loop(minutes=1)
@@ -162,7 +162,13 @@ class AMP_Server(commands.Cog):
                 discord_guild = self._client.get_guild(banner['GuildID'])
                 discord_channel = discord_guild.get_channel(banner['ChannelID'])
                 discord_message = discord_channel.get_partial_message(banner['MessageID'])
-                message_list.append(discord_message)
+            
+            #!TODO! Needs to be Tested.
+            if discord_message == None:
+                self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+
+            message_list.append(discord_message)
 
             if self.DBConfig.GetSetting('Banner_Type') == 1:
                 await self._banner_generator(message_list, discord_guild, discord_channel)
@@ -233,9 +239,10 @@ class AMP_Server(commands.Cog):
             banner_image_list = []
             for server in self.AMPInstances:
                 server = self.AMPInstances[server]
-                db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-                banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
-                banner_image_list.append(banner_file)
+                if server.Hidden != 1:
+                    db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+                    banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
+                    banner_image_list.append(banner_file)
 
             self.Server_Info_Bannerss = []
             for curpos in range(0, len(banner_image_list), 10):

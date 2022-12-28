@@ -88,108 +88,110 @@ ___
 - This list may be missing permissions. You have been warned, check your logger for permission nodes.
 ___
 ```py
-"staff", #This is used specifically to change how Instances Show up with Autocomplete.
+whitelist.buttons #For Approve, Deny Buttons
 
-"bot.*",
-"bot.permissions",
-"bot.settings",
-"bot.donator",
-"bot.moderator",
+staff #Changes layout of Server Autocomplete to show IDs
 
-"bot.utils.*",
-"bot.utils.roleid",
-"bot.utils.channelid",
-"bot.utils.userid",
-"bot.utils.ping",
-"bot.utils.disconnect",
-"bot.utils.clear",
-"bot.utils.restart",
-"bot.utils.status",
-"bot.utils.sync",
-"bot.utils.message_timeout",
+bot.*
+bot.settings
+bot.donator
+bot.moderator
+bot.permissions
 
-"bot.cog.*",
-"bot.cog.load",
-"bot.cog.unload",
-"bot.cog.reload",
+bot.utils.*
+bot.utils.message_timeout
+bot.utils.roleid
+bot.utils.ping
+bot.utils.channelid
+bot.utils.uuid
+bot.utils.userid
+bot.utils.status
+bot.utils.sync
+bot.utils.clear
+bot.utils.restart
+bot.utils.disconnect
 
-"bot.banner.*",
-"bot.banner.auto_update",
-"bot.banner.type",
+bot.regex_pattern.*
+bot.regex_pattern.update
+bot.regex_pattern.add
+bot.regex_pattern.list
+bot.regex_pattern.delete
 
-"whitelist.*",
-"whitelist.buttons", #This is for Whitelist Request Buttons.
-"whitelist.auto",
-"whitelist.channel",
-"whitelist.wait_time",
-"whitelist.pending_emoji",
-"whitelist.done_emoji",
-"whitelist.reply.*",
-"whitelist.reply.add",
-"whitelist.reply.remove",
-"whitelist.reply.list",
+bot.banner_settings.*
+bot.banner_settings.type
+bot.banner_settings.auto_update
 
-"dbserver.*",
-"dbserver.cleanup",
-"dbserver.swap",
+bot.cog.*
+bot.cog.reload
+bot.cog.load
+bot.cog.unload
 
-"user.*",
-"user.info",
-"user.add",
-"user.update",
-"user.uuid",
-"user.role",
-"user.steamid",
+server.*
+server.broadcast
+server.restart
+server.update
+server.start
+server.stop
+server.users
+server.status
+server.backup
+server.kill
+server.display
+server.msg
 
-"server.*",
-"server.display",
-"server.start",
-"server.stop",
-"server.restart",
-"server.kill",
-"server.msg",
-"server.backup",
-"server.status",
-"server.users",
-"server.broadcast",
+server.regex.*
+server.regex.add
+server.regex.list
+server.regex.delete
 
-"server.settings.*",
-"server.settings.info",
-"server.settings.displayname",
-"server.settings.description",
-"server.settings.ip",
-"server.settings.role",
-"server.settings.prefix",
-"server.settings.avatar",
-"server.settings.donator",
-"server.settings.hidden",
+server.console.*
+server.console.filter
+server.console.channel
 
-"server.console.*",
-"server.console.channel",
-"server.console.filter",
-"server.console.interact",
+server.settings.*
+server.settings.role
+server.settings.host
+server.settings.avatar
+server.settings.prefix
+server.settings.donator
+server.settings.info
+server.settings.hidden
+server.settings.displayname
 
-"server.chat.channel",
+server.whitelist.*
+server.whitelist.add
+server.whitelist.true
+server.whitelist.false
+server.whitelist.remove
+server.whitelist.disabled
 
-"server.event.channel",
+server.chat.*
+server.chat.channel
 
-"server.whitelist.*",
-"server.whitelist.true",
-"server.whitelist.false",
-"server.whitelist.disabled",
-"server.whitelist.add",
-"server.whitelist.remove",
+server.event.*
+server.event.channel
 
-"server.banner.settings",
-"server.banner.background",
+whitelist.*
+whitelist.reply
+whitelist.reply.list
+whitelist.reply.add
+whitelist.reply.remove
+whitelist.request
+whitelist.disabled
+whitelist.false
+whitelist.auto
+whitelist.wait_time
+whitelist.add
+whitelist.request_channel
+whitelist.true
+whitelist.remove
 
-"server.regex.add",
-"server.regex.delete",
-"server.regex.list",
+dbserver.*
+dbserver.cleanup
+dbserver.change_instance_id
 
-"bot.regex_pattern.add",
-"bot.regex_pattern.delete",
-"bot.regex_pattern.update",
-"bot.regex_pattern.list"
-
+user.*
+user.update
+user.info
+user.add
 ```

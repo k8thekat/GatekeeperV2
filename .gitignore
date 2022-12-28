@@ -17,3 +17,4 @@ discordBot v1.5.db
 discordBot-old.db
 tokens_dev.py
 changelog
+cogs/dev_cog.py
