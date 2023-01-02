@@ -279,7 +279,7 @@ class Whitelist(commands.Cog):
 
         if not self.DBConfig.GetSetting('Auto_Whitelist'):
             self.logger.error('Hey a Whitelist request came in, but Auto-Whitelisting is currently disabled!')
-            return await message.edit(content= f'Hey {discord_user.name}, we are unable to handle your request at this time, please contact a Staff Member.')
+            return await message.edit(content= f'Hey {discord_user.mention} we are unable to handle your request at this time. {self._client.user.name} Auto-Whitelist is disabled.')
 
         server_name = f"{server.FriendlyName if server.FriendlyName != None else server.InstanceName}"
         db_user = self.DB.GetUser(discord_user.id)
@@ -325,7 +325,7 @@ class Whitelist(commands.Cog):
             
             #Send view to specific channel
             whitelist_request_channel = self._client.get_channel(self.DBConfig.GetSetting('Whitelist_Request_Channel')) #Whitelist Channel #This will point to a Staff Channel/Similar
-            whitelist_request_message = await whitelist_request_channel.send(content= f'Whitelist Request from `{message.author.name}` for Server: **{server.FriendlyName}**...')
+            whitelist_request_message = await whitelist_request_channel.send(content= f'Whitelist Request from `{context.message.author.name}` for Server: **{server.FriendlyName}**...')
             await whitelist_request_message.edit(view= self.uiBot.Whitelist_view(client= self._client, discord_message= whitelist_request_message, whitelist_message= context.message, amp_server= server, context= context, timeout= wait_time_value))
 
             #Checks if the Tasks is running, if not starts the task.

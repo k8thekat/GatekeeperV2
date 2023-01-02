@@ -214,7 +214,7 @@ async def clear(context: commands.Context, channel: discord.abc.GuildChannel = N
     else:
         messages = await channel.purge(limit=amount, check= client.self_check, bulk=False)
 
-    return await channel.send(f'Cleaned up **{len(messages)} {"messages" if len(messages) > 1 else "message"}**. Wow, look at all this space!', delete_after=client.message_timeout)
+    return await channel.send(f'Cleaned up **{len(messages)} {"messages" if len(messages) > 1 else "message"}**. Wow, look at all this space!', delete_after= client.Message_Timeout)
 
 @bot_utils.command(name='roleid')
 @utils.role_check()

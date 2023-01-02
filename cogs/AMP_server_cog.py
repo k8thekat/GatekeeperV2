@@ -115,8 +115,13 @@ class AMP_Server(commands.Cog):
         for curpos in range(0, len(message_list)):
             try:
                 await message_list[curpos].edit(embeds=embed_list[curpos*10:(curpos+1)*10], attachments= [])
+
             except discord.errors.Forbidden:
                 self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+            
+            except discord.errors.NotFound:
+                self.logger.error(f'{self._client.user.name} is unable to find the messages in {discord_channel.name}, removing Banner Messages from DB.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
             self.server_display_update.stop()
@@ -141,6 +146,10 @@ class AMP_Server(commands.Cog):
 
             except discord.errors.Forbidden:
                 self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+            
+            except discord.errors.NotFound:
+                self.logger.error(f'{self._client.user.name} is unable to find the messages in {discord_channel.name}, removing Banner Messages from DB.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
             await asyncio.sleep(5)
 

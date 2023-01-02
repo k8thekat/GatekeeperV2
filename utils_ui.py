@@ -331,7 +331,7 @@ class Accept_Whitelist_Button(Button):
             self._view.logger.info(f'We Accepted a Whitelist Request by {self._view._whitelist_message.author.name}')
             await self._discord_message.edit(content= f'**{interaction.user.name}** -> Approved __{self._view._whitelist_message.author.name}__ Whitelist Request', view= None)
             await self._view._whitelist_handler()
-            #self._amp_server.addWhitelist(self._client.Whitelist_wait_list[self._view._whitelist_message.id]['dbuser'])
+            self._amp_server.addWhitelist(self._client.Whitelist_wait_list[self._view._whitelist_message.id]['dbuser'])
             self._client.Whitelist_wait_list.pop(self._view._whitelist_message.id)
             self.disabled = True
 

@@ -81,7 +81,7 @@ class AMPMinecraft(AMP.AMPInstance):
     def addWhitelist(self, db_user: DBUser= None, in_gamename: str= None):
         """Adds a User to the Whitelist File *Supports IGN*"""
         self.Login()
-        self.ConsoleMessage(f'whitelist add {in_gamename if db_user == None else db_user.DiscordName}')
+        self.ConsoleMessage(f'whitelist add {in_gamename if db_user == None else db_user.MC_IngameName}')
 
     def getWhitelist(self):
         """Returns a List of Dictionary Entries of all Whitelisted Users `{'name': 'IGN', 'uuid': '781a2971-c14b-42c2-8742-d1e2b029d00a'}`"""
@@ -93,7 +93,7 @@ class AMPMinecraft(AMP.AMPInstance):
     def removeWhitelist(self, db_user: DBUser= None, in_gamename: str= None):
         """Removes a User from the Whitelist File *Supports IGN*"""
         self.Login()
-        self.ConsoleMessage(f'whitelist remove {in_gamename if db_user == None else db_user.DiscordName}')
+        self.ConsoleMessage(f'whitelist remove {in_gamename if db_user == None else db_user.MC_IngameName}')
         
     def check_Whitelist(self, db_user: DBUser= None, in_gamename: str= None):
         self.logger.dev(f'Checking if {in_gamename if db_user == None else db_user.DiscordName} is whitelisted on {self.FriendlyName}...')
@@ -106,24 +106,28 @@ class AMPMinecraft(AMP.AMPInstance):
             if uuid == None:
                 return False
             
-        #No IGN or UUID and they didnt provide one. Return False
-        elif db_user.MC_IngameName == None and in_gamename == None:
-            return False
-        
-        elif db_user.MC_IngameName == None and in_gamename != None:
-            uuid = self.name_Conversion(in_gamename)
-            if uuid == None:
+        if db_user != None:
+            if db_user.MC_UUID == None:
+                uuid = self.name_Conversion(db_user.MC_IngameName)
+                if uuid == None:
+                    return False
+                
+                db_user.MC_UUID = uuid
+
+            if db_user.MC_IngameName == None and in_gamename == None:
                 return False
             
-            db_user.MC_IngameName = in_gamename
-            db_user.MC_UUID = uuid
-        
-        if db_user != None and db_user.MC_UUID == None:
-            uuid = self.name_Conversion(db_user.MC_IngameName)
-            if uuid == None:
-                return False
+            if db_user.MC_IngameName == None and in_gamename != None:
+                uuid = self.name_Conversion(in_gamename)
+                if uuid == None:
+                    return False
+                
+                db_user.MC_IngameName = in_gamename
+                db_user.MC_UUID = uuid
             
-            db_user.MC_UUID = uuid
+        
+            else:
+                uuid = db_user.MC_UUID
 
         self.Login()
         server_whitelist = self.getWhitelist()
