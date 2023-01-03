@@ -83,13 +83,6 @@ class AMPMinecraft(AMP.AMPInstance):
         self.Login()
         self.ConsoleMessage(f'whitelist add {in_gamename if db_user == None else db_user.MC_IngameName}')
 
-    def getWhitelist(self):
-        """Returns a List of Dictionary Entries of all Whitelisted Users `{'name': 'IGN', 'uuid': '781a2971-c14b-42c2-8742-d1e2b029d00a'}`"""
-        self.Login()
-        parameters = {}
-        result = self.CallAPI(f'{self.APIModule}/GetWhitelist',parameters)
-        return result['result']
-
     def removeWhitelist(self, db_user: DBUser= None, in_gamename: str= None):
         """Removes a User from the Whitelist File *Supports IGN*"""
         self.Login()
@@ -107,6 +100,18 @@ class AMPMinecraft(AMP.AMPInstance):
                 return False
             
         if db_user != None:
+            if db_user.MC_IngameName == None:
+                if in_gamename != None:
+                    uuid = self.name_Conversion(in_gamename)
+                    if uuid == None:
+                        return False
+                
+                    db_user.MC_IngameName = in_gamename
+                    db_user.MC_UUID = uuid
+
+                else:
+                    return False
+
             if db_user.MC_UUID == None:
                 uuid = self.name_Conversion(db_user.MC_IngameName)
                 if uuid == None:
@@ -114,18 +119,6 @@ class AMPMinecraft(AMP.AMPInstance):
                 
                 db_user.MC_UUID = uuid
 
-            if db_user.MC_IngameName == None and in_gamename == None:
-                return False
-            
-            if db_user.MC_IngameName == None and in_gamename != None:
-                uuid = self.name_Conversion(in_gamename)
-                if uuid == None:
-                    return False
-                
-                db_user.MC_IngameName = in_gamename
-                db_user.MC_UUID = uuid
-            
-        
             else:
                 uuid = db_user.MC_UUID
 
