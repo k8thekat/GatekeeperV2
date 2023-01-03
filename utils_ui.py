@@ -33,7 +33,7 @@ class ServerButton(Button):
 
     async def callback(self, interaction):
         """This is called when a button is interacted with."""
-        if not await utils.async_rolecheck(interaction.user, self.permission_node):
+        if not await utils.async_rolecheck(interaction, self.permission_node):
             return
         self._interaction = interaction
         self.label = self.callback_label

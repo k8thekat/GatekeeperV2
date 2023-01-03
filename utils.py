@@ -46,7 +46,7 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
     DBConfig = DBHandler.DBConfig
     _mod_role = DBConfig.GetSetting('Moderator_role_id') 
     logger = logging.getLogger(__name__)
-    logger.dev(f'Permission Context command node {str(context.command).replace(" ",".")}')
+    logger.dev(f'Permission Context command node {perm_node if perm_node != None else str(context.command).replace(" ",".")}')
    
     author = context
     if type(context) != discord.Member:
