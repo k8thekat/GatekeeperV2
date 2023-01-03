@@ -27,6 +27,7 @@ import requests.sessions
 import pyotp # 2Factor Authentication Python Module
 import json
 import time
+import base64
 
 import sys
 import pathlib
@@ -981,7 +982,13 @@ class AMPInstance():
 
     def getWhitelist(self):
         """Base Function for AMP.getWhitelist"""
-        return False
+        file_directory = self.getDirectoryListing('')
+        for entry in file_directory['result']:
+            if entry['Filename'] == 'whitelist.json':
+                whitelist = self.getFileChunk("whitelist.json",0,33554432)
+                whitelist_data = base64.b64decode(whitelist["result"]["Base64Data"])
+                whitelist_json = json.loads(whitelist_data.decode("utf-8"))
+                return whitelist_json
 
     def removeWhitelist(self, db_user, in_gamename: str= None):
         """Base Function for AMP.removeWhitelist"""
@@ -1289,7 +1296,7 @@ class AMPConsole:
                     last_entry_time = entry_time
                     continue
                 
-                self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} | DisplayImageSource: {self.AMPInstance.DisplayImageSource} | Console Channel: {self.AMPInstance.Discord_Console_Channel} \n Console Entry: {entry}')
+                self.logger.dev(f'Name: {self.AMPInstance.FriendlyName} | DisplayImageSource: {self.AMPInstance.DisplayImageSource} | Console Channel: {self.AMPInstance.Discord_Console_Channel}\n Console Entry: {entry}')
                 #This will add the Servers Discord_Chat_Prefix to the beginning of any of the messages.
                 #Its done down here to prevent breaking of any exisiting filtering.
                 if self.DB_Server.Discord_Chat_Prefix != None:
