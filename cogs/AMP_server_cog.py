@@ -78,8 +78,6 @@ class AMP_Server(commands.Cog):
                 self.logger.warning('Someone deleted the Display Banners, removing them from the Database and stopping the Loop..')
                 self.DB.DelServerDisplayBanner(discord_guild, discord_channel)
 
-                if self.server_display_update.is_running():
-                    self.server_display_update.stop()
 
     async def autocomplete_regex(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Regex Pattern Names"""
@@ -124,7 +122,6 @@ class AMP_Server(commands.Cog):
                 self.logger.error(f'{self._client.user.name} is unable to find the messages in {discord_channel.name}, removing Banner Messages from DB.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
-            self.server_display_update.stop()
             await asyncio.sleep(5)
 
     async def _banner_generator(self, message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
@@ -163,7 +160,6 @@ class AMP_Server(commands.Cog):
             server_banners = self.DB.GetServerDisplayBanner()
             if len(server_banners) == 0:
                 self.logger.error('No Server Displays Messages to Update')
-                self.server_display_update.stop()
                 return
 
             message_list = []
