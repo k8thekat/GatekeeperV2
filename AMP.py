@@ -183,7 +183,7 @@ class AMPInstance():
                     self.DB_Server = self.DB.AddServer(InstanceID= self.InstanceID, InstanceName= self.InstanceName, FriendlyName= self.FriendlyName)
                 except Exception as e:
                     self.logger.error(f'We failed to add the {self.InstanceName} {self.InstanceID} to the DB. Error: {e}')
-                    raise 'Failed to Add to Database'
+                    raise Exception('Failed to Add to Database')
 
                 self.logger.info(f'*SUCCESS** Added {self.InstanceName} to the Database.')
             else:
