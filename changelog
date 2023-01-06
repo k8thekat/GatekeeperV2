@@ -1,6 +1,7 @@
 __**Update 4.4.6**__
 - changes to `AMP_server_cog.py`
     - Added except `discord.errors.NotFound`
+    - Removed all `server_display_update.stop()` calls to prevent the task loop from exiting. Thanks @HunterAP and @FeminalPanda#7879
 - changes to `discordbot.py`
     - Fixed typo in `/bot utils clear` reply message.
 - changes to `banner_creator.py`
@@ -10,6 +11,15 @@ __**Update 4.4.6**__
     - Fixed typo in `whitelist request message` that displays the Buttons/View
 - changes to `amp_minecraft.py`
     - Changed logic in `check_whitelist()` method for validation.
+- changes to `AMP.py`
+    - Added `type hinting` to `getWhitelist()` method
+    - Added `Exception` raising when a Server fails to be added to the `DB`
+- changes to `utils_embeds.py`
+    - Changed layout of `server_status_embed()` embed fields for clarity on Instances vs Applications. Thanks @FeminalPanda#7879
+    - Changed layout of `server_display_embed()` embed fields for clarity on Instances vs Applications. Thanks @FeminalPanda#7879
+- changes to `DB.py`
+    - Updated to `2.7`
+    - Fixed typo in `server_regex_pattern_table_creation` SQL statement; this is addressed when updating DB to `v2.7`
 
 __**Update 4.4.5**__
 - Fixed issue with `/bot utils clear` failing if you do not provide an `amount` parameter.
