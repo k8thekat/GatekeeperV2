@@ -980,7 +980,7 @@ class AMPInstance():
         #Use the DB_User object and get the required IGN depending on the server type.
         return False
 
-    def getWhitelist(self):
+    def getWhitelist(self) -> dict[str, str]:
         """Base Function for AMP.getWhitelist"""
         file_directory = self.getDirectoryListing('')
         for entry in file_directory['result']:
