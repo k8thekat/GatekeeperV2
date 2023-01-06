@@ -279,7 +279,10 @@ class Whitelist(commands.Cog):
 
         if not self.DBConfig.GetSetting('Auto_Whitelist'):
             self.logger.error('Hey a Whitelist request came in, but Auto-Whitelisting is currently disabled!')
-            return await message.edit(content= f'Hey {discord_user.name}, we are unable to handle your request at this time, please contact a Staff Member.')
+            return await message.edit(content= f'Hey {discord_user.mention} we are unable to handle your request at this time. `Auto-Whitelist` is disabled.')
+
+        if self._client.get_channel(self.DBConfig.GetSetting('Whitelist_Request_Channel')) == None:
+            return await message.edit(content= f'It appears the `Staff` of **{context.guild.name}** has yet to setup a `Whitelist Request Channel`, please inform a Staff member.')
 
         server_name = f"{server.FriendlyName if server.FriendlyName != None else server.InstanceName}"
         db_user = self.DB.GetUser(discord_user.id)
@@ -290,7 +293,7 @@ class Whitelist(commands.Cog):
 
         exists = server.check_Whitelist(db_user, ign)
         if exists == False:
-            return await message.edit(content= f'Well I am unable to handle your request, {f"the IGN: {ign} appears to be invalid." if ign != None else "I need your IGN to handle your request."}')
+            return await message.edit(content= f'Well I am unable to handle your request, {f"the **IGN**: `{ign}` appears to be invalid." if ign != None else "I need your **IGN** to handle your request."}')
     
         elif exists == None:
                 return await message.edit(content= f'Hey it looks like you are already whitelisted on **{server_name}**~ Have fun.')
@@ -325,9 +328,9 @@ class Whitelist(commands.Cog):
             
             #Send view to specific channel
             whitelist_request_channel = self._client.get_channel(self.DBConfig.GetSetting('Whitelist_Request_Channel')) #Whitelist Channel #This will point to a Staff Channel/Similar
-            whitelist_request_message = await whitelist_request_channel.send(content= f'Whitelist Request from `{message.author.name}` for Server: **{server.FriendlyName}**...')
+            whitelist_request_message = await whitelist_request_channel.send(content= f'Whitelist Request from `{context.message.author.name}` for Server: **{server.FriendlyName}**...')
             await whitelist_request_message.edit(view= self.uiBot.Whitelist_view(client= self._client, discord_message= whitelist_request_message, whitelist_message= context.message, amp_server= server, context= context, timeout= wait_time_value))
-
+            
             #Checks if the Tasks is running, if not starts the task.
             if not self.whitelist_waitlist_handler.is_running():
                 self.whitelist_waitlist_handler.start()

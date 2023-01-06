@@ -33,7 +33,7 @@ class ServerButton(Button):
 
     async def callback(self, interaction):
         """This is called when a button is interacted with."""
-        if not await utils.async_rolecheck(interaction.user, self.permission_node):
+        if not await utils.async_rolecheck(interaction, self.permission_node):
             return
         self._interaction = interaction
         self.label = self.callback_label
@@ -331,7 +331,7 @@ class Accept_Whitelist_Button(Button):
             self._view.logger.info(f'We Accepted a Whitelist Request by {self._view._whitelist_message.author.name}')
             await self._discord_message.edit(content= f'**{interaction.user.name}** -> Approved __{self._view._whitelist_message.author.name}__ Whitelist Request', view= None)
             await self._view._whitelist_handler()
-            #self._amp_server.addWhitelist(self._client.Whitelist_wait_list[self._view._whitelist_message.id]['dbuser'])
+            self._amp_server.addWhitelist(self._client.Whitelist_wait_list[self._view._whitelist_message.id]['dbuser'])
             self._client.Whitelist_wait_list.pop(self._view._whitelist_message.id)
             self.disabled = True
 

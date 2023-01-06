@@ -105,14 +105,17 @@ class botEmbeds():
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
             if db_server != None and db_server.Hidden != 1:
 
-                status = 'Offline'
+                instance_status = 'Offline'
+                dedicated_status = 'Offline'
                 Users = None
                 User_list = None
-                if server.Running and server._ADScheck() and server.ADS_Running:
-                    Users = server.getUsersOnline()
-                    if len(server.getUserList()) > 1:
-                        User_list = (', ').join(server.getUserList())
-                    status = 'Online'
+                if server.Running:
+                    instance_status = 'Online'
+                    if server._ADScheck() and server.ADS_Running:
+                        dedicated_status = 'Online'
+                        Users = server.getUsersOnline()
+                        if len(server.getUserList()) > 1:
+                            User_list = (', ').join(server.getUserList())
 
                 embed_color = 0x71368a
                 if guild != None and db_server.Discord_Role != None:
@@ -124,14 +127,14 @@ class botEmbeds():
                 if server.DisplayName != None:
                     server_name = db_server.DisplayName
 
-                embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= db_server.Description, color=embed_color)
+                embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= server.Description, color=embed_color)
                 #This is for future custom avatar support.
                 avatar = await self.uBot.validate_avatar(db_server)
                 if avatar != None:
                     embed.set_thumbnail(url=avatar)
-
+                embed.add_field(name='**Instance Status**:' , value= instance_status, inline= False)
+                embed.add_field(name='**Dedicated Server Status**:', value= dedicated_status, inline= False)
                 embed.add_field(name='**Host**:', value= str(db_server.Host), inline=True)
-                embed.add_field(name='**Status**:' , value= status, inline= True)
                 embed.add_field(name='**Donator Only**:', value= str(bool(db_server.Donator)), inline= True)
                 embed.add_field(name='**Whitelist Open**:', value= str(bool(db_server.Whitelist)), inline= True)
                 if Users != None:
@@ -147,6 +150,11 @@ class botEmbeds():
         """This is the Server Status Embed Message"""
         db_server = self.DB.GetServer(InstanceID= server.InstanceID)
         
+        if server.Running:
+            instance_status = 'Online'
+        else:
+            instance_status = 'Offline'
+
         if server.ADS_Running:
             server_status = 'Online'
         else:
@@ -162,14 +170,16 @@ class botEmbeds():
         if server.DisplayName != None:
             server_name = db_server.DisplayName
 
-        embed=discord.Embed(title= f"{server_name} - [{server.TargetName}]", description=f'Dedicated Server Status: **{server_status}**', color=embed_color)
+        embed=discord.Embed(title= f"{server_name} - [{server.TargetName}]", description=f'Instance Server Status: **{instance_status}**', color=embed_color)
         
         avatar = await self.uBot.validate_avatar(db_server)
         if avatar != None:
             embed.set_thumbnail(url=avatar)
 
+        embed.add_field(name='**Dedicated Server Status**:', value= server_status, inline= True)
+
         if db_server.Host != None:
-            embed.add_field(name=f'Server Host: ', value=db_server.Host, inline=False)
+            embed.add_field(name=f'Host: ', value=db_server.Host, inline=False)
 
         #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
         embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
@@ -181,7 +191,8 @@ class botEmbeds():
             embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
             embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=False)
             embed.add_field(name='CPU Usage', value=f'{CPU}/100%', inline=True)
-            embed.add_field(name='Uptime', value=Uptime, inline=True)
+            #!UPTIME is disabled until AMP Impliments the feature.
+            #embed.add_field(name='Uptime', value=Uptime, inline=True)
             embed.add_field(name='Players Online', value=Users_Online, inline=False)
         return embed
                 

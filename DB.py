@@ -25,6 +25,7 @@ import datetime
 import json
 import time
 import logging
+import sys
 
 from AMP import AMPInstance
 
@@ -38,7 +39,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.6
+DB_Version = 2.7
 
 class DBHandler():
     def __init__(self):
@@ -1013,7 +1014,7 @@ class DBUpdate:
 
         if 1.3 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.3')
-            self.nicknames_unique
+            #self.nicknames_unique()
             self.DBConfig.SetSetting('DB_Version', '1.3')
 
         if 1.4 > Version:
@@ -1047,9 +1048,9 @@ class DBUpdate:
         if 1.8 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.8')
             self.server_hide_column()
-            self.server_ip_constraint_update()
+            #self.server_ip_constraint_update()
             self.server_display_name_reset()
-            self.server_display_name_constraint_update()
+            #self.server_display_name_constraint_update()
             self.DBConfig.SetSetting('DB_Version', '1.8')
 
         if 1.9 > Version:
@@ -1068,11 +1069,6 @@ class DBUpdate:
             self.banner_name_conversion()
             self.DBConfig.SetSetting('DB_Version', '2.2')
 
-        if 2.3 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 2.3')
-            self.banner_name_conversion()
-            self.DBConfig.SetSetting('DB_Version', '2.3')
-
         if 2.4 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 2.4')
             self.server_table_whitelist_disabled_column()
@@ -1089,11 +1085,21 @@ class DBUpdate:
 
         if 2.6 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 2.6')
-            self.server_Display_IP_rename()
             #self.user_MC_IngameName_unique_constraint()
             self.DBConfig.DeleteSetting('Whitelist_Emoji_Pending')
             self.DBConfig.DeleteSetting('Whitelist_Emoji_Done')
             self.DBConfig.SetSetting('DB_Version', '2.6')
+        
+        if 2.7 > Version:
+            """Hotfix for Failed Table creation in version 2.4"""
+            self.logger.info('**ATTENTION** Updating DB to Version 2.7')
+            self.server_add_FriendlyName_column()
+            try:
+                SQL = 'select * from ServerRegexPatterns'
+                self.DB._execute(SQL, ())
+            except:
+                self.server_regex_pattern_table_creation()
+            self.DBConfig.SetSetting('DB_Version', '2.7')
         
 
     def user_roles(self):
@@ -1102,7 +1108,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'user_roles {e}')
-            return
+            sys.exit(-1)
 
     def nicknames_unique(self):
         try:
@@ -1110,7 +1116,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'nicknames_unique {e}')
-            return
+            sys.exit(-1)
 
     def user_Donator_removal(self):
         try:
@@ -1118,7 +1124,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'user_Donator_removal {e}')
-            return
+            sys.exit(-1)
 
     def server_Discord_reaction_removal(self):
         try:
@@ -1126,7 +1132,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_Discord_reaction_removal {e}')
-            return
+            sys.exit(-1)
 
     def server_Discord_Chat_prefix(self):
         try:
@@ -1134,7 +1140,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_Discord_Chat_prefix {e}')
-            return
+            sys.exit(-1)
 
     def server_Discord_event_channel(self):
         try:
@@ -1142,7 +1148,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_Discord_event_channel {e}')
-            return
+            sys.exit(-1)
 
     def server_Avatar_url(self):
         try:
@@ -1150,15 +1156,15 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_Avatar_url {e}')
-            return
+            sys.exit(-1)
 
     def server_banner_table(self):
         try:
-            SQL = 'create table ServerBanners (ID integer primary key, Discord_Guild_ID text nocase, Discord_Channel_ID text nocase, Discord_Message_ID text)'
+            SQL = 'create table ServerEmbed (ID integer primary key, Discord_Guild_ID text nocase, Discord_Channel_ID text nocase, Discord_Message_ID text)'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_banner_table {e}')
-            return
+            sys.exit(-1)
     
     def whitelist_reply_table(self):
         try:
@@ -1166,7 +1172,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'whitelist_reply_table {e}')
-            return
+            sys.exit(-1)
     
     def server_hide_column(self):
         """1.8 Update"""
@@ -1175,15 +1181,16 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_hide_column {e}')
-            return
+            sys.exit(-1)
 
     def server_ip_constraint_update(self):
+        """SQLITE does not support dropping UNIQUE constraint"""
         try:
             SQL = 'alter table servers drop constraint IP unique'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_ip_constraint_update {e}')
-            return
+            sys.exit(-1)
 
     def server_display_name_reset(self):
         try:
@@ -1191,39 +1198,77 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_display_name_reset {e}')
-            return
+            sys.exit(-1)
 
     def server_display_name_constraint_update(self):
+        """SQLITE does not support adding UNIQUE constraint"""
         try:
             SQL = "alter table Servers add constraint DisplayName unique"
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_display_name_constraint_update {e}')
-            return
+            sys.exit(-1)
 
     def banner_table_creation(self):
         try:
-            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer not null default 0, color_header text, color_body text,color_Host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
+            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer, color_header text, color_body text, color_Host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'banner_table_creation {e}')
-            return
+            sys.exit(-1)
     
     def server_ip_name_change(self):
         try:
-            SQL = "alter table Servers rename column IP to Host"
+            # SQL = 'select IP from Servers limit 1'
+            # self.DB._execute(SQL, ())
+
+            # SQL = "alter table Servers drop column IP"
+            # self.DB._execute(SQL, ())
+
+            SQL = 'alter table Servers add column Host text'
+            self.DB._execute(SQL, ())
+            return
+        except Exception as e:
+            self.logger.error(e)
+            pass
+
+        try:
+            SQL = 'select Display_IP from Servers limit 1'
+            self.DB._execute(SQL, ())
+
+            SQL = 'alter table Servers drop column Display_IP'
+            self.DB._execute(SQL, ())
+
+            SQL = 'alter table Servers add column Host text'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_ip_name_change {e}')
-            return
+            sys.exit(-1)
         
     def banner_name_conversion(self):
         try:
+            SQL = 'select * from ServerEmbed limit 1'
+            self.DB._execute(SQL, ())
+
             SQL = 'alter table ServerEmbed rename to ServerDisplayBanners'
+            self.DB._execute(SQL, ())
+            return
+        except:
+            pass
+
+        try:
+            SQL = 'select * from ServerDisplayBanners'
+            self.DB._execute(SQL, ())
+            return
+        except:
+            pass
+
+        try:
+            SQL = 'create table ServerDisplayBanners (ID integer primary key,Discord_Guild_ID text nocase,Discord_Channel_ID text nocase, Discord_Message_ID text nocase)'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'banner_name_conversion {e}')
-            return
+            sys.exit(-1)
 
     def server_table_whitelist_disabled_column(self):
         try:
@@ -1231,15 +1276,7 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_table_whitelist_disabled_column {e}')
-            return
-
-    def server_regex_pattern_table_creation(self):
-        try:
-            SQL = 'create table ServerRegexPatterns (ServerID integeter not null, RegexPatternID integer not null, foreign key (RegexPatternID) references RegexPatterns(ID), foreign key(ServerID) references Server(ID)), CONSTRAINT server_patterns UNIQUE(ServerID, RegexPatternID)'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_regex_pattern_table_creation {e}')
-            return
+            sys.exit(-1)
 
     def regex_pattern_table_creation(self):
         try:
@@ -1247,7 +1284,15 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'regex_pattern_table_creation {e}')
-            return
+            sys.exit(-1)
+
+    def server_regex_pattern_table_creation(self):
+        try:
+            SQL = 'create table ServerRegexPatterns (ServerID integeter not null, RegexPatternID integer not null, foreign key (RegexPatternID) references RegexPatterns(ID), foreign key(ServerID) references Servers(ID) UNIQUE(ServerID, RegexPatternID))'
+            self.DB._execute(SQL, ())
+        except Exception as e:
+            self.logger.critical(f'server_regex_pattern_table_creation {e}')
+            sys.exit(-1)
 
     def server_console_filter_type(self):
         try:
@@ -1255,20 +1300,13 @@ class DBUpdate:
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_console_filter_type {e}')
-            return
+            sys.exit(-1)
         
-    def server_Display_IP_rename(self):
+    def server_add_FriendlyName_column(self):
         try:
-            SQL = 'alter table Servers rename column Display_IP to Host'
+            SQL = 'alter table Servers add column FriendlyName text'
             self.DB._execute(SQL, ())
         except Exception as e:
-            self.logger.critical(f'server_Display_IP_rename {e}')
-            return
-        
-    # def user_MC_IngameName_unique_constraint(self):
-    #     try:
-    #         SQL = 'alter table Users add constraint MC_IngameName unique'
-    #         self.DB._execute(SQL, ())
-    #     except Exception as e:
-    #         self.logger.critical(f'user_MC_IngameName_unique_constraint {e}')
-    #         return
+            self.logger.critical(f'server_add_FriendlyName_column {e}')
+            sys.exit(-1)
+  

@@ -78,8 +78,6 @@ class AMP_Server(commands.Cog):
                 self.logger.warning('Someone deleted the Display Banners, removing them from the Database and stopping the Loop..')
                 self.DB.DelServerDisplayBanner(discord_guild, discord_channel)
 
-                if self.server_display_update.is_running():
-                    self.server_display_update.stop()
 
     async def autocomplete_regex(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Regex Pattern Names"""
@@ -115,11 +113,15 @@ class AMP_Server(commands.Cog):
         for curpos in range(0, len(message_list)):
             try:
                 await message_list[curpos].edit(embeds=embed_list[curpos*10:(curpos+1)*10], attachments= [])
+
             except discord.errors.Forbidden:
                 self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+            
+            except discord.errors.NotFound:
+                self.logger.error(f'{self._client.user.name} is unable to find the messages in {discord_channel.name}, removing Banner Messages from DB.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
-            self.server_display_update.stop()
             await asyncio.sleep(5)
 
     async def _banner_generator(self, message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
@@ -142,6 +144,10 @@ class AMP_Server(commands.Cog):
             except discord.errors.Forbidden:
                 self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
                 self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+            
+            except discord.errors.NotFound:
+                self.logger.error(f'{self._client.user.name} is unable to find the messages in {discord_channel.name}, removing Banner Messages from DB.')
+                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
             await asyncio.sleep(5)
 
     @tasks.loop(minutes=1)
@@ -154,7 +160,6 @@ class AMP_Server(commands.Cog):
             server_banners = self.DB.GetServerDisplayBanner()
             if len(server_banners) == 0:
                 self.logger.error('No Server Displays Messages to Update')
-                self.server_display_update.stop()
                 return
 
             message_list = []

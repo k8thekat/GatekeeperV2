@@ -130,9 +130,10 @@ class Banner_Generator():
                 image = image.convert(mode= 'RGBA')
             return image
         except:
+            #We are reverting all changes to default values due to failure.
             self._logger.error(f'We Failed to find the Existing Image Path, resetting {self._Server.InstanceName} background path to default.')
             self._Server.background_banner_path = self._Server.default_background_banner_path
-            self._DBBanner.back
+            self._DBBanner.background_path = self._Server.default_background_banner_path 
             return self._validate_image(path= self._Server.default_background_banner_path)
 
     def _blur_background(self, blur_power:int=2):

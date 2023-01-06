@@ -1,3 +1,16 @@
+__**Update 4.4.6**__
+- changes to `AMP_server_cog.py`
+    - Added except `discord.errors.NotFound`
+- changes to `discordbot.py`
+    - Fixed typo in `/bot utils clear` reply message.
+- changes to `banner_creator.py`
+    - Fixed typo in `_validate_image()`
+- changes to `whitelist_cog.py`
+    - Changed message for reply regarding `Auto-Whitelist` being `False` when a user uses `/whitelist request` to better inform players/staff.
+    - Fixed typo in `whitelist request message` that displays the Buttons/View
+- changes to `amp_minecraft.py`
+    - Changed logic in `check_whitelist()` method for validation.
+
 __**Update 4.4.5**__
 - Fixed issue with `/bot utils clear` failing if you do not provide an `amount` parameter.
     - Added `Default channel` if not provided to the channel the command was run in and `type` check the `all` parameter
@@ -10,7 +23,6 @@ __**Update 4.4.5**__
     - Fixed issue with `/server whitelist add` and `/server whitelist remove`. Thanks @Dann
         - Added `Whitelist check` back to both methods.
             - Currently there is an issue with the AMP API; unable to resolve at this time. See https://github.com/CubeCoders/AMP/issues/806
-    - Fixed issue with `/whitelist request` using the wrong autocomplete list for servers. Thanks @Dann
 - Updated `AMP.py` / `amp_minecraft.py`
     - Changed parameters for `AMP` object `check_whitelist`, `addWhitelist` and `removeWhitelist`
         - Fixed issue with `logger.dev()` statement.
