@@ -105,14 +105,17 @@ class botEmbeds():
             db_server = self.DB.GetServer(InstanceID= server.InstanceID)
             if db_server != None and db_server.Hidden != 1:
 
-                status = 'Offline'
+                instance_status = 'Offline'
+                dedicated_status = 'Offline'
                 Users = None
                 User_list = None
-                if server.Running and server._ADScheck() and server.ADS_Running:
-                    Users = server.getUsersOnline()
-                    if len(server.getUserList()) > 1:
-                        User_list = (', ').join(server.getUserList())
-                    status = 'Online'
+                if server.Running:
+                    instance_status = 'Online'
+                    if server._ADScheck() and server.ADS_Running:
+                        dedicated_status = 'Online'
+                        Users = server.getUsersOnline()
+                        if len(server.getUserList()) > 1:
+                            User_list = (', ').join(server.getUserList())
 
                 embed_color = 0x71368a
                 if guild != None and db_server.Discord_Role != None:
@@ -129,9 +132,9 @@ class botEmbeds():
                 avatar = await self.uBot.validate_avatar(db_server)
                 if avatar != None:
                     embed.set_thumbnail(url=avatar)
-
+                embed.add_field(name='**Instance Status**:' , value= instance_status, inline= True)
+                embed.add_field(name='**Dedicated Server Status**:', value= dedicated_status, inline= True)
                 embed.add_field(name='**Host**:', value= str(db_server.Host), inline=True)
-                embed.add_field(name='**Status**:' , value= status, inline= True)
                 embed.add_field(name='**Donator Only**:', value= str(bool(db_server.Donator)), inline= True)
                 embed.add_field(name='**Whitelist Open**:', value= str(bool(db_server.Whitelist)), inline= True)
                 if Users != None:
