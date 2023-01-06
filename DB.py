@@ -1235,7 +1235,7 @@ class DBUpdate:
 
     def server_regex_pattern_table_creation(self):
         try:
-            SQL = 'create table ServerRegexPatterns (ServerID integeter not null, RegexPatternID integer not null, foreign key (RegexPatternID) references RegexPatterns(ID), foreign key(ServerID) references Server(ID)), CONSTRAINT server_patterns UNIQUE(ServerID, RegexPatternID)'
+            SQL = 'create table ServerRegexPatterns (ServerID integer not null, RegexPatternID integer not null, foreign key (RegexPatternID) references RegexPatterns(ID), foreign key(ServerID) references Server(ID)), CONSTRAINT server_patterns UNIQUE(ServerID, RegexPatternID)'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_regex_pattern_table_creation {e}')
