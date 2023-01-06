@@ -127,13 +127,13 @@ class botEmbeds():
                 if server.DisplayName != None:
                     server_name = db_server.DisplayName
 
-                embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= db_server.Description, color=embed_color)
+                embed=discord.Embed(title=f'**=======  {server_name}  =======**',description= server.Description, color=embed_color)
                 #This is for future custom avatar support.
                 avatar = await self.uBot.validate_avatar(db_server)
                 if avatar != None:
                     embed.set_thumbnail(url=avatar)
-                embed.add_field(name='**Instance Status**:' , value= instance_status, inline= True)
-                embed.add_field(name='**Dedicated Server Status**:', value= dedicated_status, inline= True)
+                embed.add_field(name='**Instance Status**:' , value= instance_status, inline= False)
+                embed.add_field(name='**Dedicated Server Status**:', value= dedicated_status, inline= False)
                 embed.add_field(name='**Host**:', value= str(db_server.Host), inline=True)
                 embed.add_field(name='**Donator Only**:', value= str(bool(db_server.Donator)), inline= True)
                 embed.add_field(name='**Whitelist Open**:', value= str(bool(db_server.Whitelist)), inline= True)
@@ -150,7 +150,6 @@ class botEmbeds():
         """This is the Server Status Embed Message"""
         db_server = self.DB.GetServer(InstanceID= server.InstanceID)
         
-
         if server.Running:
             instance_status = 'Online'
         else:
@@ -192,7 +191,8 @@ class botEmbeds():
             embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
             embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=False)
             embed.add_field(name='CPU Usage', value=f'{CPU}/100%', inline=True)
-            embed.add_field(name='Uptime', value=Uptime, inline=True)
+            #!UPTIME is disabled until AMP Impliments the feature.
+            #embed.add_field(name='Uptime', value=Uptime, inline=True)
             embed.add_field(name='Players Online', value=Users_Online, inline=False)
         return embed
                 
