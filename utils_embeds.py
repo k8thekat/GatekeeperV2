@@ -150,6 +150,12 @@ class botEmbeds():
         """This is the Server Status Embed Message"""
         db_server = self.DB.GetServer(InstanceID= server.InstanceID)
         
+
+        if server.Running:
+            instance_status = 'Online'
+        else:
+            instance_status = 'Offline'
+
         if server.ADS_Running:
             server_status = 'Online'
         else:
@@ -165,14 +171,16 @@ class botEmbeds():
         if server.DisplayName != None:
             server_name = db_server.DisplayName
 
-        embed=discord.Embed(title= f"{server_name} - [{server.TargetName}]", description=f'Dedicated Server Status: **{server_status}**', color=embed_color)
+        embed=discord.Embed(title= f"{server_name} - [{server.TargetName}]", description=f'Instance Server Status: **{instance_status}**', color=embed_color)
         
         avatar = await self.uBot.validate_avatar(db_server)
         if avatar != None:
             embed.set_thumbnail(url=avatar)
 
+        embed.add_field(name='**Dedicated Server Status**:', value= server_status, inline= True)
+
         if db_server.Host != None:
-            embed.add_field(name=f'Server Host: ', value=db_server.Host, inline=False)
+            embed.add_field(name=f'Host: ', value=db_server.Host, inline=False)
 
         #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
         embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
