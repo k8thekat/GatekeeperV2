@@ -1304,6 +1304,13 @@ class DBUpdate:
         
     def server_add_FriendlyName_column(self):
         try:
+            SQL = 'select FriendlyName from Servers'
+            self.DB._execute(SQL, ())
+            return
+        except:
+            pass
+
+        try:
             SQL = 'alter table Servers add column FriendlyName text'
             self.DB._execute(SQL, ())
         except Exception as e:
