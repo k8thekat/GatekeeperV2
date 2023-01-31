@@ -19,6 +19,7 @@
    02110-1301, USA. 
 '''
 import AMP
+import AMP_Console
 import requests
 import json
 
@@ -105,7 +106,7 @@ class AMPMinecraft(AMP.AMPInstance):
                     uuid = self.name_Conversion(in_gamename)
                     if uuid == None:
                         return False
-                
+                    
                     db_user.MC_IngameName = in_gamename
                     db_user.MC_UUID = uuid
 
@@ -188,6 +189,6 @@ class AMPMinecraft(AMP.AMPInstance):
         self.Login()
         self.ConsoleMessage(f'say <{prefix}> :{message}')
 
-class AMPMinecraftConsole(AMP.AMPConsole):
+class AMPMinecraftConsole(AMP_Console.AMPConsole):
     def __init__(self, AMPInstance = AMPMinecraft):
         super().__init__(AMPInstance)

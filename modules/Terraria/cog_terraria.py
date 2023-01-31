@@ -24,7 +24,7 @@ import os
 import logging
 
 import utils
-import AMP
+import AMP_Handler
 import DB
 
 DisplayImageSources = ['steam:105600']
@@ -34,7 +34,7 @@ class Terraria(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances
 

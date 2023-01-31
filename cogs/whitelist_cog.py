@@ -23,18 +23,24 @@ from datetime import datetime, timedelta, timezone
 import os
 import logging
 import random
+import sqlite3
+import traceback
 
 import discord
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands, tasks
 
-import AMP
+import AMP_Handler
 import DB
 
 import utils
 import utils_embeds
 import utils_ui
+
+Whitelist_settings_choices = [app_commands.Choice(name= 'True', value= True),
+                            app_commands.Choice(name= 'False', value= False)
+                            ]
 
 class Whitelist(commands.Cog):
     def __init__(self,client:discord.Client):
@@ -42,7 +48,7 @@ class Whitelist(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
        
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB #Main Database object
@@ -59,6 +65,10 @@ class Whitelist(commands.Cog):
         self._client.Whitelist_wait_list = {} #[message.id] : {'ampserver' : amp_server, 'context' : context, 'dbuser' : db_user}
 
         self.uBot.sub_command_handler('server', self.server_whitelist)
+
+        #!TODO! Need's to be validated/tested.
+        #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist)
+        #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist_disabled)
     
         self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
 
@@ -80,6 +90,7 @@ class Whitelist(commands.Cog):
         if len(parameter) > 100:
             return parameter[0:96] + '...'
         return parameter
+
 
     # Discord Listener Events -------------------------------------------------------------------------------------------------------------
     @commands.Cog.listener('on_member_remove')
@@ -273,7 +284,7 @@ class Whitelist(commands.Cog):
 
             await self.whitelist_request_handler(context = context, message= message, discord_user= context.author, server= amp_server, ign= ign)
     
-    async def whitelist_request_handler(self, context:commands.Context, message: discord.Message, discord_user:discord.Member, server:AMP.AMPInstance, ign:str= None):
+    async def whitelist_request_handler(self, context:commands.Context, message: discord.Message, discord_user:discord.Member, server:AMP_Handler.AMP.AMPInstance, ign:str= None):
         """Whitelist request handler checks for a DB User, checks for their IGN, checks if they are Whitelisted and any other required checks to whitelist a user. """
         self.logger.command(f'Whitelist Request: ign: {ign} servers: {server.FriendlyName} user: {discord_user.name}')
 
@@ -291,7 +302,18 @@ class Whitelist(commands.Cog):
             db_user = self.DB.AddUser(DiscordID= discord_user.id, DiscordName= discord_user.name)
             self.logger.info(f'Added new user to the DB: {discord_user.name}')
 
-        exists = server.check_Whitelist(db_user, ign)
+        #Its possible that the IGN already exists in the DB; this is to prevent people from requesting whitelist for other people/etc..
+        #check_whitelist can fail with a UNIQUE constraint exception from the SQLite DB.
+        try:
+            exists = server.check_Whitelist(db_user, ign)
+        except sqlite3.IntegrityError as e:
+            #We check the first entry of the tuple.
+            if "UNIQUE constraint failed" in e.args[0]:
+                duplicate_ign_db_user = self.DB.GetUser(ign)
+                return await message.edit(content= f'The IGN **{ign}** must be Unique for your Whitelist request; it appears to belong to {context.guild.get_member(duplicate_ign_db_user.DiscordID).mention}')
+            else: #Any other errors need to be presented
+                return await message.edit(content= f'We were unable to handle your request because of a SQLite Error {traceback.format_exc()}; please report this to staff.')
+            
         if exists == False:
             return await message.edit(content= f'Well I am unable to handle your request, {f"the **IGN**: `{ign}` appears to be invalid." if ign != None else "I need your **IGN** to handle your request."}')
     
@@ -343,7 +365,7 @@ class Whitelist(commands.Cog):
         else:
             await message.edit(content= f'You are all set! We whitelisted `{context.author.name}` on **{db_server.FriendlyName}**')
         if db_server.Discord_Role != None:
-            discord_role = self.uBot.roleparse(db_server.Discord_Role, context, context.guild.id)
+            discord_role = self.uBot.role_parse(db_server.Discord_Role, context, context.guild.id)
             await context.author.add_roles(discord_role, reason= 'Auto Whitelisting')
 
         self.logger.command(f'Whitelisting {context.author.name} on {server.FriendlyName}')
@@ -376,8 +398,8 @@ class Whitelist(commands.Cog):
 
                     #This handles all the Discord Role stuff.
                     if db_server != None and db_server.Discord_Role != None:
-                        discord_role = self.uBot.roleparse(db_server.Discord_Role, cur_message_context, cur_message_context.guild.id)
-                        discord_user = self.uBot.userparse(cur_message.author.id, cur_message_context, cur_message_context.guild.id)
+                        discord_role = self.uBot.role_parse(db_server.Discord_Role, cur_message_context, cur_message_context.guild.id)
+                        discord_user = self.uBot.user_parse(cur_message.author.id, cur_message_context, cur_message_context.guild.id)
                         await discord_user.add_roles(discord_role, reason= 'Auto Whitelisting')
 
                     #This is for all the Replies

@@ -35,10 +35,10 @@ from discord.ext import commands
 import asyncio
 
 import DB
-import AMP
+import AMP_Handler
 
 #GLOBAL VARS# DO NOT EDIT THESE! ONLY READ THEM
-__AMP_Handler = AMP.getAMPHandler()
+__AMP_Handler = AMP_Handler.getAMPHandler()
 __DB_Handler = DB.getDBHandler()
 
 async def async_rolecheck(context: Union[commands.Context, discord.Interaction, discord.member.Member], perm_node:str= None):
@@ -50,15 +50,19 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
    
     author = context
     if type(context) != discord.Member:
+        #This is used for `discord.ext.commands.Context` objects
         if hasattr(context, 'author'):
             top_role_id = context.author.top_role.id
             author = context.author
 
+        #This is used for `discord.Interaction` objects
         elif hasattr(context, 'user'):
             top_role_id = context.user.top_role.id
             author = context.user
-    
+
+    #!TODO! Not sure which one triggers this action.
     elif type(context) == discord.member.Member:
+        print('Triggered discord.member.Member in Role_check()')
         top_role_id = context.top_role.id
         author = context.name
     else:
@@ -96,6 +100,8 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
     
     staff_role, author_top_role = 0,0
     guild_roles = context.guild.roles
+    #Guild Roles is a heirachy tree; 
+    #So here I am comparing if the author/user's top role is greater than or equal to the `_mod_role` in terms of index values from the list.
     for i in range(0, len(guild_roles)):
         if guild_roles[i].id == top_role_id:
             author_top_role = i
@@ -146,7 +152,7 @@ async def autocomplete_servers(interaction:discord.Interaction, current:str) -> 
         
 async def autocomplete_servers_public(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for AMP Instance Names"""
-        choice_list = __AMP_Handler.get_AMP_instance_names()
+        choice_list = __AMP_Handler.get_AMP_instance_names(public= True)
         return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items()][:25]
 
 class discordBot():
@@ -236,7 +242,7 @@ class botUtils():
         self.DB = self.DBHandler.DB #Main Database object
         self.DBConfig = self.DBHandler.DBConfig
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMPServer_Avatar_urls = []
 
@@ -260,7 +266,7 @@ class botUtils():
         message = message.replace('\x06', '__')
         return message
     
-    def whitelist_reply_handler(self,message:str, context:commands.Context, server:AMP.AMPInstance=None) -> str:
+    def whitelist_reply_handler(self, message:str, context:commands.Context, server:AMP_Handler.AMP.AMPInstance=None) -> str:
         """Handles the reply message for the whitelist event\n
         Supports the following: \n
         `<user>` - Uses the Message Author's Name/IGN \n
@@ -278,7 +284,7 @@ class botUtils():
             message = message.replace('<server>',server_name)
         return message
 
-    async def validate_avatar(self, db_server:AMP.AMPInstance) -> Union[str, None]:
+    async def validate_avatar(self, db_server:AMP_Handler.AMP.AMPInstance) -> Union[str, None]:
         """This checks the DB Server objects Avatar_url and returns the proper object type. \n
         Must be either `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
         if db_server.Avatar_url == None:
@@ -287,6 +293,7 @@ class botUtils():
         if db_server.Avatar_url.startswith("https://") or db_server.Avatar_url.startswith("http://"):
             if db_server.Avatar_url not in self.AMPServer_Avatar_urls:
                 await asyncio.sleep(.5)
+                #Validating if the URL actually works/exists via response.status codes.
                 async with aiohttp.ClientSession() as session:
                     async with session.get(db_server.Avatar_url) as response:
                         if response.status == 200:
@@ -338,7 +345,7 @@ class botUtils():
         self.logger.dev(f'Found Steam ID {steam_id}')
         return steam_id
 
-    def roleparse(self, parameter:str, context:commands.Context, guild_id:int) -> Union[discord.Role, None]: 
+    def role_parse(self, parameter:str, context:commands.Context, guild_id:int) -> Union[discord.Role, None]: 
         """This is the bot utils Role Parse Function\n
         It handles finding the specificed Discord `<role>` in multiple different formats.\n
         They can contain single quotes, double quotes and underscores. (" ",' ',_)\n
@@ -375,7 +382,7 @@ class botUtils():
             #await context.reply(f'Unable to find the Discord Role: {parameter}')
             return None
 
-    def channelparse(self, parameter:Union[str, int], context:commands.Context=None, guild_id:int=None) -> Union[discord.TextChannel, None]:
+    def channel_parse(self, parameter:Union[str, int], context:commands.Context=None, guild_id:int=None) -> Union[discord.TextChannel, None]:
         """This is the bot utils Channel Parse Function\n
         It handles finding the specificed Discord `<channel>` in multiple different formats, either numeric or alphanumeric.\n
         returns `<channel>` object if True, else returns `None`
@@ -407,7 +414,7 @@ class botUtils():
                 #await context.reply(f'Unable to find the Discord Channel: {parameter}')
                 return None
     
-    def userparse(self, parameter:str, context:commands.Context=None, guild_id:int=None) -> Union[discord.Member, None]:
+    def user_parse(self, parameter:str, context:commands.Context=None, guild_id:int=None) -> Union[discord.Member, None]:
         """This is the bot utils User Parse Function\n
         It handles finding the specificed Discord `<user>` in multiple different formats, either numeric or alphanumeric.\n
         It also supports '@', '#0000' and partial display name searching for user indentification (eg. k8thekat#1357)\n
@@ -460,7 +467,7 @@ class botUtils():
                     cur_member = member
             return cur_member
             
-    def serverparse(self, instanceID= str, context:commands.Context=None, guild_id:int=None) -> Union[AMP.AMPInstance, None]:
+    def serverparse(self, instanceID= str, context:commands.Context=None, guild_id:int=None) -> Union[AMP_Handler.AMP.AMPInstance, None]:
         """This is the botUtils Server Parse function.
         **Note** Use context.guild.id \n
         Returns `AMPInstance[server] <object>`"""
@@ -480,7 +487,16 @@ class botUtils():
         self.logger.dev(f'Loading Parent Command: {parent_command}')
         parent_command.add_command(sub_command)
     
-    async def _serverCheck(self, context:commands.Context, server, online_only:bool=True) -> Union[AMP.AMPInstance,bool]:
+    def sub_group_command_handler(self, group:str, command):
+        """Gets the `Command Group` and adds the `command` to said `Group`"""
+        #!TODO! Need to see about getting "sub command" groups.
+        parent_group = self._client.get_command(group)
+        print()
+        self.logger.dev(f'Loading Command Group: {group}')
+        parent_group.add_command(command)
+
+
+    async def _serverCheck(self, context:commands.Context, server, online_only:bool=True) -> Union[AMP_Handler.AMP.AMPInstance, bool]:
         """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
         amp_server = self.serverparse(server, context, context.guild.id)
         
@@ -492,9 +508,11 @@ class botUtils():
         
         await context.send(f'Well this is awkward, it appears the **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}** is `Offline`.', ephemeral=True, delete_after= self._client.Message_Timeout)
         return False
-                    
+
+#Used to maintain a "Global" botPerms() object.               
 bPerms = None
 def get_botPerms():
+    """Returns the Global botPerms() object; otherwise creates it."""
     global bPerms
     if bPerms == None:
         bPerms = botPerms()
@@ -512,9 +530,10 @@ class botPerms():
         
         self.validate_and_load()
         self.get_roles()
-        self.logger.info('**Success** Loading Bot Permissions')
+        self.logger.info('**SUCCESS** Loading Bot Permissions')
 
     def validate_and_load(self):
+        """Validates the contents of bot_perms.json."""
         self.json_file = pathlib.Path.cwd().joinpath('bot_perms.json')
         if self.json_file.stat().st_mtime > self._last_modified:
             try:
@@ -522,6 +541,7 @@ class botPerms():
                 self._last_modified = self.json_file.stat().st_mtime
 
                 #Soft validation of the file to help with errors.
+                #Verifies each role has a numeric discord_role_id or is equal to None and the name is not empty.
                 for role in self.permissions['Roles']:
                     if len(role['name']) == 0:
                         self.logger.critical(f'You are missing a role name, please do not leave role names empty..')
@@ -530,8 +550,7 @@ class botPerms():
                     if role['discord_role_id'] == 'None':
                         continue
 
-                    #Verifies each role has a numeric discord_role_id or is equal to none.
-                    if type(role['discord_role_id']) != str:
+                    elif type(role['discord_role_id']) != str:
                         self.logger.critical(f'Your Discord Role ID for {role["name"]} does not appear to be string. Please check your bot_perms.json.')
                         sys.exit(0) 
 

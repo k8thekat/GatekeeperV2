@@ -29,7 +29,7 @@ from discord.ext import commands,tasks
 from discord import app_commands
 from discord.app_commands import Choice
 
-import AMP
+import AMP_Handler
 import DB
 import utils
 import utils_ui
@@ -42,7 +42,7 @@ class AMP_Server(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
         
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMPThreads = self.AMPHandler.AMP_Console_Threads
 
@@ -165,14 +165,20 @@ class AMP_Server(commands.Cog):
             message_list = []
             for banner in server_banners:
                 discord_guild = self._client.get_guild(banner['GuildID'])
-                discord_channel = discord_guild.get_channel(banner['ChannelID'])
-                discord_message = discord_channel.get_partial_message(banner['MessageID'])
-            
-            #!TODO! Needs to be Tested.
-            if discord_message == None:
-                self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
-                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
 
+                discord_channel = discord_guild.get_channel(banner['ChannelID'])
+                #Just in case the channel gets deleted/etc...
+                if discord_channel == None:
+                    self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
+                    self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+                    continue
+
+                discord_message = discord_channel.get_partial_message(banner['MessageID'])
+                #Just in case the message gets deleted/etc...
+                if discord_message == None:
+                    self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
+                    self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+            
             message_list.append(discord_message)
 
             if self.DBConfig.GetSetting('Banner_Type') == 1:
@@ -278,7 +284,8 @@ class AMP_Server(commands.Cog):
     async def amp_server_start(self, context:commands.Context, server):
         """Starts the AMP Instance"""
         self.logger.command(f'{context.author.name} used AMP Server Started...')
-
+        await context.defer(ephemeral= True)
+        
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
 
         if not amp_server._ADScheck():
@@ -294,6 +301,7 @@ class AMP_Server(commands.Cog):
     async def amp_server_stop(self, context:commands.Context, server):
         """Stops the AMP Instance"""
         self.logger.command(f'{context.author.name} used AMP Server Stopped...')
+        await context.defer(ephemeral= True)
 
         amp_server = await self.uBot._serverCheck(context, server)
         if amp_server:
@@ -307,6 +315,7 @@ class AMP_Server(commands.Cog):
     async def amp_server_restart(self, context:commands.Context, server):
         """Restarts the AMP Instance"""
         self.logger.command(f'{context.author.name} used AMP Server Restart...')
+        await context.defer(ephemeral= True)
 
         amp_server = await self.uBot._serverCheck(context, server)
         if amp_server:
@@ -320,6 +329,7 @@ class AMP_Server(commands.Cog):
     async def amp_server_kill(self, context:commands.Context, server):
         """Kills the AMP Instance"""
         self.logger.command(f'{context.author.name} used AMP Server Kill...')
+        await context.defer(ephemeral= True)
 
         amp_server = await self.uBot._serverCheck(context, server)
         if amp_server:
@@ -486,7 +496,7 @@ class AMP_Server(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server: 
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = flag
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = flag.value
             amp_server._setDBattr() #This will update the AMPConsole Attributes
             return await context.send(f"Set **{amp_server.InstanceName}** Donator Only to `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
@@ -515,7 +525,7 @@ class AMP_Server(commands.Cog):
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
     @app_commands.choices(filter_type= [Choice(name='Blacklist', value= 0), Choice(name='Whitelist', value= 1)])
     async def db_server_console_filter(self, context:commands.Context, server, flag:Choice[int], filter_type:Choice[int]):
-        """Sets the Console Filter"""
+        """Sets the Console Filter type to either Blacklist or Whitelist"""
         self.logger.command(f'{context.author.name} used Database Server Console Filtered True...')
 
         amp_server = await self.uBot._serverCheck(context, server, False)

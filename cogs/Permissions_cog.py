@@ -28,7 +28,7 @@ import logging
 from typing import Union
 
 import utils
-import AMP as AMP
+import AMP_Handler
 import DB as DB
 
 class Permissions(commands.Cog):

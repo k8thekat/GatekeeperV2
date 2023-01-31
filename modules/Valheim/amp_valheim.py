@@ -19,8 +19,8 @@
    02110-1301, USA. 
 
 '''
-import pathlib
-import AMP as AMP
+import AMP_Console
+import AMP
 
 DisplayImageSources = ['steam:892970']
 class AMPValheim(AMP.AMPInstance):
@@ -36,6 +36,6 @@ class AMPValheim(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/valheim_avatar.png?raw=true'
 
-class AMPValheimConsole(AMP.AMPConsole):
+class AMPValheimConsole(AMP_Console.AMPConsole):
     def __init__(self, AMPInstance = AMPValheim):
         super().__init__(AMPInstance)

@@ -23,12 +23,13 @@ import os
 import logging
 import pathlib
 import importlib.util
+import traceback
 
 #prebuilt packages
 import discord
 
 #custom scripts
-import AMP
+import AMP_Handler
 
 #loop = asyncio.new_event_loop()
 loaded = []
@@ -43,7 +44,7 @@ class Handler():
 
         self.logger = logging.getLogger()
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMP_Modules = self.AMPHandler.AMP_Modules
@@ -76,7 +77,7 @@ class Handler():
                     self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **{module_name}**')
                     
         except Exception as e:
-            self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module ** - File Not Found {e}')
+            self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module ** - File Not Found {traceback.format_exc()}')
                     
         for instance in self.AMPInstances:
             DisplayImageSource = self.AMPInstances[instance].DisplayImageSource
@@ -91,7 +92,7 @@ class Handler():
                     continue
                 
                 except Exception as e:
-                    self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module **{path.stem}** - {e}')
+                    self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module **{path.stem}** - {traceback.format_exc()}')
      
         self.logger.info(f'**All Server Modules Loaded**')
 
@@ -121,7 +122,7 @@ class Handler():
                         continue
 
                     except Exception as e:
-                        self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** Will retry shortly... - {e}')
+                        self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** Will retry shortly... - {traceback.format_exc()}')
                         failed_cog_load_list.append(cog)
 
             #!TEMP HOTFIX 4.4.2 - FAILED TO LOAD COGS with DEPENDENCIES
@@ -138,11 +139,11 @@ class Handler():
                     continue
 
                 except Exception as e:
-                    self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {e}')
+                    self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {traceback.format_exc()}')
 
                 
         except FileNotFoundError as e:
-            self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {e}')
+            self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {traceback.format_exc()}')
             
         self.logger.info(f'**All Cog Modules Loaded**')
 

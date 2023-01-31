@@ -1,20 +1,10 @@
 __pycache__
 logs
 tokens.py
-copyright.txt
-class_examples.py
-db-howto.txt
-test*
-**/test*
 todo.txt
-hybrid*
-discordBot.db
+*.db
 /dev
-.vscode/launch.json
-discordBot copy.db
-discordBot v1.5.db
-.vscode/settings.json
-discordBot-old.db
+.vscode
 tokens_dev.py
-changelog
 cogs/dev_cog.py
+cogs/testcog.py

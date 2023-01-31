@@ -135,7 +135,7 @@ ___
 - `/server settings hidden (flag)` - Hides or Shows the Servers Banners when using `/server display`
 
 ### <u>AMP Server Donator Commands</u>:
-- `/server donator (flag)` - Sets Donator Only Flag for the AMP Dedicated server to True
+- `/server settings donator (flag)` - Sets Donator Only Flag for the AMP Dedicated server to True
     - **ATTENTION**: This doesn't prevent players without the rank from connecting; only for auto whitelisting purposes.
 
 ### <u>AMP Server Console Commands</u>: 

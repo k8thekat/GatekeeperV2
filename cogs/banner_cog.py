@@ -34,7 +34,7 @@ from discord.app_commands import Choice
 import utils
 import utils_ui
 import utils_embeds
-import AMP as AMP
+import AMP_Handler
 import DB as DB
 import modules.banner_creator as BC
 
@@ -45,7 +45,7 @@ class Banner(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger() #Point all print/logging statments here!
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
@@ -72,7 +72,7 @@ class Banner(commands.Cog):
             banners.append(entry.name)
         return [app_commands.Choice(name=banner, value=banner) for banner in banners if current.lower() in banner.lower()]
 
-    async def banner_editor(self, context:commands.Context, amp_server:AMP.AMPInstance, db_server_banner=None):
+    async def banner_editor(self, context:commands.Context, amp_server:AMP_Handler.AMP.AMPInstance, db_server_banner=None):
         """Handles sending the banner."""
         db_server = self.DB.GetServer(amp_server.InstanceID)
 

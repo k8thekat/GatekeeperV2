@@ -19,6 +19,7 @@
    02110-1301, USA. 
 
 '''
+from typing import TYPE_CHECKING
 import sqlite3
 import pathlib
 import datetime
@@ -27,7 +28,8 @@ import time
 import logging
 import sys
 
-from AMP import AMPInstance
+if TYPE_CHECKING:
+    import AMP_Handler
 
 def dump_to_json(data):
     for entry in data:
@@ -71,7 +73,7 @@ class DBHandler():
         
         self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
 
-    def dbServerConsoleSetup(self,server:AMPInstance):
+    def dbServerConsoleSetup(self, server: AMP_Handler.AMP.AMPInstance):
         """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
         self.DB_Server = self.DB.GetServer(server.InstanceID)
         try:
@@ -209,7 +211,7 @@ class Database:
         self._AddConfig('Guild_ID', None)
         self._AddConfig('Moderator_role_id', None)
         self._AddConfig('Permissions', 0) #0 = Default | 1 = Custom
-        self._AddConfig('Server_Info_Display', None)
+        #self._AddConfig('Server_Info_Display', None)
         self._AddConfig('Whitelist_Request_Channel', None)
         self._AddConfig('WhiteList_Wait_Time', 5)
         self._AddConfig('Auto_Whitelist', False)
@@ -898,7 +900,7 @@ class DBConfig:
         return val
 
     # list(self._ConfigNameToID.keys())
-    def GetSettingList(self):
+    def GetSettingList(self)-> list[str]:
         settings = list(self._ConfigNameToID.keys())
         return settings
 
@@ -909,7 +911,7 @@ class DBConfig:
         else:
             setattr(self, name, value)
 
-    def GetSetting(self, name: str):
+    def GetSetting(self, name: str) -> str:
         name = name.capitalize().replace(" ", "_").replace("-", "_")
         if name not in self._ConfigNameToID:
             return None

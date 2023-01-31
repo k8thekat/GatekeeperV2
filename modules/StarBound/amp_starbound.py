@@ -19,8 +19,9 @@
    02110-1301, USA. 
 
 '''
-import AMP as AMP
-import pathlib
+import AMP
+import AMP_Console
+
 
 DisplayImageSources = ['steam:211820']
 class AMPStarbound(AMP.AMPInstance):
@@ -36,6 +37,6 @@ class AMPStarbound(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/starbound_avatar.png?raw=true'
 
-class AMPStarboundConsole(AMP.AMPConsole):
+class AMPStarboundConsole(AMP_Console.AMPConsole):
     def __init__(self, AMPInstance = AMPStarbound):
         super().__init__(AMPInstance)

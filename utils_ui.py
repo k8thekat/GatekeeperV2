@@ -10,13 +10,13 @@ from discord.ui import Button,View,Select,Modal,TextInput
 import asyncio
 
 import DB
-import AMP
+import AMP_Handler
 import modules.banner_creator as BC
 import utils
 
 class ServerButton(Button):
     """Custom Start Button for when Servers are Offline."""
-    def __init__(self, server:AMP.AMPInstance, view:discord.ui.View, function, label:str, callback_label:str, callback_disabled:bool, style=discord.ButtonStyle.green, context=None):
+    def __init__(self, server:AMP_Handler.AMP.AMPInstance, view:discord.ui.View, function, label:str, callback_label:str, callback_disabled:bool, style=discord.ButtonStyle.green, context=None):
         super().__init__(label=label, style=style, custom_id=label)
         self.logger = logging.getLogger()
         self.server = server
@@ -67,7 +67,7 @@ class KillButton(ServerButton):
         super().__init__(server=server, view=view, function=function, label='Kill', callback_label='Killed...', callback_disabled=True, style=discord.ButtonStyle.danger)
     
 class StatusView(View):
-    def __init__(self, timeout=180, context:commands.Context=None, amp_server:AMP.AMPInstance=None):
+    def __init__(self, timeout=180, context:commands.Context=None, amp_server:AMP_Handler.AMP.AMPInstance=None):
         super().__init__(timeout=timeout)
         self.server = amp_server
         self.context = context
@@ -109,7 +109,7 @@ class Edited_DB_Banner():
         return self._db_banner
     
 class Banner_Editor_View(View):
-    def __init__(self, amp_server: AMP.AMPInstance, db_banner: DB.DBBanner, banner_message: discord.Message, timeout=None):
+    def __init__(self, amp_server: AMP_Handler.AMP.AMPInstance, db_banner: DB.DBBanner, banner_message: discord.Message, timeout=None):
         self.logger = logging.getLogger()
 
         self._original_db_banner = db_banner
@@ -127,7 +127,7 @@ class Banner_Editor_View(View):
         self.add_item(Cancel_Banner_Button(banner_message= self._banner_message))
 
 class Banner_Editor_Select(Select):
-    def __init__(self, edited_db_banner: Edited_DB_Banner, view: Banner_Editor_View, amp_server: AMP.AMPInstance, banner_message: discord.Message, custom_id:str= None, min_values:int= 1, max_values:int= 1, row:int= None, disabled:bool= False, placeholder:str= None):
+    def __init__(self, edited_db_banner: Edited_DB_Banner, view: Banner_Editor_View, amp_server: AMP_Handler.AMP.AMPInstance, banner_message: discord.Message, custom_id:str= None, min_values:int= 1, max_values:int= 1, row:int= None, disabled:bool= False, placeholder:str= None):
         self.logger = logging.getLogger()
         options = []
         self._banner_view = view
@@ -147,7 +147,7 @@ class Banner_Editor_Select(Select):
             discord.SelectOption(label= "Blur Background Intensity", value= 'blur_background_amount'),
             discord.SelectOption(label= "Header Font Color", value= 'color_header'),
             discord.SelectOption(label= "Body Font Color", value= 'color_body'),
-            discord.SelectOption(label= "Host Font Color", value= 'color_Host'),
+            discord.SelectOption(label= "Host Font Color", value= 'color_host'),
             
             discord.SelectOption(label= "Server Online Font Color", value= 'color_status_online'),
             discord.SelectOption(label= "Server Offline Font Color", value= 'color_status_offline'),
@@ -175,7 +175,7 @@ class Banner_Editor_Select(Select):
         self._first_interaction = False
 
 class Banner_Modal(Modal):
-    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: discord.Message, amp_server: AMP.AMPInstance, timeout= None , custom_id= 'Banner Modal'):
+    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: discord.Message, amp_server: AMP_Handler.AMP.AMPInstance, timeout= None , custom_id= 'Banner Modal'):
         self._edited_db_banner = edited_db_banner
         self._banner_message = banner_message
         self._banner_view = view
@@ -209,6 +209,7 @@ class Banner_Modal(Modal):
         await self._banner_message.edit(attachments= [banner_file_handler(BC.Banner_Generator(self._amp_server, self._edited_db_banner)._image_())], view= self._banner_view)
  
 class Banner_Color_Input(TextInput):
+    #This is the Modal that appears when Inputing a color hexcode.
     def __init__(self, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, select_value: str, label: str= "Enter your Hex color code below.", style= discord.TextStyle.short, placeholder: str= '#000000', default: str= '#ffffff', required= True, min_length= 3, max_length= 8):
         self._edited_db_banner = edited_db_banner
         self._select_value = select_value
@@ -217,7 +218,8 @@ class Banner_Color_Input(TextInput):
 
     async def callback(self):
         #Remove the Hex code for validation.
-        self._value = self.value
+        #Also lower the value for better comparison.
+        self._value = self.value.lower()
         if self._value[0] == '#':
             self._value = self._value[1:]
 
@@ -246,7 +248,7 @@ class Banner_Blur_Input(TextInput):
 
 class Save_Banner_Button(Button):
     """Saves the Banners current settings to the DB."""
-    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner,  style= discord.ButtonStyle.green):
+    def __init__(self, banner_message: discord.Message, server: AMP_Handler.AMP.AMPInstance, edited_banner: Edited_DB_Banner,  style= discord.ButtonStyle.green):
         super().__init__(label='Save', style=style, custom_id='Save_Button')
         self.logger = logging.getLogger()
         self._amp_server = server
@@ -262,7 +264,7 @@ class Save_Banner_Button(Button):
 
 class Reset_Banner_Button(Button):
     """Resets the Banners current settings to the original DB."""
-    def __init__(self, banner_message: discord.Message, server: AMP.AMPInstance, edited_banner: Edited_DB_Banner, style= discord.ButtonStyle.blurple):
+    def __init__(self, banner_message: discord.Message, server: AMP_Handler.AMP.AMPInstance, edited_banner: Edited_DB_Banner, style= discord.ButtonStyle.blurple):
         super().__init__(label='Reset', style=style, custom_id='Reset_Button')
         self.logger = logging.getLogger()
         self._amp_server = server
@@ -290,7 +292,7 @@ class Cancel_Banner_Button(Button):
     
 class Whitelist_view(View):
     """Whitelist Request View"""
-    def __init__(self, client: discord.Client, discord_message: discord.Message, whitelist_message: discord.Message, amp_server: AMP.AMPInstance, context: commands.Context, timeout: float):
+    def __init__(self, client: discord.Client, discord_message: discord.Message, whitelist_message: discord.Message, amp_server: AMP_Handler.AMP.AMPInstance, context: commands.Context, timeout: float):
         self.logger = logging.getLogger()
         self.DB = DB.getDBHandler().DB
         self._client = client
@@ -306,20 +308,20 @@ class Whitelist_view(View):
         self.logger.dev(f'Whitelist Request; Attempting to Whitelist {self._whitelist_message.author.name} on {db_server.FriendlyName}')
         #This handles all the Discord Role stuff.
         if db_server != None and db_server.Discord_Role != None:
-            discord_role = self._client.uBot.roleparse(db_server.Discord_Role, self._context, self._context.guild.id)
-            discord_user = self._client.uBot.userparse(self._context.author.id, self._context, self._context.guild.id)
+            discord_role = self._client.uBot.role_parse(db_server.Discord_Role, self._context, self._context.guild.id)
+            discord_user = self._client.uBot.user_parse(self._context.author.id, self._context, self._context.guild.id)
             await discord_user.add_roles(discord_role, reason= 'Auto Whitelisting')
 
         #This is for all the Replies
         if len(self.DB.GetAllWhitelistReplies()) != 0:
             whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
-            await self._context.message.channel.send(content= f'{self._context.author.mention} \n{self._client.uBot.whitelist_reply_handler(whitelist_reply)}', delete_after= self._client.Message_Timeout)
+            await self._context.message.channel.send(content= f'{self._context.author.mention} \n{self._client.uBot.whitelist_reply_handler(message= whitelist_reply, context= self._context, server= self._amp_server)}', delete_after= self._client.Message_Timeout)
         else:
             await self._context.message.channel.send(content= f'You are all set! We whitelisted {self._context.author.mention} on **{db_server.FriendlyName}**', delete_after= self._client.Message_Timeout)
 
 class Accept_Whitelist_Button(Button):
     """Accepts the Whitelist Request"""
-    def __init__(self, discord_message: discord.Message, view: Whitelist_view, client: discord.Client, amp_server: AMP.AMPInstance, style= discord.ButtonStyle.green):
+    def __init__(self, discord_message: discord.Message, view: Whitelist_view, client: discord.Client, amp_server: AMP_Handler.AMP.AMPInstance, style= discord.ButtonStyle.green):
         super().__init__(label= 'Accept', style= style, custom_id= 'Accept_Button')
         self._view = view
         self._discord_message = discord_message
@@ -337,7 +339,7 @@ class Accept_Whitelist_Button(Button):
 
 class Deny_Whitelist_Button(Button):
     """Denys the Whitelist Request"""
-    def __init__(self, discord_message: discord.Message, view: Whitelist_view, client: discord.Client, amp_server: AMP.AMPInstance,  style= discord.ButtonStyle.red):
+    def __init__(self, discord_message: discord.Message, view: Whitelist_view, client: discord.Client, amp_server: AMP_Handler.AMP.AMPInstance,  style= discord.ButtonStyle.red):
         super().__init__(label= 'Deny', style= style, custom_id= 'Deny_Button')
         self._view = view
         self._discord_message = discord_message
