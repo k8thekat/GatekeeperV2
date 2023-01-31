@@ -73,7 +73,7 @@ class DBHandler():
         
         self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
 
-    def dbServerConsoleSetup(self, server: AMP_Handler.AMP.AMPInstance):
+    def dbServerConsoleSetup(self, server):
         """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
         self.DB_Server = self.DB.GetServer(server.InstanceID)
         try:
@@ -174,7 +174,7 @@ class Database:
                         blur_background_amount integer,
                         color_header text,
                         color_body text,
-                        color_Host text,
+                        color_host text,
                         color_whitelist_open text,
                         color_whitelist_closed text,
                         color_donator text,
@@ -1213,7 +1213,7 @@ class DBUpdate:
 
     def banner_table_creation(self):
         try:
-            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer, color_header text, color_body text, color_Host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
+            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer, color_header text, color_body text, color_host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'banner_table_creation {e}')
