@@ -49,6 +49,7 @@ class DB_Server(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.uiBot = utils_ui
         self.dBot = utils.discordBot(client)
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Db","DB")}')
 
     async def autocomplete_db_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Database Server Names for Change Instance IDs"""

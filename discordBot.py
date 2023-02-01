@@ -177,9 +177,10 @@ async def bot_permissions(context:commands.Context, permission: Choice[int]):
         #This validates the `bot_perms.json` file.
         if not await client.permissions_update():
             return await context.send(f'Error loading the Permissions Cog, please check your Console for errors.', ephemeral= True, delete_after= client.Message_Timeout)
-        
-    client.tree.copy_global_to(guild= client.get_guild(client.guild_id))
-    await client.tree.sync(guild= client.get_guild(client.guild_id))
+
+    #Depending on which permissions; this will sync the updated commands available.
+    client.tree.copy_global_to(guild= client.get_guild(context.guild.id))
+    await client.tree.sync(guild= client.get_guild(context.guild.id))
     client.DBConfig.Permissions = permission.name
     await context.send(f'Finished setting Gatekeeper permissions to `{permission.name}`!', ephemeral= True, delete_after= client.Message_Timeout)
 

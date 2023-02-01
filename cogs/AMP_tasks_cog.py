@@ -45,7 +45,7 @@ class AMP_Tasks(commands.Cog):
         self.bPerms = utils.get_botPerms()
 
         self.uBot = utils.botUtils(client)
-        self.logger.info(f'**SUCCESS** Initializing {self.name.replace("amp","AMP")}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
         
         self.amp_server_console_messages_send.start()
         self.logger.dev('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))

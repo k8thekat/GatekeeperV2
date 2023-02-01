@@ -391,6 +391,7 @@ class AMPInstance():
 
             except Exception as e:
                 self.logger.dev(f'Core/Login Exception: {traceback.format_exc()}')
+                self.logger.dev(result)
                 
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
                 self.Running = False

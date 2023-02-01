@@ -70,7 +70,7 @@ class Whitelist(commands.Cog):
         #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist)
         #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist_disabled)
     
-        self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title()}')
 
     def __getattribute__(self, __name: str):
         if __name == 'Whitelist__Request_Channel':

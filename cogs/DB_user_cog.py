@@ -52,7 +52,7 @@ class DB_User(commands.Cog):
 
         self.eBot = utils_embeds.botEmbeds(client)
 
-        self.logger.info(f'**SUCCESS** Initializing {self.name.replace("db","DB")}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Db","DB")}')
 
     # @commands.Cog.listener('on_message')
     # async def on_message(self, message:discord.Message):

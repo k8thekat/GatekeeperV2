@@ -60,7 +60,7 @@ class AMP_Server(commands.Cog):
             self.server_display_update.start()
             self.logger.dev(f'Server Display Banners Update is Running: {self.server_display_update.is_running()}')
 
-        self.logger.info(f'**SUCCESS** Initializing {self.name.capitalize()}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
 
     @commands.Cog.listener('on_message_delete')
     async def on_message_delete(self, message:discord.Message):
@@ -126,8 +126,11 @@ class AMP_Server(commands.Cog):
 
     async def _banner_generator(self, message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
         banner_image_list = []
-        for cur_server in self.AMPInstances:
-            server = self.AMPInstances[cur_server]
+        #Ran into a RuntimeError with adding an Instance as this was updating; causing a `dictionary changed size during iteration` issue.
+        #!TODO! This may break; keep watch.
+        banner_dictionary = self.AMPInstances
+        for cur_server in banner_dictionary:
+            server = banner_dictionary[cur_server]
 
             if server.Hidden != 1:
                 db_server = self.DB.GetServer(InstanceID= server.InstanceID)
@@ -496,9 +499,9 @@ class AMP_Server(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server: 
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = flag.value
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = {flag.value if type(flag) == Choice else flag}
             amp_server._setDBattr() #This will update the AMPConsole Attributes
-            return await context.send(f"Set **{amp_server.InstanceName}** Donator Only to `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f"Set **{amp_server.InstanceName}** Donator Only to `{flag.name if type(flag) == Choice else bool(flag)}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server.group(name='console')
     @utils.role_check()

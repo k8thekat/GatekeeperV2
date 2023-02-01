@@ -61,7 +61,7 @@ class Banner(commands.Cog):
         #Leave this commented out unless you need to create a sub-command.
         self.uBot.sub_command_handler('server', self.amp_banner) #This is used to add a sub command(self,parent_command,sub_command)
         self.uBot.sub_command_handler('bot', self.banner)
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**')
+        self.logger.info(f'**SUCCESS** Loading Module **{self.name.title()}**')
         
     async def autocomplete_banners(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """This is for a file listing of the `resources/banners` path."""

@@ -116,7 +116,7 @@ class Handler():
                         else:
                             await self._client.load_extension(cog) 
 
-                        self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
+                        self.logger.dev(f'**FINISHED LOADING** {self.name} -> **{cog}**')
 
                     except discord.ext.commands.errors.ExtensionAlreadyLoaded:
                         continue
@@ -133,7 +133,7 @@ class Handler():
                     else:
                         await self._client.load_extension(cog) 
 
-                    self.logger.dev(f'**SUCCESS** {self.name} Loading Cog **{cog}**')
+                    self.logger.dev(f'**FINISHED LOADING** {self.name} ->**{cog}**')
 
                 except discord.ext.commands.errors.ExtensionAlreadyLoaded:
                     continue
