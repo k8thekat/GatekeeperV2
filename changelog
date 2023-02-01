@@ -8,7 +8,6 @@ __**Update 4.4.7**__
 - updated the layout of `bot_settings_embed` inside `utils_embeds.py` which will provide a cleaner display for `/bot settings` command
 - fixed issue with donator flag not updating on banners. Thanks @FeminalPanda#7879
     - updated `commands.md` to reflect the changes.
-
 - began making `sub_group_handler` for adding commands to an existing command group.
 - fixed issue with `server banners` not resetting when the discord channel was deleted. Thanks @hotdamnitsaaron#1501
 - fixed issue with `whitelisting`, was failing with duplicate IGNs. Thanks @Snaggolicious#4987
@@ -26,6 +25,7 @@ __**Update 4.4.7**__
     - changed layout of banners slightly; moved the setting `AMP Description` below the Server Name to be used as a possible version indicator/similar.
         - changed `AMP Description` to no longer word wrap to next line; it will truncate when it hits the Shadow box on the right of Banners.(Sorry)
     - fixed issue with `host` color not updating on banners, DB was using `Host` instead of `host`. Thanks @hotdamnitsaaron#1501
+    - added `Donator color` to `/server banner settings`.
 
 
 __**Update 4.4.6**__

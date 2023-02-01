@@ -159,6 +159,10 @@ class Banner_Editor_Select(Select):
         #If Whitelist is disabled, remove the options from the list.
         if not self._amp_server.Whitelist_disabled:
             options = whitelist_options + options
+        
+        #If Donator Only is enabled; adds the option to set the color.
+        if self._amp_server.Donator:
+            options = options + donator_options
 
         super().__init__(custom_id=custom_id, placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, disabled=disabled, row=row)
         
