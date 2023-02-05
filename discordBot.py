@@ -37,7 +37,7 @@ import AMP_Handler
 import DB
 from typing import Union
 
-Version = 'beta-4.4.7'
+Version = 'beta-4.4.8'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -142,7 +142,7 @@ async def main_bot(context:commands.Context):
 async def bot_donator(context:commands.Context, role:discord.Role):
     """Sets the Donator Role for Donator Only AMP Server access."""
     client.logger.command(f'{context.author.name} used Bot Donator Role...')
-    
+
     client.DBConfig.SetSetting('Donator_role_id', role.id)
     await context.send(f'You are all set! Donator Role is now set to {role.mention}', ephemeral= True, delete_after= client.Message_Timeout)
 
