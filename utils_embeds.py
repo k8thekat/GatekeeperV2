@@ -246,7 +246,9 @@ class botEmbeds():
                   "banner_auto_update", 
                   "auto_whitelist", 
                   "whitelist_wait_time", 
-                  "whitelist_request_channel"]
+                  "whitelist_request_channel",
+                  "donator_role_id",
+                  "donator_bypass"]
 
         #Take our list and store it in a seperate list and lowercase the strings.
         db_config_settingslist = [x.lower() for x in self.DBConfig.GetSettingList()]
@@ -268,7 +270,7 @@ class botEmbeds():
                 if value != 'None':
                     value = context.guild.get_channel(value)
                 
-                embed.add_field(name= 'Whitelist Request Channel:', value= f'{value.name if value != None else "Not Set"}', inline= False)
+                embed.add_field(name= 'Whitelist Request Channel:', value= f'{value.name.title() if value != None else "Not Set"}', inline= False)
 
             elif key == 'message_timeout':
                 embed.add_field(name= 'Gatekeeper Reply Timeout', value= f'{value} Seconds', inline= False)
@@ -300,13 +302,23 @@ class botEmbeds():
                 if self._client != None and value != 'None':
                     value = self._client.get_guild(value)
 
-                    embed.add_field(name= 'Guild ID:', value= f'{value.name if value != None else "Not Set"}', inline= False)
+                    embed.add_field(name= 'Guild ID:', value= f'{value.name.title() if value != None else "Not Set"}', inline= False)
 
             elif key == 'moderator_role_id':
                 if value != 'None':
                     value = context.guild.get_role(value)
                
-                embed.add_field(name= 'Moderator Role:', value= f'{value.name if value != None else "Not Set"}', inline= True)
+                embed.add_field(name= 'Moderator Role:', value= f'{value.name.title() if value != None else "Not Set"}', inline= True)
+            
+
+            elif key == "donator_role_id":
+                if value != 'None':
+                    value = context.guild.get_role(value)
+                
+                embed.add_field(name= 'Donator Role ID:', value= f'{value.name.title() if value != None else "Not Set"}', inline= True)
+
+            elif key == 'donator_bypass':
+                embed.add_field(name= 'Donator Bypass:', value= f'{"True" if value == 1 else "False"}', inline= True)
 
         #This iterates through the remaining keys of the Settings List and adds them to the Embed.
         for key in db_config_settingslist:

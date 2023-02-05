@@ -141,14 +141,14 @@ class Whitelist(commands.Cog):
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.choices(flag= [Choice(name='False', value= 0), Choice(name='True', value= 1)])
     async def dbserver_whitelist_disabled(self, context:commands.Context, server, flag:Choice[int]):
-        """Disables the Servers Whitelist Functionality"""
+        """Hides the Servers Whitelist Status from Display Banners"""
         self.logger.command(f'{context.author.name} used Database Server Whitelist Disabled...')
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server:
             self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = flag.value
             amp_server._setDBattr() #This will update the AMPInstance Attributes
-        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Whitelist set to : `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Display Whitelist Status on Banners set to : `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_whitelist.command(name='add')
     @utils.role_check()
@@ -278,7 +278,8 @@ class Whitelist(commands.Cog):
         if amp_server:
             #if this succeeds, then we can check if the user is whitelisted since we have updated the DB
             message = await context.send('Handling your request, please wait...', ephemeral= True)# delete_after= self._client.Message_Timeout)
-            for key, value in self._client.Whitelist_wait_list.items():
+            temp_Whitelist_wait_list = self._client.Whitelist_wait_list
+            for key, value in temp_Whitelist_wait_list.items():
                 if value['context'].author.id == context.author.id and value['ampserver'].InstanceID == amp_server.InstanceID:
                     await context.send(f'Hey, I already have a whitelist request pending from you on {amp_server.InstanceName if amp_server.FriendlyName == None else amp_server.FriendlyName}')
 
@@ -287,10 +288,7 @@ class Whitelist(commands.Cog):
     async def whitelist_request_handler(self, context:commands.Context, message: discord.Message, discord_user:discord.Member, server:AMP_Handler.AMP.AMPInstance, ign:str= None):
         """Whitelist request handler checks for a DB User, checks for their IGN, checks if they are Whitelisted and any other required checks to whitelist a user. """
         self.logger.command(f'Whitelist Request: ign: {ign} servers: {server.FriendlyName} user: {discord_user.name}')
-
-        if not self.DBConfig.GetSetting('Auto_Whitelist'):
-            self.logger.error('Hey a Whitelist request came in, but Auto-Whitelisting is currently disabled!')
-            return await message.edit(content= f'Hey {discord_user.mention} we are unable to handle your request at this time. `Auto-Whitelist` is disabled.')
+        bypass_wait_time = False
 
         if self._client.get_channel(self.DBConfig.GetSetting('Whitelist_Request_Channel')) == None:
             return await message.edit(content= f'It appears the `Staff` of **{context.guild.name}** has yet to setup a `Whitelist Request Channel`, please inform a Staff member.')
@@ -334,41 +332,60 @@ class Whitelist(commands.Cog):
                 if self.DBConfig.GetSetting('Donator_Role')!= None:
                     if int(self.DBConfig.GetSetting('Donator_role_id')) not in author_roles:
                         return await message.edit(content= f'*Waves* Hey **{server_name}** is for Donator Access Only, it appears you do not have Donator. If this is an error please contact a Staff Member.')
+                    #Allows the user to bypass the wait time.
+                    elif self.DBConfig.GetSetting('Donator_Bypass'):
+                        bypass_wait_time = True
                         
                 else:
                     return await message.edit(content= f'Well it appears that the Staff have not set a Donator Role yet, Please inform Staff of this error.')
-                    
-        wait_time_value = self.DBConfig.GetSetting("Whitelist_Wait_Time")
-        if wait_time_value != 0:
-            cur_time = datetime.now(timezone.utc)
-            display_time = discord.utils.format_dt((cur_time + timedelta(minutes= wait_time_value)))
-            await message.edit(content= f'Your whitelist request has been accepted and is awaiting __Staff Approval__. \n> If no approval by {display_time}, your request will be auto-approved.')
-
-            self._client.Whitelist_wait_list[context.message.id] = {'ampserver': server, 'context': context, 'dbuser' : db_user}
-            self.logger.info(f'Added {context.author} to Whitelist Wait List. Current wait time is {wait_time_value} {"minutes" if wait_time_value > 1 else "minute"}')
-            self.logger.dev(f'MessageID: {context.message.id}')
-            
-            #Send view to specific channel
-            whitelist_request_channel = self._client.get_channel(self.DBConfig.GetSetting('Whitelist_Request_Channel')) #Whitelist Channel #This will point to a Staff Channel/Similar
-            whitelist_request_message = await whitelist_request_channel.send(content= f'Whitelist Request from `{context.message.author.name}` for Server: **{server.FriendlyName}**...')
-            await whitelist_request_message.edit(view= self.uiBot.Whitelist_view(client= self._client, discord_message= whitelist_request_message, whitelist_message= context.message, amp_server= server, context= context, timeout= wait_time_value))
-            
-            #Checks if the Tasks is running, if not starts the task.
-            if not self.whitelist_waitlist_handler.is_running():
-                self.whitelist_waitlist_handler.start()
-            return
         
-        server.addWhitelist(db_user = db_user)
-        if len(self.DB.GetAllWhitelistReplies()) != 0:
-            whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
-            await message.edit(content= self.uBot.whitelist_reply_handler(whitelist_reply, context, server))
-        else:
-            await message.edit(content= f'You are all set! We whitelisted `{context.author.name}` on **{db_server.FriendlyName}**')
-        if db_server.Discord_Role != None:
-            discord_role = self.uBot.role_parse(db_server.Discord_Role, context, context.guild.id)
-            await context.author.add_roles(discord_role, reason= 'Auto Whitelisting')
+        wait_time_value = self.DBConfig.GetSetting("Whitelist_Wait_Time")
+        self._client.Whitelist_wait_list[context.message.id] = {'ampserver': server, 'context': context, 'dbuser' : db_user}
 
-        self.logger.command(f'Whitelisting {context.author.name} on {server.FriendlyName}')
+        format_1 = f'Current wait time is {wait_time_value} {"minutes" if wait_time_value > 1 else "minute"}'
+        self.logger.info(f'Added {context.author} to Whitelist Wait List. {"Auto-Whitelist is Disabled, waiting for Staff Approval Only" if not self.DBConfig.GetSetting("Auto_Whitelist") else format_1}')
+        self.logger.dev(f'MessageID: {context.message.id}')
+
+        #If Auto-Whitelist is disabled; means we are waiting for STAFF Approval ONLY!
+        if not self.DBConfig.GetSetting('Auto_Whitelist'):
+            wait_time_value = None
+            await message.edit(content= f'Your whitelist request has been accepted and is awaiting __Staff Approval__. \n')
+
+        #If Auto-whitelist is enabled
+        elif self.DBConfig.GetSetting('Auto_Whitelist'):
+            # and the wait time is either instant or bypass_wait_time is true.
+            if wait_time_value == 0 or bypass_wait_time:
+                #Remove them from the waitlist
+                self._client.Whitelist_wait_list.pop(context.message.id)
+                server.addWhitelist(db_user = db_user)
+                
+                #Lets get all the custom Whitelist Replies in the DB and randomly pick one.
+                if len(self.DB.GetAllWhitelistReplies()) >= 1:
+                    whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
+                    await message.edit(content= self.uBot.whitelist_reply_handler(whitelist_reply, context, server))
+                else:
+                    await message.edit(content= f'You are all set! We whitelisted `{context.author.name}` on **{db_server.FriendlyName}**')
+
+                if db_server.Discord_Role != None:
+                    discord_role = self.uBot.role_parse(db_server.Discord_Role, context, context.guild.id)
+                    await context.author.add_roles(discord_role, reason= 'Auto Whitelisting')
+
+                self.logger.command(f'Whitelisting {context.author.name} on {server.FriendlyName}')
+                return
+            
+            # and the Wait time isnt Instant (!= 0 mins); let them know.. etc etc..
+            elif wait_time_value != 0:
+                cur_time = datetime.now(timezone.utc)
+                display_time = discord.utils.format_dt((cur_time + timedelta(minutes= wait_time_value)))
+                await message.edit(content= f'Your whitelist request has been accepted and is awaiting __Staff Approval__. \n> If no approval by {display_time}, your request will be auto-approved.')
+                #Checks if the Tasks is running, if not starts the task. 
+                if not self.whitelist_waitlist_handler.is_running():
+                    self.whitelist_waitlist_handler.start()
+        
+        #Send view to specific channel
+        whitelist_request_channel = self._client.get_channel(self.DBConfig.GetSetting('Whitelist_Request_Channel')) #Whitelist Channel #This will point to a Staff Channel/Similar
+        whitelist_request_message = await whitelist_request_channel.send(content= f'Whitelist Request from `{context.message.author.name}` for Server: **{server.FriendlyName}**...')
+        await whitelist_request_message.edit(view= self.uiBot.Whitelist_view(client= self._client, discord_message= whitelist_request_message, whitelist_message= context.message, amp_server= server, context= context, timeout= wait_time_value))
 
     @tasks.loop(seconds= 30)
     async def whitelist_waitlist_handler(self):
@@ -384,7 +401,8 @@ class Whitelist(commands.Cog):
         except Exception:
             wait_time = timedelta(minutes= 1)  # Fallback to 1 min delay if somehow the value fails to get parsed.
 
-        for key, value in self._client.Whitelist_wait_list.items():
+        temp_Whitelist_wait_list = self._client.Whitelist_wait_list
+        for key, value in temp_Whitelist_wait_list.items():
             cur_message = value['context'].channel.get_partial_message(key)
             cur_amp_server = value['ampserver'] #AMPInstance Object
             cur_message_context = value['context']

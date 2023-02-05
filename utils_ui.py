@@ -296,14 +296,20 @@ class Cancel_Banner_Button(Button):
     
 class Whitelist_view(View):
     """Whitelist Request View"""
-    def __init__(self, client: discord.Client, discord_message: discord.Message, whitelist_message: discord.Message, amp_server: AMP_Handler.AMP.AMPInstance, context: commands.Context, timeout: float):
+    def __init__(self, client: discord.Client, discord_message: discord.Message, whitelist_message: discord.Message, amp_server: AMP_Handler.AMP.AMPInstance, context: commands.Context, timeout: float= None):
         self.logger = logging.getLogger()
         self.DB = DB.getDBHandler().DB
         self._client = client
         self._context = context
         self._whitelist_message = whitelist_message
         self._amp_server = amp_server
-        super().__init__(timeout= (timeout * 60))
+
+        #This is for when Auto-Whitelisting is Disabled to prevent the View from timing out...
+        if timeout != None:
+            #Converts my Minutes value I pass in into seconds which is what `Views` rely on..
+            timeout = (timeout * 60)
+            
+        super().__init__(timeout= timeout)
         self.add_item(Accept_Whitelist_Button(discord_message= discord_message, view= self, client= client, amp_server= amp_server))
         self.add_item(Deny_Whitelist_Button(discord_message= discord_message, view = self, client= client, amp_server= amp_server))
     
