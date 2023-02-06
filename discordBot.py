@@ -202,7 +202,7 @@ async def bot_utils(context:commands.Context):
 @app_commands.describe(all='Default\'s to True, removes ALL commands from selected Channel regardless of who sent them.')
 @app_commands.describe(channel='Default\'s to the Channel the command was run; otherwise applies to the channel selected')
 @utils.role_check()
-async def clear(context: commands.Context, channel: discord.abc.GuildChannel = None, amount: app_commands.Range[int, 0, 100] = 50, all: Choice[int] = 1):
+async def bot_utils_clear(context: commands.Context, channel: discord.abc.GuildChannel = None, amount: app_commands.Range[int, 0, 100] = 50, all: Choice[int] = 0):
     """Cleans up Messages sent by the anyone. Limit 100 messages..."""
     client.logger.info(f'{context.author.name} used {context.command.name}...')
     client.context = context
