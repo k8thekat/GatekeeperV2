@@ -264,9 +264,24 @@ class Whitelist(commands.Cog):
         if flag.value == 1:
             self.DBConfig.SetSetting('Auto_Whitelist', flag.value)
             return await context.send('Woohoo! Let me handle all your Whitelisting needs.', ephemeral= True, delete_after= self._client.Message_Timeout)
-        if flag.value == 0:
+        elif flag.value == 0:
             self.DBConfig.SetSetting('Auto_Whitelist', flag.value)
             return await context.send('Waaah? Looks like I am not handling Whitelisting anymore.', ephemeral= True, delete_after= self._client.Message_Timeout)
+        
+    @db_bot_whitelist.command(name= 'donator_bypass')
+    @utils.role_check()
+    @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
+    async def db_bot_whitelist_donator_bypass(self, context:commands.Context, flag:Choice[int]):
+        """This turns on or off Donator Bypass"""
+        self.logger.command(f'{context.author.name} used Bot Donator Bypass')
+       
+        if flag.value == 1:
+            self.DBConfig.SetSetting('Donator_Bypass', flag.value)
+            return await context.send('Woohoo! Donators can bypass the Whitelist Wait time.', ephemeral= True, delete_after= self._client.Message_Timeout)
+        elif flag.value == 0:
+            self.DBConfig.SetSetting('Donator_Bypass', flag.value)
+            return await context.send('Donators can no longer bypass the Whitelist Wait Time.', ephemeral= True, delete_after= self._client.Message_Timeout)
+
 
     @db_bot_whitelist.command(name= 'request')
     @app_commands.autocomplete(server = utils.autocomplete_servers_public)

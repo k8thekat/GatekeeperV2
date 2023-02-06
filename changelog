@@ -1,3 +1,8 @@
+__**Update 4.4.8**__
+- added `Donator` role bypass for Auto whitelist wait time.
+    - added `/whitelist donator_bypass` command.
+
+
 __**Update 4.4.7**__
 - fixed issue with `whitelist_request_handler()` when attempting to use a non unique IGN. Thanks @Snaggolicious#4987
 - split `AMP.py` class's into seperate files for future ease of usage/editing.

@@ -19,7 +19,6 @@
    02110-1301, USA. 
 
 '''
-from typing import TYPE_CHECKING
 import sqlite3
 import pathlib
 import datetime
@@ -28,8 +27,6 @@ import time
 import logging
 import sys
 
-if TYPE_CHECKING:
-    import AMP_Handler
 
 def dump_to_json(data):
     for entry in data:
@@ -41,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.7
+DB_Version = 2.8
 
 class DBHandler():
     def __init__(self):
@@ -144,10 +141,10 @@ class Database:
                         )""")
 
         cur.execute("""create table ServerRegexPatterns (
-                        ServerID integeter not null,
+                        ServerID integer not null,
                         RegexPatternID integer not null,
                         foreign key (RegexPatternID) references RegexPatterns(ID),
-                        foreign key(ServerID) references Servers(ID)
+                        foreign key (ServerID) references Servers(ID)
                         UNIQUE(ServerID, RegexPatternID)
                         )""")
 
@@ -221,6 +218,9 @@ class Database:
         self._AddConfig('Banner_Type', 0) #0 = Discord embeds | 1 = Custom Banner Images
         self._AddConfig('Bot_Version', None)
         self._AddConfig('Message_Timeout', 60)
+        #Donator Settings
+        self._AddConfig('Donator_Bypass', False)
+        self._AddConfig("Donator_role_id", None)
 
     def _execute(self, SQL, params):
         Retry = 0
@@ -1103,6 +1103,12 @@ class DBUpdate:
                 self.server_regex_pattern_table_creation()
             self.DBConfig.SetSetting('DB_Version', '2.7')
         
+        if 2.8 > Version:
+            """Adds Donator Bypass and Donator Role ID"""
+            self.logger.info('**ATTENTION** Updating DB to Version 2.8')
+            self.db_config_add_donator_setting()
+            self.DBConfig.SetSetting('DB_Version', '2.8')
+
 
     def user_roles(self):
         try:
@@ -1311,4 +1317,11 @@ class DBUpdate:
         except Exception as e:
             self.logger.critical(f'server_add_FriendlyName_column {e}')
             sys.exit(-1)
-  
+    
+    def db_config_add_donator_setting(self):
+        #Adds support for Donator related functionality.
+        try:
+            self.DBConfig.AddSetting("Donator_Bypass", False)
+            self.DBConfig.AddSetting("Donator_role_id", None)
+        except Exception as e:
+            self.logger.critical(f'db_config_add_donator_settings {e}')
