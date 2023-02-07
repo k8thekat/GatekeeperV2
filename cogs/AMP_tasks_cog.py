@@ -22,7 +22,7 @@ import os
 
 
 import utils
-import AMP
+import AMP_Handler
 import logging
 import DB
 
@@ -35,7 +35,7 @@ class AMP_Tasks(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
         
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMPInstances = self.AMPHandler.AMP_Instances
 
         self.DBHandler = DB.getDBHandler()
@@ -45,7 +45,7 @@ class AMP_Tasks(commands.Cog):
         self.bPerms = utils.get_botPerms()
 
         self.uBot = utils.botUtils(client)
-        self.logger.info(f'**SUCCESS** Initializing {self.name.replace("amp","AMP")}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
         
         self.amp_server_console_messages_send.start()
         self.logger.dev('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
@@ -62,8 +62,9 @@ class AMP_Tasks(commands.Cog):
     @commands.Cog.listener('on_message')
     async def on_message(self, message:discord.Message):
         context = await self._client.get_context(message)
+        #Force the Tasks to ignore any "prefix" commands.
         if message.content.startswith(self._client.command_prefix):
-            return message
+            return await self._client.process_commands(message)
         
         if message.author == self._client.user:
             self.logger.dev('AMP_Tasks_Cog Found my own Message, oops')
@@ -100,12 +101,7 @@ class AMP_Tasks(commands.Cog):
                        
         return message
 
-    # @tasks.loop(seconds=30)
-    # async def amp_server_instance_check(self):
-    #     """Checks for new AMP Instances every 30 seconds.."""
-    #     self.logger.dev('Checking AMP Instance(s) Status...')
-    #     self.AMPHandler.AMP._instanceValidation()
-    #     self.AMPHandler.AMP._instance_ThreadManager()
+
 
     @tasks.loop(seconds=1)
     async def amp_server_console_messages_send(self):

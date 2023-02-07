@@ -26,7 +26,7 @@ import os
 import logging
 
 import utils
-import AMP as AMP
+import AMP_Handler
 import DB as DB
 
 DisplayImageSources = ['steam:427520']
@@ -37,7 +37,7 @@ class Factorio(commands.Cog):
 
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
@@ -46,7 +46,7 @@ class Factorio(commands.Cog):
         self.DB = self.DBHandler.DB #Main Database object
         self.DBCOnfig = self.DB.DBConfig
 
-        #utils.botUtils provide access to utility functions such as serverparse,roleparse,channelparse,userparse.
+        #utils.botUtils provide access to utility functions such as serverparse,role_parse,channel_parse,user_parse.
         self.uBot = utils.botUtils(client)
         #utils.discordBot provides access to utility functions such as sending/deleting messages, kicking/ban users.
         self.dBot = utils.discordBot(client)

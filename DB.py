@@ -27,7 +27,6 @@ import time
 import logging
 import sys
 
-from AMP import AMPInstance
 
 def dump_to_json(data):
     for entry in data:
@@ -39,7 +38,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.7
+DB_Version = 2.8
 
 class DBHandler():
     def __init__(self):
@@ -71,7 +70,7 @@ class DBHandler():
         
         self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
 
-    def dbServerConsoleSetup(self,server:AMPInstance):
+    def dbServerConsoleSetup(self, server):
         """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
         self.DB_Server = self.DB.GetServer(server.InstanceID)
         try:
@@ -142,10 +141,10 @@ class Database:
                         )""")
 
         cur.execute("""create table ServerRegexPatterns (
-                        ServerID integeter not null,
+                        ServerID integer not null,
                         RegexPatternID integer not null,
                         foreign key (RegexPatternID) references RegexPatterns(ID),
-                        foreign key(ServerID) references Servers(ID)
+                        foreign key (ServerID) references Servers(ID)
                         UNIQUE(ServerID, RegexPatternID)
                         )""")
 
@@ -172,7 +171,7 @@ class Database:
                         blur_background_amount integer,
                         color_header text,
                         color_body text,
-                        color_Host text,
+                        color_host text,
                         color_whitelist_open text,
                         color_whitelist_closed text,
                         color_donator text,
@@ -209,7 +208,7 @@ class Database:
         self._AddConfig('Guild_ID', None)
         self._AddConfig('Moderator_role_id', None)
         self._AddConfig('Permissions', 0) #0 = Default | 1 = Custom
-        self._AddConfig('Server_Info_Display', None)
+        #self._AddConfig('Server_Info_Display', None)
         self._AddConfig('Whitelist_Request_Channel', None)
         self._AddConfig('WhiteList_Wait_Time', 5)
         self._AddConfig('Auto_Whitelist', False)
@@ -219,6 +218,9 @@ class Database:
         self._AddConfig('Banner_Type', 0) #0 = Discord embeds | 1 = Custom Banner Images
         self._AddConfig('Bot_Version', None)
         self._AddConfig('Message_Timeout', 60)
+        #Donator Settings
+        self._AddConfig('Donator_Bypass', False)
+        self._AddConfig("Donator_role_id", None)
 
     def _execute(self, SQL, params):
         Retry = 0
@@ -898,7 +900,7 @@ class DBConfig:
         return val
 
     # list(self._ConfigNameToID.keys())
-    def GetSettingList(self):
+    def GetSettingList(self)-> list[str]:
         settings = list(self._ConfigNameToID.keys())
         return settings
 
@@ -909,7 +911,7 @@ class DBConfig:
         else:
             setattr(self, name, value)
 
-    def GetSetting(self, name: str):
+    def GetSetting(self, name: str) -> str:
         name = name.capitalize().replace(" ", "_").replace("-", "_")
         if name not in self._ConfigNameToID:
             return None
@@ -1101,6 +1103,12 @@ class DBUpdate:
                 self.server_regex_pattern_table_creation()
             self.DBConfig.SetSetting('DB_Version', '2.7')
         
+        if 2.8 > Version:
+            """Adds Donator Bypass and Donator Role ID"""
+            self.logger.info('**ATTENTION** Updating DB to Version 2.8')
+            self.db_config_add_donator_setting()
+            self.DBConfig.SetSetting('DB_Version', '2.8')
+
 
     def user_roles(self):
         try:
@@ -1211,7 +1219,7 @@ class DBUpdate:
 
     def banner_table_creation(self):
         try:
-            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer, color_header text, color_body text, color_Host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
+            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer, color_header text, color_body text, color_host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'banner_table_creation {e}')
@@ -1316,4 +1324,11 @@ class DBUpdate:
         except Exception as e:
             self.logger.critical(f'server_add_FriendlyName_column {e}')
             sys.exit(-1)
-  
+    
+    def db_config_add_donator_setting(self):
+        #Adds support for Donator related functionality.
+        try:
+            self.DBConfig.AddSetting("Donator_Bypass", False)
+            self.DBConfig.AddSetting("Donator_role_id", None)
+        except Exception as e:
+            self.logger.critical(f'db_config_add_donator_settings {e}')

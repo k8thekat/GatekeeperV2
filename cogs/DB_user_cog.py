@@ -29,17 +29,17 @@ from discord.ext import commands
 
 import utils
 import utils_embeds
-import AMP 
+import AMP_Handler
 import DB
 
 class DB_User(commands.Cog):
-    def __init__ (self,client:discord.Client):
+    def __init__ (self, client:discord.Client):
         self._client = client
         self.name = os.path.basename(__file__)
 
         self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP#Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
@@ -52,7 +52,7 @@ class DB_User(commands.Cog):
 
         self.eBot = utils_embeds.botEmbeds(client)
 
-        self.logger.info(f'**SUCCESS** Initializing {self.name.replace("db","DB")}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Db","DB")}')
 
     # @commands.Cog.listener('on_message')
     # async def on_message(self, message:discord.Message):
@@ -164,7 +164,7 @@ class DB_User(commands.Cog):
                         updated_vals.append(f'> **{db_params[entry]}** -> {params[entry]}')
 
                     except sqlite3.IntegrityError as e:
-                        if "UNIQUE constraint failed" in e.args:
+                        if "UNIQUE constraint failed" in e.args[0]:
                             self.logger.error(f'SQLITE Exception {e}')
                             await context.send(f'The **{db_params[entry]}** must be Unique for {db_user.DiscordName}', ephemeral= True, delete_after= self._client.Message_Timeout)
 

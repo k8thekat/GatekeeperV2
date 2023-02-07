@@ -19,8 +19,9 @@
    02110-1301, USA. 
 
 '''
-import AMP as AMP
-import pathlib
+import AMP
+import AMP_Console
+
 
 DisplayImageSources = ['Generic']
 class AMPGeneric(AMP.AMPInstance):
@@ -36,6 +37,6 @@ class AMPGeneric(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/amp_avatar.jpg?raw=true'
 
-class AMPGenericConsole(AMP.AMPConsole):
+class AMPGenericConsole(AMP_Console.AMPConsole):
     def __init__(self, AMPInstance = AMPGeneric):
         super().__init__(AMPInstance)

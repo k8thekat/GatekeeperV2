@@ -27,9 +27,10 @@ from discord.ext import commands
 import os
 import logging
 import re
+import traceback
 
 import utils
-import AMP as AMP
+import AMP_Handler
 import DB as DB
 
 
@@ -39,7 +40,7 @@ class Regex(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger() #Point all print/logging statments here!
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP #Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
@@ -48,7 +49,7 @@ class Regex(commands.Cog):
         self.DB = self.DBHandler.DB #Main Database object
        
 
-        #utils.botUtils provide access to utility functions such as serverparse,roleparse,channelparse,userparse.
+        #utils.botUtils provide access to utility functions such as serverparse,role_parse,channel_parse,user_parse.
         self.uBot = utils.botUtils(client)
         #utils.discordBot provides access to utility functions such as sending/deleting messages, kicking/ban users.
         self.dBot = utils.discordBot(client)
@@ -56,7 +57,7 @@ class Regex(commands.Cog):
         #Leave this commented out unless you need to create a sub-command.
         self.uBot.sub_command_handler('bot', self.regex_pattern) #This is used to add a sub command(self,parent_command,sub_command)
 
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name}**') 
+        self.logger.info(f'**SUCCESS** Loading Module **{self.name.title()}**') 
 
     async def autocomplete_regex(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Regex Pattern Names"""
@@ -109,13 +110,13 @@ class Regex(commands.Cog):
     @app_commands.autocomplete(name= autocomplete_regex)
     @app_commands.choices(filter_type= [Choice(name='Console', value= 0), Choice(name='Events', value= 1)])
     async def regex_pattern_update(self, context:commands.Context, name:str, new_name:str= None, filter_type:Choice[int]= None, pattern:str= None):
-        """Update Named Regex Patterns Name, Pattern and or Type"""
+        """Update a Regex Patterns Name, Pattern and or Type"""
         self.logger.command(f'{context.author.name} used Regex Pattern Update')
 
         try:
             re.compile(pattern= pattern)
         except re.error as e:
-            self.logger.error(f'Regex Error: {e}')
+            self.logger.error(f'Regex Error: {traceback.format_exc()}')
             return await context.send(content= f'The Pattern you provided is invalid. \n `{pattern}`', ephemeral= True, delete_after= self._client.Message_Timeout)
         
         filter_value = None

@@ -1,3 +1,38 @@
+__**Update 4.4.8**__
+- added `Donator` role bypass for Auto whitelist wait time.
+    - added `/whitelist donator_bypass` command.
+
+
+__**Update 4.4.7**__
+- fixed issue with `whitelist_request_handler()` when attempting to use a non unique IGN. Thanks @Snaggolicious#4987
+- split `AMP.py` class's into seperate files for future ease of usage/editing.
+    - Updated any related `AMP.py` calls and any type checking related to `AMPInstance, AMPHandler` and `AMPConsole`
+- fixed logic on `/bot permissions` command
+- updated info on `/bot utils clear` command
+- cleaned up formatting of `bot_utils_sync` method
+- updated the layout of `bot_settings_embed` inside `utils_embeds.py` which will provide a cleaner display for `/bot settings` command
+- fixed issue with donator flag not updating on banners. Thanks @FeminalPanda#7879
+    - updated `commands.md` to reflect the changes.
+- began making `sub_group_handler` for adding commands to an existing command group.
+- fixed issue with `server banners` not resetting when the discord channel was deleted. Thanks @hotdamnitsaaron#1501
+- fixed issue with `whitelisting`, was failing with duplicate IGNs. Thanks @Snaggolicious#4987
+- added `intents.jpg` to be used with `Readme.md`
+- Servers that are `Hidden` via `/server settings hidden` will be omitted when a `NON STAFF` member uses an autocomplete that provides server names.
+- added a `dev` print to `AMP` Login's if they fail.
+- fixed typo in `/bot permissions` when attempting to sync commands to the current guild. 
+- changed formatting of `dev` prints inside of `loader.py`
+- added fix for `dict` issues inside of `AMP_server_cog.py` for method `_banner_generator`. 
+    - Edge case when generating banners and creating an new instance at the same time.
+- changed formatting of `dev` prints on multiple files for better readability.
+- Updated `Display Banners` --
+    - fixed issue with `Banners` not displaying `Donator Only` when the flag was set.
+    - split `Donator Only` and `Whitelist Open/Closed` into seperate methods and placed `Donator Only` below Whitelist.
+    - changed layout of banners slightly; moved the setting `AMP Description` below the Server Name to be used as a possible version indicator/similar.
+        - changed `AMP Description` to no longer word wrap to next line; it will truncate when it hits the Shadow box on the right of Banners.(Sorry)
+    - fixed issue with `host` color not updating on banners, DB was using `Host` instead of `host`. Thanks @hotdamnitsaaron#1501
+    - added `Donator color` to `/server banner settings`.
+
+
 __**Update 4.4.6**__
 - changes to `AMP_server_cog.py`
     - Added except `discord.errors.NotFound`

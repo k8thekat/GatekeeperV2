@@ -3,27 +3,16 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageColor
 import pathlib
 import random
 
-import AMP
 import DB
+import AMP_Handler
 import logging
-
-class fake_server():
-    def __init__(self):
-        self.DisplayName = 'All The Mods 7: To The Sky'
-        self.Description = 'All the Mods 7 To the Sky is the sequel to the popular atm6 sky, we have taken feedback from the first iteration to make this pack the best we have to offer, adding in mods that were not in the first, such as Twilight Forest and Alchemistry, followed by the mod ex machinis, an automation addon for ex nihilo built in house by ATM to take you from early, all the way to end game automated resources.'
-        self.Host = '192.168.3.50:25565'
-        self.Whitelist = 1#random.randint(0,1)
-        self.Donator = 1#random.randint(0,1)
-        self.Status = 1#random.randint(0,1)
-        self.Player_Limit = random.randint(0,20)
-        self.Players_Online = ['k8_thekat', 'Lightning', 'Alain', 'Dann', 'Saorie', 'IceofWraith', 'BigO','Steve','k8_thekat', 'Lightning', 'Alain', 'Dann', 'Saorie', 'IceofWraith', 'BigO','Steve']
         
 class Banner_Generator():
     """Custom Banner Generator for Gatekeeper. """
-    def __init__(self, AMPServer:AMP.AMPInstance, DBBanner:DB.DBBanner, Banner_path:str=None, blur_background:bool=None):
+    def __init__(self, AMPServer:AMP_Handler.AMP.AMPInstance, DBBanner:DB.DBBanner, Banner_path:str=None, blur_background:bool=None):
+        #Turn that str into a Purepath for cross OS support
         self._font = pathlib.Path("resources/fonts/ReemKufiFun-Regular.ttf").as_posix()
         self._logger = logging.getLogger()
-        #Turn that str into a Purepath for cross OS support
         self._font_default_size = 25
         self._font_default = ImageFont.truetype(self._font, self._font_default_size)
         self._font_drop_shadow_size = (int(self._font_default_size / 5), int(self._font_default_size / 5))
@@ -68,15 +57,20 @@ class Banner_Generator():
         self._font_Host = ImageFont.truetype(self._font, self._font_Host_size)
         self._font_Host_text_height = self._font_Host.getbbox('W')[-1]
 
-        self._font_Whitelist_Donator_size = int(self._font_default_size * 3.5)
+        self._font_Whitelist_size = int(self._font_default_size * 3.5)
         self._font_Whitelist_color_open =  DBBanner.color_whitelist_open
         self._font_Whitelist_color_closed = DBBanner.color_whitelist_closed
         # self._font_Whitelist_color_open =  "#f7dc6f"
         # self._font_Whitelist_color_closed = "#cb4335"
-        # self._font_Donator_color = "#212f3c"
+        self._font_Whitelist = ImageFont.truetype(self._font, self._font_Whitelist_size)
+        self._font_Whitelist_text_height = self._font_Whitelist.getbbox('W')[-1]
+
+        self._font_Donator_size = int(self._font_default_size * 3.5)
         self._font_Donator_color = DBBanner.color_donator
-        self._font_Whitelist_Donator = ImageFont.truetype(self._font, self._font_Whitelist_Donator_size)
-        self._font_Whitelist_Donator_text_height = self._font_Whitelist_Donator.getbbox('W')[-1]
+        # self._font_Donator_color = "#212f3c"
+        self._font_Donator = ImageFont.truetype(self._font, self._font_Donator_size)
+        self._font_Donator_text_height = self._font_Donator.getbbox('W')[-1]
+
         
         self._font_Status_size = int(self._font_default_size * 3)
         self._font_Status = ImageFont.truetype(self._font, self._font_Status_size)
@@ -108,8 +102,13 @@ class Banner_Generator():
         self._Server_Name()
         self._Server_Status()
 
+        #If Whitelisting is NOT Disabled display Whitelist Text.
         if not AMPServer.Whitelist_disabled:
-            self._Server_Whitelist_Donator()
+            self._Server_Whitelist()
+        
+        #If Donator Only; display the Text
+        if AMPServer.Donator:
+            self._Server_Donator()
 
         self._Server_Description()
         self._Server_Players_Online()
@@ -230,7 +229,8 @@ class Banner_Generator():
         name = self._Server.FriendlyName
         if self._Server.DisplayName != None:
             name = self._Server.DisplayName
-
+        #Lets truncate our Display Name since; well it can clip the shadowbox..
+        name = self._word_wrap(name, self._font, self._font_Header_size, (self._banner_shadow_box_x - x), ' ')
         self._draw_text((x,y), name, self._font_Header, self._font_Header_color)
     
     def _Server_Host(self):
@@ -241,8 +241,8 @@ class Banner_Generator():
             x,y = (25, self._font_Host_y)
             self._draw_text((x,y), text, self._font_Host, self._font_Host_color)
 
-    def _Server_Whitelist_Donator(self):
-        self._font_Whitelist_Donator_y = int(self._font_Header_text_height  + self._font_Host_text_height + self._font_Whitelist_Donator_text_height + 5)
+    def _Server_Whitelist(self):
+        self._font_Whitelist_y = int(self._font_Header_text_height  + self._font_Host_text_height + self._font_Whitelist_text_height + 5)
         text = 'Whitelist Closed'
         color = self._font_Whitelist_color_closed
         shadow_color = None
@@ -251,20 +251,25 @@ class Banner_Generator():
             text = 'Whitelist Open'
             color = self._font_Whitelist_color_open
 
-            if self._Server.Donator == 1:
-                text += ' - [Donator Only]'
-                color = self._font_Donator_color
-                shadow_color = '#3498db'
-
-        offset = ImageFont.truetype(self._font, self._font_Whitelist_Donator_size).getlength(text)
-        x,y = (int(self._center_align_Body - (offset / 2)), self._font_Whitelist_Donator_y)
-        self._draw_text((x,y), text= text, font= self._font_Whitelist_Donator, fill= color, drop_shadow_fill= shadow_color)
-
+        offset = ImageFont.truetype(self._font, self._font_Whitelist_size).getlength(text)
+        x,y = (int(self._center_align_Body - (offset / 2)), self._font_Whitelist_y)
+        self._draw_text((x,y), text= text, font= self._font_Whitelist, fill= color, drop_shadow_fill= shadow_color)
+    
+    def _Server_Donator(self):
+        #Location
+        self._font_Donator_y = int(self._font_Whitelist_y + self._font_Whitelist_text_height)
+        text = '[Donator Only]'
+        color = self._font_Donator_color
+        shadow_color = '#3498db'
+        offset = ImageFont.truetype(self._font, self._font_Donator_size).getlength(text)
+        x,y = (int(self._center_align_Body - (offset / 2)), self._font_Donator_y)
+        self._draw_text((x,y), text= text, font= self._font_Donator, fill= color, drop_shadow_fill= shadow_color)
+        
     def _Server_Description(self):
-        x,y= (15, (self._banner_limit_size_y - (self._font_Body_text_height * 2) - 8))
+        x,y= (100, (self._font_Header_text_height + 10))
 
         if self._Server.Description != None:
-            text = self._word_wrap(self._Server.Description, self._font, self._font_Body_size, (self._banner_shadow_box_x - x), ' ', False)
+            text = self._word_wrap(self._Server.Description, self._font, self._font_Body_size, (self._banner_shadow_box_x - x), ' ', True)
             if type(text) == list:
                 for entry in text:
                     self._draw_text((x,y), entry, self._font_Body, self._font_Body_color)
@@ -307,4 +312,9 @@ class Banner_Generator():
                 self._draw_text((x,y), entry, self._font_Player_Online, self._font_Player_Online_color)
                 y += self._font_Player_Online_text_height
   
-
+# test_path = 'resources/banners/Minecraft_banner2.jpg'
+# server = fake_server()
+# banner = fake_banner()
+# a = Banner_Generator(AMPServer= server, DBBanner= banner, Banner_path= test_path)
+# #a._image_().save(fp= "dev/test.png", format= 'PNG')
+# a._image_().show()

@@ -33,11 +33,11 @@ from discord.app_commands import Choice
 import utils
 import utils_embeds
 import utils_ui
-import AMP
+import AMP_Handler
 import DB
 from typing import Union
 
-Version = 'beta-4.4.6'
+Version = 'beta-4.4.8'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -54,8 +54,8 @@ class Gatekeeper(commands.Bot):
         if self.Bot_Version == None:
             self.DBConfig.SetSetting('Bot_Version', Version)
 
-        self.AMPHandler = AMP.getAMPHandler()
-        self.AMP = AMP.getAMPHandler().AMP
+        self.AMPHandler = AMP_Handler.getAMPHandler()
+        self.AMP = AMP_Handler.getAMPHandler().AMP
     
         #Discord Specific
         intents = discord.Intents.default()
@@ -96,7 +96,7 @@ class Gatekeeper(commands.Bot):
     async def update_loop(self):
         self.logger.warn(f'Waiting to Update Bot Version to {Version}...')
         await client.wait_until_ready()
-        self.logger.warn(f'Currently Updatting Bot Version to {Version}...')
+        self.logger.warn(f'Currently Updating Bot Version to {Version}...')
         self.DBConfig.SetSetting('Bot_Version', Version)
         if self.guild_id != None:
             self.tree.copy_global_to(guild= self.get_guild(self.guild_id))
@@ -115,7 +115,7 @@ class Gatekeeper(commands.Bot):
             pass
         
         except Exception as e:
-            self.logger.error(f'We ran into an Error Loading the Permissions_Cog. Error - {e}')
+            self.logger.error(f'We ran into an Error Loading the Permissions_Cog. Error - {traceback.format_exc()}')
             return False
         
         self.bPerms = utils.get_botPerms()
@@ -142,7 +142,7 @@ async def main_bot(context:commands.Context):
 async def bot_donator(context:commands.Context, role:discord.Role):
     """Sets the Donator Role for Donator Only AMP Server access."""
     client.logger.command(f'{context.author.name} used Bot Donator Role...')
-    client.DBConfig = client.DB.DBConfig
+
     client.DBConfig.SetSetting('Donator_role_id', role.id)
     await context.send(f'You are all set! Donator Role is now set to {role.mention}', ephemeral= True, delete_after= client.Message_Timeout)
 
@@ -162,21 +162,25 @@ async def bot_permissions(context:commands.Context, permission: Choice[int]):
     """Set the Bot to use Default Permissions or Custom"""
     client.logger.command(f'{context.author.name} used Bot Permissions...')
 
+    #If we set to 0; we are using `Default` Permissions and need to unload the cog and commands related to custom permissions.
     if permission.value == 0:
         await context.send(f'You have selected `Default` permissions, removing permission commands...', ephemeral= True, delete_after= client.Message_Timeout)
         parent_command = client.get_command('user')
         parent_command.remove_command('role')
         if 'cogs.Permissions_cog' in client.extensions:
             await client.unload_extension('cogs.Permissions_cog')
-        
-    if permission.value == 1:
+
+    #If we set to 1; we are using `Custom` Permissions. 
+    elif permission.value == 1:
         await context.send(f'You have selected `Custom` permissions, validating `bot_perms.json`', ephemeral= True, delete_after= client.Message_Timeout)
         await context.send(f'Visit https://github.com/k8thekat/GatekeeperV2/blob/main/PERMISSIONS.md', ephemeral= True, delete_after= client.Message_Timeout)
+        #This validates the `bot_perms.json` file.
         if not await client.permissions_update():
             return await context.send(f'Error loading the Permissions Cog, please check your Console for errors.', ephemeral= True, delete_after= client.Message_Timeout)
-        
-    client.tree.copy_global_to(guild= client.get_guild(client.guild_id))
-    await client.tree.sync(guild= client.get_guild(client.guild_id))
+
+    #Depending on which permissions; this will sync the updated commands available.
+    client.tree.copy_global_to(guild= client.get_guild(context.guild.id))
+    await client.tree.sync(guild= client.get_guild(context.guild.id))
     client.DBConfig.Permissions = permission.name
     await context.send(f'Finished setting Gatekeeper permissions to `{permission.name}`!', ephemeral= True, delete_after= client.Message_Timeout)
 
@@ -185,7 +189,7 @@ async def bot_permissions(context:commands.Context, permission: Choice[int]):
 async def bot_settings(context:commands.Context):
     """Displays currently set Bot settings"""
     client.logger.command(f'{context.author.name} used Bot Settings...')
-    await context.send(embed= client.eBot.bot_settings_embed(context), ephemeral= True, delete_after= client.Message_Timeout)
+    await context.send(embed= client.eBot.bot_settings_embed(context), ephemeral= True, delete_after= (client.Message_Timeout*3)) #Tripled the delay to help sort times.
 
 @main_bot.group(name='utils')
 @utils.role_check()
@@ -196,13 +200,15 @@ async def bot_utils(context:commands.Context):
 @bot_utils.command(name='clear')
 @app_commands.choices(all=[Choice(name='True', value=1), Choice(name='False', value=0)])
 @app_commands.describe(all='Default\'s to True, removes ALL commands from selected Channel regardless of who sent them.')
+@app_commands.describe(channel='Default\'s to the Channel the command was run; otherwise applies to the channel selected')
 @utils.role_check()
-async def clear(context: commands.Context, channel: discord.abc.GuildChannel = None, amount: app_commands.Range[int, 0, 100] = 50, all: Choice[int] = 1):
-    """Cleans up Messages sent by the Kuma. Limit 100"""
+async def bot_utils_clear(context: commands.Context, channel: discord.abc.GuildChannel = None, amount: app_commands.Range[int, 0, 100] = 50, all: Choice[int] = 0):
+    """Cleans up Messages sent by the anyone. Limit 100 messages..."""
     client.logger.info(f'{context.author.name} used {context.command.name}...')
     client.context = context
     await context.defer()
 
+    #Setting channel to the channel the command was run in as default.
     if channel == None:
         channel = context.channel
 
@@ -327,29 +333,29 @@ async def bot_utils_sync(context:commands.Context, local: Choice[int]= True, res
     if client.guild_id == None or context.guild.id != int(client.guild_id):
         client.DBConfig.SetSetting('Guild_ID',context.guild.id)
     
-    if type(reset) == bool and reset == True or type(reset) == Choice and reset.value() == 1:
-        if type(local) == bool and local == True or type(local) == Choice and local.value() == 1:
+    if ((type(reset)) == bool and (reset == True)) or ((type(reset) == Choice) and (reset.value() == 1)):
+        if ((type(local) == bool) and (local == True)) or ((type(local)) == Choice and (local.value() == 1)):
             #Local command tree reset
             client.tree.clear_commands(guild=context.guild)
             client.logger.command(f'Bot Commands Reset Locally and Sync\'d: {await client.tree.sync(guild=context.guild)}')
             return await context.send('**WARNING** Resetting Gatekeeper Commands Locally...', ephemeral= True, delete_after= client.Message_Timeout)
 
         elif context.author.id == 144462063920611328:
-            #Global command tree reset
+            #Global command tree reset, limited by k8thekat discord ID
             client.tree.clear_commands(guild=None)
             client.logger.command(f'Bot Commands Reset Globall and Sync\'d: {await client.tree.sync(guild=None)}')
             return await context.send('**WARNING** Resetting Gatekeeper Commands Globally...', ephemeral= True, delete_after= client.Message_Timeout)
         else:
             return await context.sned('**ERROR** You do not have permission to reset the commands.', ephemeral= True, delete_after= client.Message_Timeout)
 
-    if type(local) == bool and local == True or type(local) == Choice and local.value() == 1:
+    if ((type(local) == bool) and (local == True)) or ((type(local) == Choice) and (local.value() == 1)):
         #Local command tree sync
         client.tree.copy_global_to(guild=context.guild)
         client.logger.command(f'Bot Commands Sync\'d Locally: {await client.tree.sync(guild=context.guild)}')
         return await context.send(f'Successfully Sync\'d Gatekeeper Commands to {context.guild.name}...', ephemeral= True, delete_after= client.Message_Timeout)
 
     elif context.author.id == 144462063920611328:
-        #Global command tree sync
+        #Global command tree sync, limited by k8thekat discord ID
         client.logger.command(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild=None)}')
         await context.send('Successfully Sync\'d Gatekeeper Commands Globally...', ephemeral= True, delete_after= client.Message_Timeout)
 
@@ -369,7 +375,7 @@ async def bot_cog_loader(context:commands.Context, cog:str):
     try:
         await client.load_extension(name= cog)
     except Exception as e:
-        await context.send(f'**ERROR** Loading Extension `{cog}` - `{e}`', ephemeral= True, delete_after= client.Message_Timeout)
+        await context.send(f'**ERROR** Loading Extension `{cog}` - `{traceback.format_exc()}`', ephemeral= True, delete_after= client.Message_Timeout)
     else:
         await context.send(f'**SUCCESS** Loading Extension `{cog}`', ephemeral= True, delete_after= client.Message_Timeout)
 
@@ -385,7 +391,7 @@ async def bot_cog_unloader(context:commands.Context, cog: str):
         await my_cog.cog_unload()
         #await client.unload_extension(name=cog)
     except Exception as e:
-        await context.send(f'**ERROR** Un-Loading Extension `{cog}` - `{e}`', ephemeral= True, delete_after= client.Message_Timeout)
+        await context.send(f'**ERROR** Un-Loading Extension `{cog}` - `{traceback.format_exc()}`', ephemeral= True, delete_after= client.Message_Timeout)
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension `{cog}`', ephemeral= True, delete_after= client.Message_Timeout)
 

@@ -29,7 +29,7 @@ from discord import app_commands
 
 import utils
 import utils_ui
-import AMP 
+import AMP_Handler
 import DB
 
 class DB_Server(commands.Cog):
@@ -38,7 +38,7 @@ class DB_Server(commands.Cog):
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger() #Point all print/logging statments here!
 
-        self.AMPHandler = AMP.getAMPHandler()
+        self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP#Main AMP object
         self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
@@ -49,6 +49,7 @@ class DB_Server(commands.Cog):
         self.uBot = utils.botUtils(client)
         self.uiBot = utils_ui
         self.dBot = utils.discordBot(client)
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Db","DB")}')
 
     async def autocomplete_db_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Database Server Names for Change Instance IDs"""

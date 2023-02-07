@@ -69,12 +69,12 @@ class Setup:
         self.logger.info(f'SQL Database Version: {self.DB.DBHandler.DB_Version} // SQL Database: {self.DB.DBHandler.SuccessfulDatabase}')
 
         #This connects and creates all our AMP related parts
-        import AMP
-        self.AMP_Thread = threading.Thread(target= AMP.AMP_init, name= 'AMP', args= [self.args,])
+        import AMP_Handler
+        self.AMP_Thread = threading.Thread(target= AMP_Handler.AMP_init, name= 'AMP Handler', args= [self.args,])
         self.AMP_Thread.start()
 
         if self.args.discord:
-            while(AMP.AMP_setup == False):
+            while(AMP_Handler.AMP_setup == False):
                 time.sleep(.5)
 
             if self.args.dev and pathlib.Path('tokens_dev.py').exists():

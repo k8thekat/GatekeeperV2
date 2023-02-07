@@ -19,9 +19,9 @@
    02110-1301, USA. 
 
 '''
-import AMP as AMP
-import discord
-import pathlib
+import AMP
+import AMP_Console
+
 
 #Resources
 #https://wiki.factorio.com/Console
@@ -55,6 +55,6 @@ class AMPFactorio(AMP.AMPInstance):
         #See https://wiki.factorio.com/Rich_text
         self.ConsoleMessage(f'[color=blue]"[Discord]"[/color] [color=default]<{author}>: {message}[/color]')
 
-class AMPFactorioConsole(AMP.AMPConsole):
+class AMPFactorioConsole(AMP_Console.AMPConsole):
     def __init__(self, AMPInstance = AMPFactorio):
         super().__init__(AMPInstance)

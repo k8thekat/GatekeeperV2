@@ -19,8 +19,9 @@
    02110-1301, USA. 
 
 '''
-import AMP as AMP
-import pathlib
+import AMP_Console
+import AMP
+
 #Resources - https://www.dexerto.com/gaming/terraria-console-commands-explained-a-simple-controls-guide-1663852/
 DisplayImageSources = ['steam:105600']
 class AMPTerraria(AMP.AMPInstance):
@@ -36,6 +37,6 @@ class AMPTerraria(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/terraria_avatar.jpg?raw=true'
 
-class AMPTerrariaConsole(AMP.AMPConsole):
+class AMPTerrariaConsole(AMP_Console.AMPConsole):
     def __init__(self, AMPInstance = AMPTerraria):
         super().__init__(AMPInstance)
