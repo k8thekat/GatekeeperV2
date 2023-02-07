@@ -199,17 +199,18 @@ class Banner_Modal(Modal):
             self.add_item(self._int_code_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        if self._input_type == 'color':
-            if await self._color_code_input.callback() == False:
-                await interaction.response.send_message(content= f'Please provide a proper Hex color Code. {self._color_code_input._value}', ephemeral= True, delete_after= self._client.Message_Timeout)
-                
-          
+        #Depending on the Selection made; changes the validation code and the reply.
         if self._input_type == 'int':
             if await self._int_code_input.callback() == False:
                 await interaction.response.send_message(f'Please provide a Number only. {self._int_code_input.value}', ephemeral= True, delete_after= self._client.Message_Timeout)
-                
-        else:
-            await interaction.response.defer()
+        
+        if self._input_type == 'color':
+            if await self._color_code_input.callback() == False:
+                await interaction.response.send_message(content= f'Please provide a proper Hex color Code. {self._color_code_input._value}', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+        #Regardless we defer the interaction; because we only care if it fails as seen above.
+        await interaction.response.defer()
+        #Then we send the updated Banner object to the View.
         await self._banner_message.edit(attachments= [banner_file_handler(BC.Banner_Generator(self._amp_server, self._edited_db_banner)._image_())], view= self._banner_view)
  
 class Banner_Color_Input(TextInput):
@@ -232,6 +233,7 @@ class Banner_Color_Input(TextInput):
             self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} #{self._value}')
             setattr(self._edited_db_banner, self._select_value, '#' + self._value)
             return True
+        
         else:
             return False
 
