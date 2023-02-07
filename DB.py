@@ -936,7 +936,7 @@ class DBBanner:
         self.attr_list = {'_db': DB,
                     'ServerID': int(ServerID),
                     'background_path': background_path,
-                    'blur_background_amount': 2,
+                    'blur_background_amount': 0,
                     'color_header': "#85c1e9",
                     'color_body': "#f2f3f4",
                     'color_host': "#5dade2",

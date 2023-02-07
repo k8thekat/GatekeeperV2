@@ -236,6 +236,7 @@ class Banner_Color_Input(TextInput):
             return False
 
 class Banner_Blur_Input(TextInput):
+    #This is the Modal that appears when inputing the blur value.
     def __init__(self, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, select_value: str, label: str= "Blur Background Intensity", style= discord.TextStyle.short, placeholder= 'Enter a Number', default:int= 2, required= True, min_length= 1, max_length= 2):
         self._edited_db_banner = edited_db_banner
         self._select_value = select_value
