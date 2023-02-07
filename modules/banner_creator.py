@@ -13,7 +13,7 @@ class Banner_Generator():
         #Turn that str into a Purepath for cross OS support
         self._font = pathlib.Path("resources/fonts/ReemKufiFun-Regular.ttf").as_posix()
         self._logger = logging.getLogger()
-        self._font_default_size = 25
+        self._font_default_size = 12
         self._font_default = ImageFont.truetype(self._font, self._font_default_size)
         self._font_drop_shadow_size = (int(self._font_default_size / 5), int(self._font_default_size / 5))
 
@@ -25,8 +25,8 @@ class Banner_Generator():
         self._Server = AMPServer
         self._DBBanner = DBBanner
 
-        self._banner_limit_size_x = 1800
-        self._banner_limit_size_y = 600
+        self._banner_limit_size_x = 800
+        self._banner_limit_size_y = 270
         self.banner_image = self._validate_image(pathlib.Path(Banner_path).as_posix())
 
     
@@ -144,11 +144,17 @@ class Banner_Generator():
         """Custom Word Wrap. \n
         Returns a `list` when `truncate` is `False`"""
         #No need to word wrap if the length is less than our cutoff.
-        if ImageFont.truetype(text_font, text_size).getlength(text) < limit:
+        if ImageFont.truetype(text_font, text_size).getlength(text) <= limit:
             return text
 
+        #What if we don't find the char?
         if text.find(find_char) == -1:
-            return None
+            cur_text = ''
+            for char in text:
+                #If our text is now greater than our limit; lets send a shortened version and add `...`
+                if ImageFont.truetype(text_font, text_size).getlength(cur_text) >= limit:
+                    return cur_text[:-2] + "..."
+                cur_text = cur_text + char
 
         split_test_str = text.split(find_char)
         temp_list = []
@@ -226,11 +232,13 @@ class Banner_Generator():
     def _Server_Name(self):
         """Displays the Server Name"""
         x,y = 25,0
+
         name = self._Server.FriendlyName
         if self._Server.DisplayName != None:
-            name = self._Server.DisplayName
+            name = self._Server.DisplayName 
+
         #Lets truncate our Display Name since; well it can clip the shadowbox..
-        name = self._word_wrap(name, self._font, self._font_Header_size, (self._banner_shadow_box_x - x), ' ')
+        name = self._word_wrap(text= name, text_font= self._font, text_size= self._font_Header_size, limit= (self._banner_shadow_box_x - x), find_char= ' ')
         self._draw_text((x,y), name, self._font_Header, self._font_Header_color)
     
     def _Server_Host(self):
@@ -257,7 +265,8 @@ class Banner_Generator():
     
     def _Server_Donator(self):
         #Location
-        self._font_Donator_y = int(self._font_Whitelist_y + self._font_Whitelist_text_height)
+        self._font_Donator_y = int(self._font_Header_text_height  + self._font_Host_text_height + self._font_Whitelist_text_height + 5 + self._font_Whitelist_text_height)
+
         text = '[Donator Only]'
         color = self._font_Donator_color
         shadow_color = '#3498db'

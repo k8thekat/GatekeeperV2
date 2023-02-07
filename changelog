@@ -1,7 +1,15 @@
+__**HotFix 4.4.9**__
+- changed default `DBBanner` blur amount to `0`
+- fixed issue in `on_command_error`
+- Updated `banner_creator.py`
+    - fixed issue with `banner_creator.py` raising an issue about `_font_Whitelist_y` not existing. Thanks @IceOfWraith#6057
+    - changed resolution of Banners in `banner_creator.py` from `1800x600` to `800x270`
+        - changed `self._font_default_size` from 25 to 12
+    - fixed issue with `word_wrap` not handling text without a blank space. Too long of Instance Names will show like this `InstaceN...` or similar depending on length.
+
 __**Update 4.4.8**__
 - added `Donator` role bypass for Auto whitelist wait time.
     - added `/whitelist donator_bypass` command.
-
 
 __**Update 4.4.7**__
 - fixed issue with `whitelist_request_handler()` when attempting to use a non unique IGN. Thanks @Snaggolicious#4987
@@ -31,7 +39,6 @@ __**Update 4.4.7**__
         - changed `AMP Description` to no longer word wrap to next line; it will truncate when it hits the Shadow box on the right of Banners.(Sorry)
     - fixed issue with `host` color not updating on banners, DB was using `Host` instead of `host`. Thanks @hotdamnitsaaron#1501
     - added `Donator color` to `/server banner settings`.
-
 
 __**Update 4.4.6**__
 - changes to `AMP_server_cog.py`

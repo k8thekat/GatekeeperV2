@@ -37,7 +37,7 @@ import AMP_Handler
 import DB
 from typing import Union
 
-Version = 'beta-4.4.8'
+Version = 'beta-4.4.9'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -87,7 +87,7 @@ class Gatekeeper(commands.Bot):
     
     async def on_command_error(self, context:commands.Context, exception: discord.errors) -> None:
         self.logger.error(f'We ran into an issue. {exception}')
-        traceback.print_exception(exception)
+        traceback.print_exc()
 
     async def on_ready(self):
         self.logger.info('Are you the Keymaster?...I am the Gatekeeper')
