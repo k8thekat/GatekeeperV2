@@ -88,6 +88,8 @@ class AMPInstance():
         """
     def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
         self.Initialized = False
+                # Do not send messages from people in this list (case insensitive)
+        self.SenderFilterList = list()
 
         self.logger = logging.getLogger()
 

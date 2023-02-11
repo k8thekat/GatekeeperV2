@@ -230,7 +230,12 @@ class AMPConsole:
         #Currently all servers set "Type" to Chat! So lets use those.
         self.logger.dev(f"Chat Channel: {self.AMPInstance.Discord_Chat_Channel} | Chat Prefix: {self.DB_Server.Discord_Chat_Prefix} | Event Channel: {self.AMPInstance.Discord_Event_Channel}")
         if message["Type"] == 'Chat':
-      
+            
+            for sender in self.AMPInstance.SenderFilterList:
+                if message['Source'].lower() == sender.lower():
+                    self.logger.dev(f'Filtered Message: {message}')
+                    return
+
             #Removed the odd character for color idicators on text
             message['Contents'] = message['Contents'].replace('�','')
 
