@@ -242,7 +242,7 @@ class Whitelist(commands.Cog):
         """Sets the Whitelist Request Channel for the Bot to send Whitelist Requests for Staff Approval"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
     
-        self.DBConfig.SetSetting('Whitelist_request_channel',channel.id)
+        self.DBConfig.SetSetting('Whitelist_request_channel', channel.id)
         await context.send(f'Set Bot Whitelist Request Channel to **{channel.name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @db_bot_whitelist.command(name='wait_time')
@@ -260,6 +260,11 @@ class Whitelist(commands.Cog):
     async def db_bot_whitelist_auto_whitelist(self, context:commands.Context, flag:Choice[int]):
         """This turns on or off Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
+
+        #lets validate our Whitelist_request_channel still exists.
+        db_setting = self.DBConfig.GetSetting('Whitelist_request_channel')
+        if db_setting != None and context.guild.get_channel(db_setting) == None:
+            return await context.send('Hey uhh your `Whitelist Request Channel` is no longer valid or is not set.', ephemeral= True, delete_after= self._client.Message_Timeout)
        
         if flag.value == 1:
             self.DBConfig.SetSetting('Auto_Whitelist', flag.value)
