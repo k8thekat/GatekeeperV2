@@ -37,6 +37,8 @@ class AMPSevendays(AMP.AMPInstance):
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/7days_avatar.png?raw=true'
 
+        self.SenderFilterList.append('Server')
+
     def Chat_Message(self, message:str, author:str=None, author_prefix:str=None, server_prefix:str=None):
             """Sends a customized message via say through the console."""
             self.Login()
