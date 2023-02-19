@@ -54,11 +54,6 @@ class Handler():
         
     async def module_auto_loader(self):
         """This loads all the required Cogs/Scripts for each unique AMPInstance.Module type"""
-        #Just to make it easier; always load the Generic Module as a base.
-        await self._client.load_extension('modules.Generic.generic')
-        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **Generic**')
-        loaded.append('Generic')
-
         try:
             dir_list = self._cwd.joinpath('modules').iterdir()
 
@@ -74,11 +69,17 @@ class Handler():
                     for DIS in getattr(class_module,f'DisplayImageSources'):
                         self.Cog_Modules[DIS] = script
                     
-                    self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **{module_name}**')
+                    self.logger.dev(f'**SUCCESS** {self.name} Found Server Cog Module **{module_name}**')
                     
         except Exception as e:
-            self.logger.error(f'**ERROR** {self.name} Loading Server Cog Module ** - File Not Found {traceback.format_exc()}')
-                    
+            self.logger.error(f'**ERROR** {self.name} Finding Server Cog Module ** - File Not Found {traceback.format_exc()}')
+
+        #Just to make it easier; always load the Generic Module as a base.
+        await self._client.load_extension('modules.Generic.generic')
+        self.logger.dev(f'**SUCCESS** {self.name} Loading Server Cog Module **Generic**')
+        loaded.append('Generic')
+
+        #This loads the Cog Module if it finds a Instance that requires said Module.
         for instance in self.AMPInstances:
             DisplayImageSource = self.AMPInstances[instance].DisplayImageSource
             if DisplayImageSource in self.Cog_Modules:
@@ -99,52 +100,57 @@ class Handler():
     async def cog_auto_loader(self, reload= False):
         """This will load all Cogs inside of the cogs folder."""
         path = f'cogs' #This gets us to the folder for the module specific scripts to load via the cog.
-        failed_cog_load_list = []
-        try:
-            cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
-            for script in cog_file_list:
+
+        loaded_cogs = []
+        #Grab all the cogs inside my `cogs` folder and duplicate the list.
+        cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
+        cur_cog_file_list = [entry for entry in cog_file_list]
+        print('coglist', cur_cog_file_list)
+
+        #This while loop will force it to load EVERY cog it finds until the list is empty.
+        while len(cur_cog_file_list) > 0:
+            for script in cur_cog_file_list:
+                print(script.name)
+                #Ignore Pycache or similar files.
                 #Lets Ignore our Custom Permisisons Cog. We will load it on-demand.
-                if script.name == 'Permissions_cog.py':
+                if script.name.startswith('__') or script.name == 'Permissions_cog.py':
+                    cur_cog_file_list.remove(script)
                     continue
 
+                module_name = script.name[4:-3].capitalize() #File name ofc.
+                spec = importlib.util.spec_from_file_location(module_name, script)
+                class_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(class_module)
+
+                module_dependencies = getattr(class_module, f'Dependencies')
+                print(type(module_dependencies), module_dependencies)
+                if module_dependencies != None:
+                    for dependency in getattr(class_module, f'Dependencies'):
+                        #If the cog we need isnt loaded; skip. We will come back around to it.
+                        if dependency.lower() not in loaded_cogs:
+                            continue
+                   
                 if script.name.endswith('.py'):
                     cog = f'{path}.{script.name[:-3]}'
 
                     try:
                         if reload:
                             await self._client.reload_extension(cog)
+
                         else:
-                            await self._client.load_extension(cog) 
+                            await self._client.load_extension(cog)
+                            print('loaded cog', script.name)
+                            loaded_cogs.append(script.name.lower()) #Append to our loaded cogs for dependency check
+                            cur_cog_file_list.remove(script) #Remove the entry from our cog list; so we don't attempt to load it again.
 
                         self.logger.dev(f'**FINISHED LOADING** {self.name} -> **{cog}**')
 
                     except discord.ext.commands.errors.ExtensionAlreadyLoaded:
                         continue
 
-                    except Exception as e:
-                        self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** Will retry shortly... - {traceback.format_exc()}')
-                        failed_cog_load_list.append(cog)
-
-            #!TEMP HOTFIX 4.4.2 - FAILED TO LOAD COGS with DEPENDENCIES
-            for cog in failed_cog_load_list:
-                try:
-                    if reload:
-                        await self._client.reload_extension(cog)
-                    else:
-                        await self._client.load_extension(cog) 
-
-                    self.logger.dev(f'**FINISHED LOADING** {self.name} ->**{cog}**')
-
-                except discord.ext.commands.errors.ExtensionAlreadyLoaded:
-                    continue
-
-                except Exception as e:
-                    self.logger.error(f'**ERROR** {self.name} Loading Cog **{cog}** - {traceback.format_exc()}')
-
-                
-        except FileNotFoundError as e:
-            self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {traceback.format_exc()}')
-            
+                    except FileNotFoundError as e:
+                        self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {traceback.format_exc()}')
+                           
         self.logger.info(f'**All Cog Modules Loaded**')
 
                 

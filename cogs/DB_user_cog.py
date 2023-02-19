@@ -32,6 +32,9 @@ import utils_embeds
 import AMP_Handler
 import DB
 
+#This is used to force cog order to prevent missing methods.
+Dependencies = None
+
 class DB_User(commands.Cog):
     def __init__ (self, client:discord.Client):
         self._client = client
@@ -54,24 +57,6 @@ class DB_User(commands.Cog):
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Db","DB")}')
 
-    # @commands.Cog.listener('on_message')
-    # async def on_message(self, message:discord.Message):
-    #     if message.webhook_id != None:
-    #         return message
-        
-    #     if message.author != self._client.user:
-    #         self.logger.dev(f'On Message Event for {self.name}')
-
-    #         #Testing out DM Functionality, Possible for allowing users to Update Information.
-    #         if not message.guild:
-    #             try:
-    #                 await message.channel.send("This is a DM.")
-    #             except discord.errors.Forbidden:
-    #                 pass
-    #         return message
-
-    #     if message.content.startswith(self._client.command_prefix):
-    #         return message
 
     @commands.Cog.listener('on_member_update')
     async def on_member_update(self, user_before:discord.User, user_after:discord.User):

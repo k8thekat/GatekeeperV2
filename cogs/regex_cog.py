@@ -33,6 +33,8 @@ import utils
 import AMP_Handler
 import DB as DB
 
+#This is used to force cog order to prevent missing methods.
+Dependencies = None
 
 class Regex(commands.Cog):
     def __init__ (self,client:discord.Client):

@@ -24,6 +24,9 @@ import utils
 import AMP as AMP
 import DB as DB
 
+#This is used to force cog order to prevent missing methods.
+#MUST USE ENTIRE FILENAME!
+Dependencies = None #Example - ["AMP_server_cog.py"]
 
 class Cog_Template(commands.Cog):
     def __init__ (self,client:discord.Client):

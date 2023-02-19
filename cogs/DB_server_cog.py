@@ -32,6 +32,9 @@ import utils_ui
 import AMP_Handler
 import DB
 
+#This is used to force cog order to prevent missing methods.
+Dependencies = None
+
 class DB_Server(commands.Cog):
     def __init__ (self,client:discord.Client):
         self._client = client

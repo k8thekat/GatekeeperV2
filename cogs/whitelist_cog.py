@@ -38,6 +38,10 @@ import utils
 import utils_embeds
 import utils_ui
 
+#This is used to force cog order to prevent missing methods.
+#MUST USE ENTIRE FILENAME!
+Dependencies = ["AMP_server_cog.py"]
+
 Whitelist_settings_choices = [app_commands.Choice(name= 'True', value= True),
                             app_commands.Choice(name= 'False', value= False)
                             ]

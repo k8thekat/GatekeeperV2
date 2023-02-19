@@ -36,6 +36,9 @@ import utils_ui
 import utils_embeds
 import modules.banner_creator as BC
 
+#This is used to force cog order to prevent missing methods.
+Dependencies = None
+
 class AMP_Server(commands.Cog):
     def __init__(self, client:discord.Client):
         self._client = client
@@ -236,11 +239,11 @@ class AMP_Server(commands.Cog):
                     banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
                     banner_image_list.append(banner_file)
 
-            self.Server_Info_Bannerss = []
+            self.Server_Info_Banners = []
             for curpos in range(0, len(banner_image_list), 10):
                 sent_msg = await context.send(files= banner_image_list[curpos:curpos+10])
-                self.Server_Info_Bannerss.append(sent_msg.id)
-            self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Bannerss)
+                self.Server_Info_Banners.append(sent_msg.id)
+            self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Banners)
 
         else:
             embed_list = await self.eBot.server_display_embed()
@@ -410,7 +413,7 @@ class AMP_Server(commands.Cog):
     @amp_server_settings.command(name='info')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def amp_server_info(self, context:commands.Context, server):
+    async def amp_server_settings_info(self, context:commands.Context, server):
         """Displays Specific Server Information."""
         self.logger.command(f'{context.author.name} used AMP Server Info')
         await context.defer(ephemeral= True)
@@ -493,7 +496,7 @@ class AMP_Server(commands.Cog):
     @amp_server_settings.command(name='role')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_discord_role_set(self, context:commands.Context, server, role: discord.Role):
+    async def amp_server_discord_role_set(self, context:commands.Context, server, role: discord.Role):
         """Sets the Discord Role for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Discord Role')
     
@@ -506,7 +509,7 @@ class AMP_Server(commands.Cog):
     @amp_server_settings.command(name='prefix')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_discord_prefix_set(self, context:commands.Context, server, server_prefix:str):
+    async def amp_server_discord_prefix_set(self, context:commands.Context, server, server_prefix:str):
         """Sets the Discord Chat Prefix for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Discord Chat Prefix')
     
@@ -520,7 +523,7 @@ class AMP_Server(commands.Cog):
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
-    async def db_server_hidden(self, context:commands.Context, server, flag:Choice[int]):
+    async def amp_server_hidden(self, context:commands.Context, server, flag:Choice[int]):
         """Hides the server from Banner Display via `/server display`"""
         self.logger.command(f'{context.author.name} used Database Server Hidden')
 
@@ -597,7 +600,7 @@ class AMP_Server(commands.Cog):
     @amp_server_event_settings.command(name='channel')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_event_channel_set(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
+    async def amp_server_event_channel_set(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
         """Sets the Event Channel for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Event Channel')
 

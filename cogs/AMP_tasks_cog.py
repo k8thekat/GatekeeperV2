@@ -29,6 +29,9 @@ import DB
 import discord
 from discord.ext import commands,tasks
 
+#This is used to force cog order to prevent missing methods.
+Dependencies = None
+
 class AMP_Tasks(commands.Cog):
     def __init__ (self, client:discord.Client):
         self._client = client

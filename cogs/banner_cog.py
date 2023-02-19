@@ -38,6 +38,8 @@ import AMP_Handler
 import DB as DB
 import modules.banner_creator as BC
 
+#This is used to force cog order to prevent missing methods.
+Dependencies = ["AMP_server_cog.py"]
 
 class Banner(commands.Cog):
     def __init__ (self, client:discord.Client):
@@ -60,7 +62,7 @@ class Banner(commands.Cog):
 
         #Leave this commented out unless you need to create a sub-command.
         self.uBot.sub_command_handler('server', self.amp_banner) #This is used to add a sub command(self,parent_command,sub_command)
-        self.uBot.sub_command_handler('bot', self.banner)
+        self.uBot.sub_command_handler('bot', self.banner_settings)
         self.logger.info(f'**SUCCESS** Loading Module **{self.name.title()}**')
         
     async def autocomplete_banners(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
@@ -122,11 +124,11 @@ class Banner(commands.Cog):
         await self.banner_editor(context, amp_server)
 
     @commands.hybrid_group(name='banner_settings')
-    async def banner(self, context:commands.Context):
+    async def banner_settings(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral=True, delete_after= self._client.Message_Timeout)
 
-    @banner.command(name='auto_update')
+    @banner_settings.command(name='auto_update')
     @utils.role_check()
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
     async def banner_autoupdate(self, context:commands.Context, flag: Choice[int]= 1):
@@ -142,7 +144,7 @@ class Banner(commands.Cog):
         else:
             return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @banner.command(name='type')
+    @banner_settings.command(name='type')
     @utils.role_check()
     @app_commands.choices(type= [Choice(name='Custom Banner Images', value= 1), Choice(name='Discord Embeds', value= 0)])
     async def banner_type(self, context:commands.Context, type:Choice[int]= 0):
