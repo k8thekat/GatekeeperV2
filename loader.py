@@ -105,12 +105,10 @@ class Handler():
         #Grab all the cogs inside my `cogs` folder and duplicate the list.
         cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
         cur_cog_file_list = [entry for entry in cog_file_list]
-        print('coglist', cur_cog_file_list)
 
         #This while loop will force it to load EVERY cog it finds until the list is empty.
         while len(cur_cog_file_list) > 0:
             for script in cur_cog_file_list:
-                print(script.name)
                 #Ignore Pycache or similar files.
                 #Lets Ignore our Custom Permisisons Cog. We will load it on-demand.
                 if script.name.startswith('__') or script.name == 'Permissions_cog.py':
@@ -123,7 +121,6 @@ class Handler():
                 spec.loader.exec_module(class_module)
 
                 module_dependencies = getattr(class_module, f'Dependencies')
-                print(type(module_dependencies), module_dependencies)
                 if module_dependencies != None:
                     for dependency in getattr(class_module, f'Dependencies'):
                         #If the cog we need isnt loaded; skip. We will come back around to it.
@@ -139,7 +136,6 @@ class Handler():
 
                         else:
                             await self._client.load_extension(cog)
-                            print('loaded cog', script.name)
                             loaded_cogs.append(script.name.lower()) #Append to our loaded cogs for dependency check
                             cur_cog_file_list.remove(script) #Remove the entry from our cog list; so we don't attempt to load it again.
 
