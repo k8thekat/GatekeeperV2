@@ -22,6 +22,7 @@ import AMP
 import AMP_Console
 import requests
 import json
+import base64
 
 from DB import DBUser
 
@@ -88,7 +89,17 @@ class AMPMinecraft(AMP.AMPInstance):
         """Removes a User from the Whitelist File *Supports IGN*"""
         self.Login()
         self.ConsoleMessage(f'whitelist remove {in_gamename if db_user == None else db_user.MC_IngameName}')
-        
+
+    def getWhitelist(self) -> dict[str, str]:
+        """Checks the Whitelist File for Minecraft Users"""
+        file_directory = self.getDirectoryListing('')
+        for entry in file_directory['result']:
+            if entry['Filename'] == 'whitelist.json':
+                whitelist = self.getFileChunk("whitelist.json",0,33554432)
+                whitelist_data = base64.b64decode(whitelist["result"]["Base64Data"])
+                whitelist_json = json.loads(whitelist_data.decode("utf-8"))
+                return whitelist_json
+
     def check_Whitelist(self, db_user: DBUser= None, in_gamename: str= None):
         self.logger.dev(f'Checking if {in_gamename if db_user == None else db_user.DiscordName} is whitelisted on {self.FriendlyName}...')
         """Checks if the User is already in the whitelist file. Supports DB User and MC In game Name.\n

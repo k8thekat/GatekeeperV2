@@ -1,3 +1,11 @@
+__**Update 4.5**__
+- changes to `AMP_server_cog.py`
+    - relocated and renamed methods to better facilate redability
+- changes to `whitelist_cog.py`
+    - added validation of `Whitelist_request_channel` when enabling auto-whitelist. Should warn if channel doesn't exists and or not set.
+- added extensive documentation to `amp_template.py`
+    - added required methods and notes to indicate this.
+
 __**HotFix 4.4.9**__
 - changed default `DBBanner` blur amount to `0`
 - fixed issue in `on_command_error`
@@ -6,6 +14,7 @@ __**HotFix 4.4.9**__
     - changed resolution of Banners in `banner_creator.py` from `1800x600` to `800x270`
         - changed `self._font_default_size` from 25 to 12
     - fixed issue with `word_wrap` not handling text without a blank space. Too long of Instance Names will show like this `InstaceN...` or similar depending on length.
+- fixed issue with `/server banner settings` Modal/View
 
 __**Update 4.4.8**__
 - added `Donator` role bypass for Auto whitelist wait time.
