@@ -19,52 +19,50 @@
    02110-1301, USA. 
 
 '''
-import AMP_Console
 import AMP
+import AMP_Console
 
-#Resources - https://www.dexerto.com/gaming/terraria-console-commands-explained-a-simple-controls-guide-1663852/
-DisplayImageSources = ['steam:105600']
-class AMPTerraria(AMP.AMPInstance):
+
+DisplayImageSources = ['steam:251570']
+class AMPSevendays(AMP.AMPInstance):
     def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
         self.perms = []
-        self.APIModule = 'Terraria'
+        self.APIModule = 'Seven Days To Die'
         
         super().__init__(instanceID, serverdata, Handler=Handler, TargetName=TargetName)
-        self.Console = AMPTerrariaConsole(AMPInstance = self)
+        self.Console = AMPSevendaysConsole(AMPInstance = self)
 
-        self.default_background_banner_path = 'resources/banners/Terraria_Banner.png'
-        self.SenderFilterList.append('Server')
+        self.default_background_banner_path = 'resources/banners/7Days_Banner_2.jpg'
 
         if self.Avatar_url == None:
-            self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/terraria_avatar.jpg?raw=true'
+            self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/7days_avatar.png?raw=true'
+
+        self.SenderFilterList.append('Server')
 
     def Chat_Message(self, message:str, author:str=None, author_prefix:str=None, server_prefix:str=None):
             """Sends a customized message via say through the console."""
             self.Login()
-            # Colors:
-            # To write colors, you have to use the "color" variable. To write the command, use 'say [c/(insert color):text]' Ex: /say [c/ff0000:Hi!]
-            # Colors must be entered as hex codes
-            content = 'say [c/0000ff:[Discord][c/0000ff:]] '
+            content = 'say "[Discord] '
             if server_prefix != None:
-                content += f'[c/ffd700:({server_prefix})]'
+                content += f'({server_prefix}) '
 
             if author_prefix != None:
-                content += f'[c/ffff00:({author_prefix})]'
+                content += f'({author_prefix}) '
                 
-            content += f'[c/ffffff:<{author}> {message}]'
+            content += f'<{author}> {message}"'
             self.ConsoleMessage(content)
 
     def Broadcast_Message(self, message, prefix: str = None):
         """Used to Send a Broadcast Message to the Server"""
         self.Login()
-        content = 'say '
+        content = 'say "'
         if prefix != None:
             content += f'<{prefix}> '
         
-        content += f'{message}'
+        content += f'{message}"'
         self.ConsoleMessage(content)
 
 
-class AMPTerrariaConsole(AMP_Console.AMPConsole):
-    def __init__(self, AMPInstance = AMPTerraria):
+class AMPSevendaysConsole(AMP_Console.AMPConsole):
+    def __init__(self, AMPInstance = AMPSevendays):
         super().__init__(AMPInstance)
