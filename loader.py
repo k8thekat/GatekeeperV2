@@ -133,6 +133,8 @@ class Handler():
                     try:
                         if reload:
                             await self._client.reload_extension(cog)
+                            loaded_cogs.append(script.name.lower()) #Append to our loaded cogs for dependency check
+                            cur_cog_file_list.remove(script) #Remove the entry from our cog list; so we don't attempt to load it again.
 
                         else:
                             await self._client.load_extension(cog)
