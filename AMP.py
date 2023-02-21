@@ -244,6 +244,7 @@ class AMPInstance():
         """Sets the Permissions Nodes for AMP Gatekeeper Role"""
         self.logger.info('Setting AMP Role Permissions for `Gatekeeper`...')
         import AMP_Permissions as AMPPerms
+        #import amp_permissions as AMPPerms
         core = AMPPerms.perms_super()
         for perm in core:
             enabled = True
@@ -386,10 +387,15 @@ class AMPInstance():
 
             try:
                 result = self.CallAPI('Core/Login', parameters)
-    
-                self.SessionID = result['sessionID']
-                self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
-                self.Running = True
+                if result.get("sessionID"):
+                    self.SessionID = result['sessionID']
+                    self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
+                    self.Running = True
+
+                else:
+                    self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
+                    self.Running = False
+                    return False
 
             except Exception as e:
                 self.logger.dev(f'Core/Login Exception: {traceback.format_exc()}')
@@ -398,6 +404,7 @@ class AMPInstance():
                 self.logger.warning(f'{self.FriendlyName} - Instance is Offline')
                 self.Running = False
                 return False
+            
         return True
 
     def CallAPI(self, APICall, parameters) -> Union[bool, dict]:
@@ -912,7 +919,7 @@ class AMPInstance():
       
         return True
 
-    #These are GENERIC Methods below this point ---------------------------------------------------------------------------
+    #These are GENERIC Methods below this point purely for typehiting and Linter purpose. ---------------------------------------------------------------------------
     def addWhitelist(self, db_user, in_gamename: str= None):
         """Base Function for AMP.addWhitelist"""
         #Use the DB_User object and get the required IGN depending on the server type.
@@ -920,13 +927,7 @@ class AMPInstance():
 
     def getWhitelist(self) -> dict[str, str]:
         """Base Function for AMP.getWhitelist"""
-        file_directory = self.getDirectoryListing('')
-        for entry in file_directory['result']:
-            if entry['Filename'] == 'whitelist.json':
-                whitelist = self.getFileChunk("whitelist.json",0,33554432)
-                whitelist_data = base64.b64decode(whitelist["result"]["Base64Data"])
-                whitelist_json = json.loads(whitelist_data.decode("utf-8"))
-                return whitelist_json
+        return
 
     def removeWhitelist(self, db_user, in_gamename: str= None):
         """Base Function for AMP.removeWhitelist"""
@@ -956,7 +957,7 @@ class AMPInstance():
         return message
 
     def get_IGN_Avatar(self, db_user=None, user:str=None):
-        """Base Function for customized discord messages"""
+        """Base Function for customized discord messages (Primarily Minecraft)"""
         return False
 
     def Broadcast_Message(self, message, prefix:str=None):
