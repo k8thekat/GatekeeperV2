@@ -69,12 +69,23 @@ class Whitelist(commands.Cog):
         self._client.Whitelist_wait_list = {} #[message.id] : {'ampserver' : amp_server, 'context' : context, 'dbuser' : db_user}
 
         self.uBot.sub_command_handler('server', self.server_whitelist)
+        self.uBot.sub_group_command_handler('server settings', self.server_settings_whitelist_set)
 
-        #!TODO! Need's to be validated/tested.
-        #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist)
-        #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist_disabled)
+        #Because of the similar named hybrid group; we get a duplicate command under `/whitelist`
+        #I am not overly found of doing it this way; but it currently works.
+        self.__remove_commands("whitelist", "add") 
+        self.__remove_commands("whitelist", "remove")
     
         self.logger.info(f'**SUCCESS** Initializing {self.name.title()}')
+
+    def __remove_commands(self, parent_group:str, command:str):
+        """This will remove a command from a group"""
+        #Should call some form of sync command after; but I do not want to auto sync. Regardless the command tree will be cleaned up.
+        group = self._client.get_command(parent_group)
+        #the Group command could not exists on first startup; as the client has not been sync'd.
+        if group != None:
+            group.remove_command(command)
+
 
     def __getattribute__(self, __name: str):
         if __name == 'Whitelist__Request_Channel':
@@ -108,51 +119,35 @@ class Whitelist(commands.Cog):
                 self.logger.info(f'Removed {member.name} from Whitelist Wait List.')
        
     #Server Whitelist Commands ------------------------------------------------------------
+    @commands.hybrid_command(name='whitelist')
+    @utils.role_check()
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
+    @app_commands.choices(flag= [Choice(name='False', value= 0), Choice(name='True', value= 1), Choice(name='Disabled', value= 2)])
+    async def server_settings_whitelist_set(self, context:commands.Context, server:str, flag:Choice[int]):
+        """Set the Servers Whitelist Allowed to True, False or Disabled"""
+        self.logger.command(f'{context.author.name} used {context.command.name}')
+     
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            if flag.value in [0, 1]:
+                #Set our Whitelist Flag
+                self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = flag.value
+                #Unhide our Whitelist Open/Closed on the Server Banners
+                self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = False
+                amp_server._setDBattr() #This will update the AMPInstance Attributes
+            
+            elif flag.value == 2:
+                #Hides the Whitelist Open/Closed on the Server Banners
+                self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = True
+                amp_server._setDBattr() #This will update the AMPInstance Attributes
+
+        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Whitelist set to : `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+                         
     @commands.hybrid_group(name='whitelist')
     @utils.role_check()
     async def server_whitelist(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_whitelist.command(name='true')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def dbserver_whitelist_true(self, context:commands.Context, server):
-        """Set Servers Whitelist Allowed to True"""
-        self.logger.command(f'{context.author.name} used Database Server Whitelist True...')
-     
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = True
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Whitelist set to : `True`", ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_whitelist.command(name='false')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def dbserver_whitelist_false(self, context:commands.Context, server):
-        """Set Servers Whitelist Allowed to False"""
-        self.logger.command(f'{context.author.name} used Database Server Whitelist False...')
-
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = False
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Whitelist set to : `False`", ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_whitelist.command(name='disabled')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    @app_commands.choices(flag= [Choice(name='False', value= 0), Choice(name='True', value= 1)])
-    async def dbserver_whitelist_disabled(self, context:commands.Context, server, flag:Choice[int]):
-        """Hides the Servers Whitelist Status from Display Banners"""
-        self.logger.command(f'{context.author.name} used Database Server Whitelist Disabled...')
-
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = flag.value
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Display Whitelist Status on Banners set to : `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_whitelist.command(name='add')
     @utils.role_check()
@@ -253,7 +248,7 @@ class Whitelist(commands.Cog):
     @utils.role_check()
     @app_commands.describe(time= 'Time in minutes Gatekeeper will wait before handling a Whitelist request.')
     async def db_bot_whitelist_wait_time_set(self, context: commands.Context, time: app_commands.Range[int, 0, 60]= 5):
-        """Set Gatekeeper's Whitelist wait time , this value is in minutes!"""
+        """Set Gatekeeper's Whitelist wait time , this value is in minutes! Set to `0` to disable Wait time."""
         self.logger.command(f'{context.author.name} used Bot Whitelist wait time Set...')
         self.DBConfig.Whitelist_wait_time = time
         await context.send(f'Whitelist wait time has been set to **{time} {"minutes" if time > 1 else "minute"}**.', ephemeral= True, delete_after= self._client.Message_Timeout)
@@ -262,7 +257,7 @@ class Whitelist(commands.Cog):
     @utils.role_check()
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
     async def db_bot_whitelist_auto_whitelist(self, context:commands.Context, flag:Choice[int]):
-        """This turns on or off Auto-Whitelisting"""
+        """This turns ON or OFF Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
 
         #lets validate our Whitelist_request_channel still exists.
@@ -281,7 +276,7 @@ class Whitelist(commands.Cog):
     @utils.role_check()
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
     async def db_bot_whitelist_donator_bypass(self, context:commands.Context, flag:Choice[int]):
-        """This turns on or off Donator Bypass"""
+        """This turns ON or OFF Donator Bypass for Auto-Whitelist Wait time."""
         self.logger.command(f'{context.author.name} used Bot Donator Bypass')
        
         if flag.value == 1:
@@ -295,7 +290,7 @@ class Whitelist(commands.Cog):
     @db_bot_whitelist.command(name= 'request')
     @app_commands.autocomplete(server = utils.autocomplete_servers_public)
     async def db_bot_whitelist_request(self, context:commands.Context, server, ign:str= None):
-        """Allows a user to request  Whitelist for a Specific Server."""
+        """Allows a user to request Whitelist for a Specific Server."""
         self.logger.command(f'{context.author.name} used Bot Whitelist Request...')
         amp_server = await self.uBot._serverCheck(context, server)
 

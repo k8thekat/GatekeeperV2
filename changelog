@@ -1,6 +1,7 @@
 __**Update 4.5**__
 - changes to `AMP_server_cog.py`
     - relocated and renamed methods to better facilate redability
+    - fixed edge case where `stopping` an Instance just before Banner Generator fires would cause the loop to crash.
 - changes to `whitelist_cog.py`
     - added validation of `Whitelist_request_channel` when enabling auto-whitelist. Should warn if channel doesn't exists and or not set.
     - fixed edge case with `__remove_commands()` on first time startup failing to find command group.
@@ -13,8 +14,14 @@ __**Update 4.5**__
         - See `cog_template.py` for examples if needed.
 - Created `REGEX.md`
     - Here you will find useful information regarding Console Filtering and how to impliment Regex filtering.
-    
 - Updated `Commands.md`
+    - Fixed spelling mistakes and cleaned up formatting of commands.
+    - Removed documenation for commands that no longer exist; updated documenation for commands that have changed.
+- Updated `AMP.py`
+    - Changed logic inside of `Login()` to better handle SessionIDs when an Instance is offline.
+- Updated `AMP_Console.py`
+    - Fixed logic inside of `console_filter()` when handling Event type filtering.
+    - Added two `dev` print statements.
 
 
 __**HotFix 4.4.9**__
