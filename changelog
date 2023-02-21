@@ -3,6 +3,7 @@ __**Update 4.5**__
     - relocated and renamed methods to better facilate redability
 - changes to `whitelist_cog.py`
     - added validation of `Whitelist_request_channel` when enabling auto-whitelist. Should warn if channel doesn't exists and or not set.
+    - fixed edge case with `__remove_commands()` on first time startup failing to find command group.
 - relocated `getWhitelist` to `amp_minecraft.py`, there is a generic method inside of `AMP.py` for linters.
 - added extensive documentation to `amp_template.py`
     - added required methods and notes to indicate this.
@@ -10,6 +11,11 @@ __**Update 4.5**__
     - Revamped the entire `cog_auto_loader` to better handle cogs that rely on other cogs.
     - Cogs will now require a `Dependencies` var at the top of their files and will use a list to define any required cogs they need to load. If the cog has no dependency set it to `None`
         - See `cog_template.py` for examples if needed.
+- Created `REGEX.md`
+    - Here you will find useful information regarding Console Filtering and how to impliment Regex filtering.
+    
+- Updated `Commands.md`
+
 
 __**HotFix 4.4.9**__
 - changed default `DBBanner` blur amount to `0`
