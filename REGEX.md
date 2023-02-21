@@ -1,4 +1,4 @@
-# Regex
+# **Regex**
 Welcome to Gatekeepers Regex section, In this section we will cover how to manage your Regex patterns with Gatekeeper.
 
 Need to test your Regex? **[Regex Tester](https://regex101.com/)**
