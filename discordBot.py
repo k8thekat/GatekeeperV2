@@ -37,7 +37,7 @@ import AMP_Handler
 import DB
 from typing import Union
 
-Version = 'beta-4.4.9'
+Version = 'beta-4.5.0'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -199,7 +199,7 @@ async def bot_utils(context:commands.Context):
 
 @bot_utils.command(name='clear')
 @app_commands.choices(all=[Choice(name='True', value=1), Choice(name='False', value=0)])
-@app_commands.describe(all='Default\'s to True, removes ALL commands from selected Channel regardless of who sent them.')
+@app_commands.describe(all='Default\'s to False, removes ALL commands from selected Channel regardless of sender when TRUE.')
 @app_commands.describe(channel='Default\'s to the Channel the command was run; otherwise applies to the channel selected')
 @utils.role_check()
 async def bot_utils_clear(context: commands.Context, channel: discord.abc.GuildChannel = None, amount: app_commands.Range[int, 0, 100] = 50, all: Choice[int] = 0):
@@ -308,6 +308,7 @@ async def bot_utils_status(context:commands.Context):
 
 @bot_utils.command(name='message_timeout')
 @utils.role_check()
+@app_commands.describe(time = 'Default is 60 seconds')
 async def bot_utils_message_timeout(context:commands.Context, time:Union[None, int]=60):
     """Sets the Delete After time in seconds for ephemeral messages sent from Gatekeeperv2"""
     client.logger.command(f'{context.author.name} used Bot Utils Message Timeout Function...')
@@ -333,8 +334,8 @@ async def bot_utils_sync(context:commands.Context, local: Choice[int]= True, res
     if client.guild_id == None or context.guild.id != int(client.guild_id):
         client.DBConfig.SetSetting('Guild_ID',context.guild.id)
     
-    if ((type(reset)) == bool and (reset == True)) or ((type(reset) == Choice) and (reset.value() == 1)):
-        if ((type(local) == bool) and (local == True)) or ((type(local)) == Choice and (local.value() == 1)):
+    if ((type(reset)) == bool and (reset == True)) or ((type(reset) == Choice) and (reset.value == 1)):
+        if ((type(local) == bool) and (local == True)) or ((type(local)) == Choice and (local.value == 1)):
             #Local command tree reset
             client.tree.clear_commands(guild=context.guild)
             client.logger.command(f'Bot Commands Reset Locally and Sync\'d: {await client.tree.sync(guild=context.guild)}')
@@ -348,7 +349,7 @@ async def bot_utils_sync(context:commands.Context, local: Choice[int]= True, res
         else:
             return await context.sned('**ERROR** You do not have permission to reset the commands.', ephemeral= True, delete_after= client.Message_Timeout)
 
-    if ((type(local) == bool) and (local == True)) or ((type(local) == Choice) and (local.value() == 1)):
+    if ((type(local) == bool) and (local == True)) or ((type(local) == Choice) and (local.value == 1)):
         #Local command tree sync
         client.tree.copy_global_to(guild=context.guild)
         client.logger.command(f'Bot Commands Sync\'d Locally: {await client.tree.sync(guild=context.guild)}')
