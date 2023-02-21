@@ -5,6 +5,10 @@ __**Update 4.5**__
 - changes to `whitelist_cog.py`
     - added validation of `Whitelist_request_channel` when enabling auto-whitelist. Should warn if channel doesn't exists and or not set.
     - fixed edge case with `__remove_commands()` on first time startup failing to find command group.
+    - clarified doc strings on some commands.
+    - combined `/server whitelist true` and `/server whitelist false` into `/server settings whitelist`
+        - You can set Whitelist to True or False in one command.
+        - Added `Disabled` to hide `Whitelist Open/Closed` on Banners.
 - relocated `getWhitelist` to `amp_minecraft.py`, there is a generic method inside of `AMP.py` for linters.
 - added extensive documentation to `amp_template.py`
     - added required methods and notes to indicate this.
@@ -22,7 +26,8 @@ __**Update 4.5**__
 - Updated `AMP_Console.py`
     - Fixed logic inside of `console_filter()` when handling Event type filtering.
     - Added two `dev` print statements.
-
+- Updated `utils.py`
+    - Added `sub_group_command_handler()` for adding commands to existing groups when accross seperate files.
 
 __**HotFix 4.4.9**__
 - changed default `DBBanner` blur amount to `0`

@@ -484,18 +484,26 @@ class botUtils():
     def sub_command_handler(self, command:str, sub_command):
         """This will get the `Parent` command and then add a `Sub` command to said `Parent` command."""
         parent_command = self._client.get_command(command)
-        self.logger.dev(f'Loading Parent Command: {parent_command}')
-        parent_command.add_command(sub_command)
+        try:
+            parent_command.add_command(sub_command)
+            self.logger.dev(f'Added {command} Parent Command: {parent_command}')
+        except discord.app_commands.errors.CommandAlreadyRegistered:
+            return
+        except Exception as e:
+            self.logger.error(f'We encountered an error in `sub_command_handler` - {e}')
     
     def sub_group_command_handler(self, group:str, command):
         """Gets the `Command Group` and adds the `command` to said `Group`"""
-        #!TODO! Need to see about getting "sub command" groups.
         parent_group = self._client.get_command(group)
-        print()
-        self.logger.dev(f'Loading Command Group: {group}')
-        parent_group.add_command(command)
-
-
+        if type(parent_group) == discord.ext.commands.hybrid.HybridGroup:
+            try:
+                parent_group.add_command(command)
+                self.logger.dev(f'Added {group} to Parent Command Group: {parent_group}')
+            except discord.app_commands.errors.CommandAlreadyRegistered:
+                return
+            except Exception as e:
+                self.logger.error(f'We encountered an error in `sub_group_command_handler` - {e}')
+                
     async def _serverCheck(self, context:commands.Context, server, online_only:bool=True) -> Union[AMP_Handler.AMP.AMPInstance, bool]:
         """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
         amp_server = self.serverparse(server, context, context.guild.id)
