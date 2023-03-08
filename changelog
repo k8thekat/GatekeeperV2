@@ -1,33 +1,63 @@
 __**Update 4.5**__
 - changes to `AMP_server_cog.py`
     - relocated and renamed methods to better facilate redability
+    - relocated banner related functions to `banner_cog`
     - fixed edge case where `stopping` an Instance just before Banner Generator fires would cause the loop to crash.
+
 - changes to `whitelist_cog.py`
     - added validation of `Whitelist_request_channel` when enabling auto-whitelist. Should warn if channel doesn't exists and or not set.
-    - fixed edge case with `__remove_commands()` on first time startup failing to find command group.
+    - moved all whitelist specific settings commands under `/bot`
+    - changed `/whitelist reply` to `/bot whitelist_reply`.
     - clarified doc strings on some commands.
     - combined `/server whitelist true` and `/server whitelist false` into `/server settings whitelist`
         - You can set Whitelist to True or False in one command.
         - Added `Disabled` to hide `Whitelist Open/Closed` on Banners.
-- relocated `getWhitelist` to `amp_minecraft.py`, there is a generic method inside of `AMP.py` for linters.
+
 - added extensive documentation to `amp_template.py`
     - added required methods and notes to indicate this.
+
 - Updated `loader.py`
+- Added the ability to support `.disabled` to the end of a cog file and have it be ignored.
     - Revamped the entire `cog_auto_loader` to better handle cogs that rely on other cogs.
     - Cogs will now require a `Dependencies` var at the top of their files and will use a list to define any required cogs they need to load. If the cog has no dependency set it to `None`
         - See `cog_template.py` for examples if needed.
+
 - Created `REGEX.md`
     - Here you will find useful information regarding Console Filtering and how to impliment Regex filtering.
+
 - Updated `Commands.md`
     - Fixed spelling mistakes and cleaned up formatting of commands.
     - Removed documenation for commands that no longer exist; updated documenation for commands that have changed.
+
 - Updated `AMP.py`
+    - relocated `getWhitelist` to `amp_minecraft.py`, there is a generic method inside of `AMP.py` for linters.
     - Changed logic inside of `Login()` to better handle SessionIDs when an Instance is offline.
+
 - Updated `AMP_Console.py`
     - Fixed logic inside of `console_filter()` when handling Event type filtering.
     - Added two `dev` print statements.
+    - Added an `_ADScheck()` when console parsing fails to find any entries.
+
+- Updated `AMP_Handler.py`
+    - Changed layout of server names when using autocompletes
+        - Removed displaying of `TargetName` when equal to `None`.
+
 - Updated `utils.py`
     - Added `sub_group_command_handler()` for adding commands to existing groups when accross seperate files.
+    - fixed edge case with `__remove_commands()` on first time startup failing to find command group.
+    - Updated `autocomplete_servers` to better handle partial matches of server names when typing to narrow results.
+
+- Updated `utils_embeds.py`
+    - Added `InstanceID` field to embed footers.
+
+  
+- Updated `DB.py`
+    - Moved `DB_Update` to its on file, whew.. that file was getting big.
+    - Added multiple functions for `BannerGroups` to help interacting with them.
+    - Added `ServerID` parameter to `GetServer` to help searching.
+
+- Update `discordBot.py`
+    - Fixed typo in `/bot utils sync` command.
 
 __**HotFix 4.4.9**__
 - changed default `DBBanner` blur amount to `0`
