@@ -52,7 +52,6 @@ class DB_User(commands.Cog):
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
-
         self.eBot = utils_embeds.botEmbeds(client)
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Db","DB")}')
@@ -158,8 +157,5 @@ class DB_User(commands.Cog):
         else:
             await context.send('Looks like this user is not in the Database, please use `/user add`', ephemeral= True, delete_after= self._client.Message_Timeout)
   
-
-    
-
 async def setup(client):
     await client.add_cog(DB_User(client))
