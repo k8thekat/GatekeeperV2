@@ -87,6 +87,7 @@ class Gatekeeper(commands.Bot):
     
     async def on_command_error(self, context:commands.Context, exception: discord.errors) -> None:
         self.logger.error(f'We ran into an issue. {exception}')
+        traceback.print_exception(exception)
         traceback.print_exc()
 
     async def on_ready(self):
@@ -344,7 +345,7 @@ async def bot_utils_sync(context:commands.Context, local: Choice[int]= True, res
         elif context.author.id == 144462063920611328:
             #Global command tree reset, limited by k8thekat discord ID
             client.tree.clear_commands(guild=None)
-            client.logger.command(f'Bot Commands Reset Globall and Sync\'d: {await client.tree.sync(guild=None)}')
+            client.logger.command(f'Bot Commands Reset Global and Sync\'d: {await client.tree.sync(guild=None)}')
             return await context.send('**WARNING** Resetting Gatekeeper Commands Globally...', ephemeral= True, delete_after= client.Message_Timeout)
         else:
             return await context.sned('**ERROR** You do not have permission to reset the commands.', ephemeral= True, delete_after= client.Message_Timeout)
@@ -360,6 +361,9 @@ async def bot_utils_sync(context:commands.Context, local: Choice[int]= True, res
         client.logger.command(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild=None)}')
         await context.send('Successfully Sync\'d Gatekeeper Commands Globally...', ephemeral= True, delete_after= client.Message_Timeout)
 
+
+
+#Cog Specific Bot Commands --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @main_bot.group(name='cog')
 @utils.role_check()
 async def bot_cog(context:commands.Context):
