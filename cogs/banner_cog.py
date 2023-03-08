@@ -258,6 +258,7 @@ class Banner(commands.Cog):
             return
         
         self.logger.info('**Updating Banner Displays**')
+
         Banners = self.DB.Get_All_BannerGroup_Info()
         #Banners structure = {916195413839712277: {'name': 'TestBannerGroup', 'guild_id': 602285328320954378, 'servers': [1], 'messages': [1079236992145051668]}}
         for key, value in Banners.items():
@@ -360,8 +361,7 @@ class Banner(commands.Cog):
             c_status = self.DB.Add_Channel_to_BannerGroup(banner_groupname= group_name, channelid= channel.id, guildid= context.guild.id)
 
         if not c_status or not s_status:
-            return await context.send(content= f"""It appears that {f' `{db_server.InstanceName}`'if server != None else ''}{' and 'if server != None and channel != None else ''}{channel.mention if channel != None else ''} 
-                                                    already exists for **{group_name}**, please try again.""", ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(content= f"""It appears that {f' `{db_server.InstanceName}`'if server != None else ''}{' and 'if server != None and channel != None else ''}{channel.mention if channel != None else ''} already exists for **{group_name}**, please try again.""", ephemeral= True, delete_after= self._client.Message_Timeout)
             
         d_format = f"Looks like we just added"
         c_str = f"Banner Group: **{group_name}**\n{d_format}{f'` {db_server.InstanceName}`'if server != None else ''}{' and 'if server != None and channel != None else ''}{channel.mention if channel != None else ''}"
