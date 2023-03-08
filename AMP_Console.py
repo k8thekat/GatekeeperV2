@@ -112,6 +112,7 @@ class AMPConsole:
 
             if 'ConsoleEntries' not in console:
                 self.logger.error(f'Console Entries not found for {self.AMPInstance.FriendlyName}')
+                self.AMPInstance._ADScheck()
                 continue
 
             for entry in console['ConsoleEntries']:
@@ -190,7 +191,7 @@ class AMPConsole:
     def console_filter(self, message):
         """Controls what will be sent to the Discord Console Channel via AMP Console. \n
         Return `True` to Continue, `False` to Return Message"""
-        self.logger.dev(f'Console Filtered: {bool(self.AMPInstance.Console_Filtered)} | ConsoleFiltered Type: {self.AMPInstance.Console_Filtered_Type}')
+        self.logger.dev(f'Console Filtered: {bool(self.AMPInstance.Console_Filtered)} | Console Filtered Type: {self.AMPInstance.Console_Filtered_Type}')
         if self.AMPInstance.Console_Filtered:
             
             #This is to prevent Regex filtering on Chat Messages.
@@ -210,14 +211,17 @@ class AMPConsole:
                 if flag != None:
                     #0 = Console | 1 = Event
                     #This is Console Regex Filtering
+                    self.logger.dev(f'Regex Pattern Type: {regex[pattern]["Type"]} == Console Filter Type')
                     if regex[pattern]['Type'] == self.FILTER_TYPE_CONSOLE:
                         return not return_bool
 
                     #This is Event Regex Filtering
+                    self.logger.dev(f'Regex Pattern Type: {regex[pattern]["Type"]} == Event Filter Type')
                     if regex[pattern]['Type'] == self.FILTER_TYPE_EVENT:
-                        self.console_event_message_lock.acquire()
-                        self.console_event_messages.append(message['Contents'])
-                        self.console_event_message_lock.release()
+                        if return_bool == True: #If Whitelist; then allow Event messages to be handled.
+                            self.console_event_message_lock.acquire()
+                            self.console_event_messages.append(message['Contents'])
+                            self.console_event_message_lock.release()
                         return not return_bool
             else:
                 self.logger.dev(f'Filtered Message: {message}')

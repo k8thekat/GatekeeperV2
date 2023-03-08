@@ -100,15 +100,20 @@ class AMPHandler():
                 continue
             
             #Using TargetName as a unique identifier for the server if they match names.
-            TargetName = f'({server.TargetName}) | ' 
             if server.DisplayName != None:
-                AMP_Instances_Names[instanceID] = (TargetName + server.DisplayName)
+                server_name = server.DisplayName
              
             else:
                 if server.FriendlyName not in AMP_Instances_Names:
-                    AMP_Instances_Names[instanceID] = (TargetName + server.FriendlyName)
+                    server_name = server.FriendlyName
                 else:
-                    AMP_Instances_Names[instanceID] = (TargetName + server.InstanceName)
+                    server_name = server.InstanceName
+
+            if hasattr(server, 'TargetName') and server.TargetName != None:
+                server_name = f'({server.TargetName}) | ' + server_name
+                #TargetName = f'({server.TargetName}) | ' 
+
+            AMP_Instances_Names[instanceID] = server_name
 
         return AMP_Instances_Names
     
@@ -211,7 +216,9 @@ class AMPHandler():
                 if amp_instance['InstanceID'] in amp_instance_keys:
                     continue
 
-                self.logger.info(f'Found a New AMP Instance since Startup; Creating AMP Object for {amp_instance["FriendlyName"]}')
+                if not startup:
+                    self.logger.info(f'Found a New AMP Instance since Startup; Creating AMP Object for {amp_instance["FriendlyName"]}')
+                    
                 if amp_instance['DisplayImageSource'] in self.AMP_Modules:
                     name = str(self.AMP_Modules[amp_instance["DisplayImageSource"]]).split("'")[1]
                     image_source = amp_instance['DisplayImageSource']

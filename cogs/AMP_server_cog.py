@@ -36,6 +36,9 @@ import utils_ui
 import utils_embeds
 import modules.banner_creator as BC
 
+#This is used to force cog order to prevent missing methods.
+Dependencies = None
+
 class AMP_Server(commands.Cog):
     def __init__(self, client:discord.Client):
         self._client = client
@@ -56,28 +59,7 @@ class AMP_Server(commands.Cog):
         self.eBot = utils_embeds.botEmbeds(client)
         self.BC = BC
         
-        if self.DBConfig.GetSetting('Banner_Auto_Update') == True:
-            self.server_display_update.start()
-            self.logger.dev(f'Server Display Banners Update is Running: {self.server_display_update.is_running()}')
-
         self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
-
-    @commands.Cog.listener('on_message_delete')
-    async def on_message_delete(self, message:discord.Message):
-        """This should handle if someone deletes the Display Messages."""
-        display_list = self.DB.GetServerDisplayBanner()
-        if len(display_list) != 0:
-            
-            message_list = []
-            for banner in display_list:
-                discord_guild = banner['GuildID']
-                discord_channel = banner['ChannelID']
-                discord_message = banner['MessageID']
-                message_list.append(discord_message)
-            if message.id in message_list:
-                self.logger.warning('Someone deleted the Display Banners, removing them from the Database and stopping the Loop..')
-                self.DB.DelServerDisplayBanner(discord_guild, discord_channel)
-
 
     async def autocomplete_regex(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Regex Pattern Names"""
@@ -103,92 +85,6 @@ class AMP_Server(commands.Cog):
                 choice_list.append('None')
 
         return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
-    
-
-    async def _embed_generator(self, message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
-        embed_list = await self.eBot.server_display_embed(discord_guild)
-        if len(embed_list) == 0:
-            return
-
-        for curpos in range(0, len(message_list)):
-            try:
-                await message_list[curpos].edit(embeds=embed_list[curpos*10:(curpos+1)*10], attachments= [])
-
-            except discord.errors.Forbidden:
-                self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
-                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
-            
-            except discord.errors.NotFound:
-                self.logger.error(f'{self._client.user.name} is unable to find the messages in {discord_channel.name}, removing Banner Messages from DB.')
-                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
-
-            await asyncio.sleep(5)
-
-    async def _banner_generator(self, message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
-        banner_image_list = []
-        #Ran into a RuntimeError with adding an Instance as this was updating; causing a `dictionary changed size during iteration` issue.
-        #!TODO! This may break; keep watch.
-        banner_dictionary = self.AMPInstances
-        for cur_server in banner_dictionary:
-            server = banner_dictionary[cur_server]
-
-            if server.Hidden != 1:
-                db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-                banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
-                banner_image_list.append(banner_file)
-
-            else:
-                continue
-        
-        for curpos in range(0, len(message_list)):
-            try:
-                await message_list[curpos].edit(attachments= banner_image_list[curpos*10:(curpos+1)*10], embed= None)
-
-            except discord.errors.Forbidden:
-                self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing Banner Messages from DB.')
-                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
-            
-            except discord.errors.NotFound:
-                self.logger.error(f'{self._client.user.name} is unable to find the messages in {discord_channel.name}, removing Banner Messages from DB.')
-                self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
-            await asyncio.sleep(5)
-
-    @tasks.loop(minutes=1)
-    async def server_display_update(self):
-        """This will handle the constant updating of Server Display Messages"""
-        if self._client.is_ready():
-            if not self.DBConfig.GetSetting('Banner_Auto_Update'):
-                return
-            self.logger.info('Updating Server Display Messages')
-            server_banners = self.DB.GetServerDisplayBanner()
-            if len(server_banners) == 0:
-                self.logger.error('No Server Displays Messages to Update')
-                return
-
-            message_list = []
-            for banner in server_banners:
-                discord_guild = self._client.get_guild(banner['GuildID'])
-
-                discord_channel = discord_guild.get_channel(banner['ChannelID'])
-                #Just in case the channel gets deleted/etc...
-                if discord_channel == None:
-                    self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
-                    self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
-                    continue
-
-                discord_message = discord_channel.get_partial_message(banner['MessageID'])
-                #Just in case the message gets deleted/etc...
-                if discord_message == None:
-                    self.logger.error(f'Image Banner Messages were deleted, removing {discord_channel.name} Messages.')
-                    self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
-            
-            message_list.append(discord_message)
-
-            if self.DBConfig.GetSetting('Banner_Type') == 1:
-                await self._banner_generator(message_list, discord_guild, discord_channel)
-                
-            else:
-                await self._embed_generator(message_list, discord_guild, discord_channel)
 
     @commands.hybrid_group(name='server')
     @utils.role_check()
@@ -222,65 +118,8 @@ class AMP_Server(commands.Cog):
         await discord_message.edit(content= f'{prefix.value} Sent!')
         await discord_message.delete(delay= self._client.Message_Timeout)
 
-    @server.group(name='settings')
-    @utils.role_check()
-    async def server_settings(self, context:commands.Context):
-        if context.invoked_subcommand is None:
-            await context.send('Please try your command again...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @server_settings.command(name='info')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def amp_server_info(self, context:commands.Context, server):
-        """Displays Specific Server Information."""
-        self.logger.command(f'{context.author.name} used AMP Server Info')
-        await context.defer(ephemeral= True)
-
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            embed = await self.eBot.server_info_embed(amp_server, context)
-            await context.send(embed=embed, ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server.command(name='display')
-    @utils.role_check()
-    async def amp_server_display(self, context:commands.Context):
-        """Retrieves a list of all AMP Instances and displays them as Bannerss with constant updates."""
-        self.logger.command(f'{context.author.name} used AMP Display List...')
-
-        await context.defer()
-   
-        if self.DBConfig.GetSetting('Banner_Type') == 1:
-            banner_image_list = []
-            for server in self.AMPInstances:
-                server = self.AMPInstances[server]
-                if server.Hidden != 1:
-                    db_server = self.DB.GetServer(InstanceID= server.InstanceID)
-                    banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(server, db_server.getBanner())._image_())
-                    banner_image_list.append(banner_file)
-
-            self.Server_Info_Bannerss = []
-            for curpos in range(0, len(banner_image_list), 10):
-                sent_msg = await context.send(files= banner_image_list[curpos:curpos+10])
-                self.Server_Info_Bannerss.append(sent_msg.id)
-            self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Bannerss)
-
-        else:
-            embed_list = await self.eBot.server_display_embed()
-            if len(embed_list) == 0:
-                return await context.send('Hey I encountered an issue trying to get the Messages. Please check your settings.', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-            self.Server_Info_Embeds = []
-            for curpos in range(0, len(embed_list), 10):
-                sent_msg = await context.send(embeds= embed_list[curpos:curpos+10])
-                self.Server_Info_Embeds.append(sent_msg.id)
-            self.DB.AddServerDisplayBanner(context.guild.id, sent_msg.channel.id, self.Server_Info_Embeds)
-               
-        if self.DBConfig.GetSetting('Banner_Auto_Update'):
-            reply = await context.send('Pin the Server Display Messages! and the bot will update the Messages every minute!', ephemeral= True, delete_after= self._client.Message_Timeout)
-            await reply.delete(delay=60)
-            if not self.server_display_update.is_running():
-                self.server_display_update.start()
-
+#This section is AMP Server Commands ----------------------------------------------------------------------------------------------------------------------------------------------------------------
     @server.command(name='start')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
@@ -420,11 +259,30 @@ class AMP_Server(commands.Cog):
             else:
                 await context.send('The Server currently has no online players.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    # This Section is DBServer Attributes -----------------------------------------------------------------------------------------------------
-    @server_settings.command(name='avatar')
+# This Section is AMP/DB Server Settings -----------------------------------------------------------------------------------------------------
+    @server.group(name='settings')
+    @utils.role_check()
+    async def amp_server_settings(self, context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Please try your command again...', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @amp_server_settings.command(name='info')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_avatar_set(self, context:commands.Context, server, url:str):
+    async def amp_server_settings_info(self, context:commands.Context, server):
+        """Displays Specific Server Information."""
+        self.logger.command(f'{context.author.name} used AMP Server Info')
+        await context.defer(ephemeral= True)
+
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            embed = await self.eBot.server_info_embed(amp_server, context)
+            await context.send(embed=embed, ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @amp_server_settings.command(name='avatar')
+    @utils.role_check()
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
+    async def amp_server_avatar(self, context:commands.Context, server, url:str):
         """Sets the Servers Avatar via url. Supports `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
         self.logger.command(f'{context.author.name} used Database Server Avatar Set')
         await context.defer()
@@ -446,10 +304,10 @@ class AMP_Server(commands.Cog):
             else:
                 await context.send(f'I encountered an issue using that url, please try again. Heres your url: {url}', ephemeral= True, delete_after= self._client.Message_Timeout)
  
-    @server_settings.command(name='displayname')
+    @amp_server_settings.command(name='displayname')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_displayname_set(self, context:commands.Context, server, name:str):
+    async def amp_server_displayname(self, context:commands.Context, server, name:str):
         """Sets the Display Name for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Display Name')
 
@@ -461,24 +319,11 @@ class AMP_Server(commands.Cog):
                 await context.send(f"Set **{amp_server.InstanceName}** Display Name to `{name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
             else:
                 await context.send(f'The Display Name provided is not unique, this server or another server already has this name.', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    # @server_settings.command(name='description')
-    # @utils.role_check()
-    # @app_commands.autocomplete(server= utils.autocomplete_servers)
-    # async def db_server_description(self, context:commands.Context, server, desc:str):
-    #     """Sets the Description for the provided Server"""
-    #     self.logger.command(f'{context.author.name} used Database Server Description')
-
-    #     amp_server = await self.uBot._serverCheck(context, server, False)
-    #     if amp_server:
-    #         self.DB.GetServer(InstanceID= amp_server.InstanceID).Description = desc
-    #         amp_server._setDBattr() #This will update the AMPInstance Attributes
-    #         await context.send(f"Set **{server}** Description to `{desc}`", ephemeral= True, delete_after= self._client.Message_Timeout)
         
-    @server_settings.command(name='host')
+    @amp_server_settings.command(name='host')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_host(self, context:commands.Context, server, hostname:str):
+    async def amp_server_host(self, context:commands.Context, server, hostname:str):
         """Sets the host for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Host')
 
@@ -489,11 +334,11 @@ class AMP_Server(commands.Cog):
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f"Set **{amp_server.InstanceName}** Host to `{hostname}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @server_settings.command(name='donator')
+    @amp_server_settings.command(name='donator')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
-    async def db_server_donator(self, context:commands.Context, server, flag:Choice[int]= 0):
+    async def amp_server_donator(self, context:commands.Context, server, flag:Choice[int]= 0):
         """Sets the Donator Only flag for the provided server."""
         self.logger.command(f'{context.author.name} used Database Donator Flag')
 
@@ -502,17 +347,59 @@ class AMP_Server(commands.Cog):
             self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = {flag.value if type(flag) == Choice else flag}
             amp_server._setDBattr() #This will update the AMPConsole Attributes
             return await context.send(f"Set **{amp_server.InstanceName}** Donator Only to `{flag.name if type(flag) == Choice else bool(flag)}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+        
+    
+    @amp_server_settings.command(name='role')
+    @utils.role_check()
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
+    async def amp_server_discord_role_set(self, context:commands.Context, server, role: discord.Role):
+        """Sets the Discord Role for the provided Server"""
+        self.logger.command(f'{context.author.name} used Database Server Discord Role')
+    
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            self.DB.GetServer(amp_server.InstanceID).Discord_Role = role.id
+            amp_server._setDBattr() #This will update the AMPInstance Attributes
+            await context.send(f'Set **{amp_server.InstanceName}** Discord Role to `{role.name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
 
+    @amp_server_settings.command(name='prefix')
+    @utils.role_check()
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
+    async def amp_server_discord_prefix_set(self, context:commands.Context, server, server_prefix:str):
+        """Sets the Discord Chat Prefix for the provided Server"""
+        self.logger.command(f'{context.author.name} used Database Server Discord Chat Prefix')
+    
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            self.DB.GetServer(amp_server.InstanceID).Discord_Chat_prefix = server_prefix
+            amp_server._setDBattr() #This will update the AMPInstance Attributes
+            await context.send(f'Set **{amp_server.InstanceName}** Discord Chat Prefix to `{server_prefix}`', ephemeral= True, delete_after= self._client.Message_Timeout)
+
+    @amp_server_settings.command(name='hidden')
+    @utils.role_check()
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
+    @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
+    async def amp_server_hidden(self, context:commands.Context, server, flag:Choice[int]):
+        """Hides the server from Banner Display via `/server display`"""
+        self.logger.command(f'{context.author.name} used Database Server Hidden')
+
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Hidden = flag.value
+            amp_server._setDBattr() #This will update the AMPConsole Attributes
+            return await context.send(f"The **{amp_server.InstanceName}** will now be {'Hidden' if flag.value == 1 else 'Shown'}", ephemeral= True, delete_after= self._client.Message_Timeout)
+
+#This section is AMP Server Console Specific Settings -------------------------------------------------------------------------------------------------------------------------------------------------
     @server.group(name='console')
     @utils.role_check()
-    async def db_server_console(self, context:commands.Context):
+    async def amp_server_console_settings(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
    
-    @db_server_console.command(name='channel')
+    @amp_server_console_settings.command(name='channel')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_console_channel_set(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
+    async def amp_server_console_channel(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
         """Sets the Console Channel for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Console Channel')
 
@@ -522,12 +409,12 @@ class AMP_Server(commands.Cog):
             amp_server._setDBattr() #This will update the AMPConsole Attribute
             await context.send(f'Set **{amp_server.InstanceName}** Console channel to {channel.mention}', ephemeral= True, delete_after= self._client.Message_Timeout)
       
-    @db_server_console.command(name='filter')
+    @amp_server_console_settings.command(name='filter')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
     @app_commands.choices(filter_type= [Choice(name='Blacklist', value= 0), Choice(name='Whitelist', value= 1)])
-    async def db_server_console_filter(self, context:commands.Context, server, flag:Choice[int], filter_type:Choice[int]):
+    async def amp_server_console_filter(self, context:commands.Context, server, flag:Choice[int], filter_type:Choice[int]):
         """Sets the Console Filter type to either Blacklist or Whitelist"""
         self.logger.command(f'{context.author.name} used Database Server Console Filtered True...')
 
@@ -538,17 +425,18 @@ class AMP_Server(commands.Cog):
             db_server.Console_Filtered_Type = filter_type.value
             amp_server._setDBattr() #This will update the AMPConsole Attributes
             return await context.send(f'Set **{amp_server.InstanceName}** Console Filtering to `{flag.name}` using `{filter_type.name}` filtering.', ephemeral= True, delete_after= self._client.Message_Timeout)
-     
+        
+#This section is AMP Server Chat Specific Settings -------------------------------------------------------------------------------------------------------------------------------------------------
     @server.group(name='chat')
     @utils.role_check()
-    async def db_server_chat(self, context:commands.Context):
+    async def amp_server_chat_settings(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @db_server_chat.command(name='channel')
+    @amp_server_chat_settings.command(name='channel')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_chat_channel_set(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
+    async def amp_server_chat_channel(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
         """Sets the Chat Channel for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Chat Channel')
 
@@ -558,16 +446,17 @@ class AMP_Server(commands.Cog):
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f'Set **{amp_server.InstanceName}** Chat channel to {channel.mention}', ephemeral= True, delete_after= self._client.Message_Timeout)
 
+#This section is AMP Server Event Specific Settings -------------------------------------------------------------------------------------------------------------------------------------------------
     @server.group(name='event')
     @utils.role_check()
-    async def db_server_event(self, context:commands.Context):
+    async def amp_server_event_settings(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @db_server_event.command(name='channel')
+    @amp_server_event_settings.command(name='channel')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_event_channel_set(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
+    async def amp_server_event_channel_set(self, context:commands.Context, server, channel: discord.abc.GuildChannel):
         """Sets the Event Channel for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Event Channel')
 
@@ -577,57 +466,14 @@ class AMP_Server(commands.Cog):
             amp_server._setDBattr() #This will update the AMPInstance Attributes
             await context.send(f'Set **{amp_server.InstanceName}** Event channel to {channel.mention}', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @server_settings.command(name='role')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_discord_role_set(self, context:commands.Context, server, role: discord.Role):
-        """Sets the Discord Role for the provided Server"""
-        self.logger.command(f'{context.author.name} used Database Server Discord Role')
-    
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(amp_server.InstanceID).Discord_Role = role.id
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f'Set **{amp_server.InstanceName}** Discord Role to `{role.name}`', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_settings.command(name='prefix')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def db_server_discord_prefix_set(self, context:commands.Context, server, server_prefix:str):
-        """Sets the Discord Chat Prefix for the provided Server"""
-        self.logger.command(f'{context.author.name} used Database Server Discord Chat Prefix')
-    
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(amp_server.InstanceID).Discord_Chat_prefix = server_prefix
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-            await context.send(f'Set **{amp_server.InstanceName}** Discord Chat Prefix to `{server_prefix}`', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_settings.command(name='hidden')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    #@app_commands.autocomplete(flag= utils.autocomplete_bool)
-    @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
-    async def db_server_hidden(self, context:commands.Context, server, flag:Choice[int]):
-        """Hides the server from Banner Display via `/server display`"""
-        self.logger.command(f'{context.author.name} used Database Server Hidden')
-
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Hidden = flag.value
-            amp_server._setDBattr() #This will update the AMPConsole Attributes
-            return await context.send(f"The **{amp_server.InstanceName}** will now be {'Hidden' if flag.value == 1 else 'Shown'}", ephemeral= True, delete_after= self._client.Message_Timeout)
-            
-
-
-    ## -------------------- REGEX Commands --------------------------------
+#This section is AMP Server Regex Specific Settings ------------------------------------------------------------------------------------------------------------------------------
     @server.group(name='regex')
     @utils.role_check()
-    async def server_regex(self, context:commands.Context):
+    async def server_regex_settings(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @server_regex.command(name='add')
+    @server_regex_settings.command(name='add')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.autocomplete(name= autocomplete_regex)
@@ -650,7 +496,7 @@ class AMP_Server(commands.Cog):
             else:
                 await context.send(f'Uhh, I ran into an issue adding the pattern `{name}` to `{amp_server.InstanceName}`. It looks like the Server already has this pattern.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @server_regex.command(name='delete')
+    @server_regex_settings.command(name='delete')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     @app_commands.autocomplete(name= autocomplete_server_regex)
@@ -672,7 +518,7 @@ class AMP_Server(commands.Cog):
             else:
                 await context.send(f'Uhh, I ran into an issue removing the pattern `{name}` to `{amp_server.InstanceName}`. It looks like the Server already has this pattern.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-    @server_regex.command(name= 'list')
+    @server_regex_settings.command(name= 'list')
     @utils.role_check()
     @app_commands.autocomplete(server= utils.autocomplete_servers)
     async def server_regex_list(self, context:commands.Context, server:str):

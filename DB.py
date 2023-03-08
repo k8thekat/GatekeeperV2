@@ -25,7 +25,9 @@ import datetime
 import json
 import time
 import logging
-import sys
+from typing import Union
+
+from DB_Update import DB_Update
 
 
 def dump_to_json(data):
@@ -38,7 +40,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.8
+DB_Version = 2.9
 
 class DBHandler():
     def __init__(self):
@@ -56,7 +58,7 @@ class DBHandler():
         #self.DBConfig.SetSetting('DB_Version', 2.5)
         #This should ONLY BE TRUE on new Database's going forward. 
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
-            DBUpdate(self.DB, 1.0)
+            DB_Update(self.DB, 1.0)
             return
 
         #This is to handle 1.0.0 Converting to new DB Version systems.
@@ -66,7 +68,7 @@ class DBHandler():
         #This handles version checks and calling all updates from version 1.0
         if self.DB_Version > float(self.DBConfig.GetSetting('DB_Version')):
             self.logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}")
-            self.DBUpdate = DBUpdate(self.DB, float(self.DBConfig.GetSetting('DB_Version')))
+            self.DBUpdate = DB_Update(self.DB, float(self.DBConfig.GetSetting('DB_Version')))
         
         self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
 
@@ -158,11 +160,30 @@ class Database:
                         Role text collate nocase
                         )""")
 
-        cur.execute("""create table ServerDisplayBanners (
+        cur.execute("""create table BannerGroup (
                         ID integer primary key,
-                        Discord_Guild_ID text nocase,
-                        Discord_Channel_ID text nocase,
-                        Discord_Message_ID text nocase
+                        name text unique
+                        )""")
+        
+        cur.execute("""create table BannerGroupServers (
+                        ServerID integer not null,
+                        BannerGroupID integer not null,
+                        foreign key (ServerID) references Servers(ID),
+                        foreign key (BannerGroupID) references BannerGroup(ID)
+                        )""")
+        
+        cur.execute("""create table BannerGroupChannels (
+                        ID integer primary key,
+                        Discord_Channel_ID integer,
+                        Discord_Guild_ID integer,
+                        BannerGroupID integer not null,
+                        foreign key (BannerGroupID) references BannerGroup(ID)
+                        )""")
+
+        cur.execute("""create table BannerGroupMessages (
+                        BannerGroupChannelsID integer not null,
+                        Discord_Message_ID integer,
+                        foreign key (BannerGroupChannelsID) references BannerGroupChannels(ID)
                         )""")
 
         cur.execute("""create table ServerBanners (
@@ -280,10 +301,13 @@ class Database:
     def AddServer(self, InstanceID:str, InstanceName:str= None, FriendlyName:str = None): 
         return DBServer(db=self, InstanceID= InstanceID, InstanceName= InstanceName, FriendlyName= FriendlyName)
     
-    def GetServer(self, InstanceID: str = None):
-        if not InstanceID:
+    def GetServer(self, InstanceID: str = None, ServerID: str = None):
+        if not InstanceID and not ServerID:
             return None
-
+        
+        if ServerID:
+            return DBServer(ID= int(ServerID), db= self)
+        
         (row, cur) = self._fetchone("select ID from Servers where InstanceID=?", (InstanceID,))
         if not row:
             cur.close()
@@ -358,25 +382,25 @@ class Database:
     def DelRegexPattern(self, ID:int=None, Name:str=None)-> bool:
         """Removes a entry RegexPatterns Table using either its `Name` or `ID`"""
         if ID == None:
-            (row ,cur) = self._fetchone("SELECT ID from RegexPatterns WHERE Name=?", (Name,))
+            (row ,cur) = self._fetchone("SELECT ID FROM RegexPatterns WHERE Name=?", (Name,))
             if not row:
                 cur.close()
                 return False
             ID = row["ID"]
             cur.close()
         try:
-            self._execute("DELETE from ServerRegexPatterns WHERE RegexPatternID =?",(ID,))
+            self._execute("DELETE FROM ServerRegexPatterns WHERE RegexPatternID =?",(ID,))
         except Exception as e:
             print(e)
             
-        self._execute("DELETE from RegexPatterns WHERE ID=?", (ID,))
+        self._execute("DELETE FROM RegexPatterns WHERE ID=?", (ID,))
         return True
        
     def GetRegexPattern(self, ID:int=None, Name:str=None):
         """Returns RegexPatterns Table \n
         Returns `row['ID'] = {'Name': row['Name'], 'Type': row['Type'], 'Pattern': row['Pattern']}`
         """
-        (row ,cur) = self._fetchone("SELECT ID, Name, Type, Pattern from RegexPatterns WHERE Name=? or ID=?", (Name, ID))
+        (row ,cur) = self._fetchone("SELECT ID, Name, Type, Pattern FROM RegexPatterns WHERE Name=? or ID=?", (Name, ID))
         if not row:
             cur.close()
             return False
@@ -388,7 +412,7 @@ class Database:
     def UpdateRegexPattern(self, Pattern:str= None, Type:int= None, ID:int= None, Pattern_Name:str= None, Name:str= None)-> bool:
         """Update a Regex Pattern in the RegexPatterns Table using either its `Name` or `ID`"""
         if ID == None:
-            (row ,cur) = self._fetchone("SELECT ID from RegexPatterns WHERE Name=?", (Pattern_Name,))
+            (row ,cur) = self._fetchone("SELECT ID FROM RegexPatterns WHERE Name=?", (Pattern_Name,))
             if not row:
                 cur.close()
                 return False
@@ -431,7 +455,7 @@ class Database:
         whitelist_replies = []
         SQLArgs = []
         
-        (rows, cur) = self._fetchall("Select ID, Message from WhitelistReply order by ID", tuple(SQLArgs))
+        (rows, cur) = self._fetchall("SELECT ID, Message FROM WhitelistReply ORDER BY ID", tuple(SQLArgs))
         for entry in rows:
             #reply = {'ID' : entry["ID"], 'Message' : entry["Message"]}
             #reply = {entry["Message"]}
@@ -442,37 +466,220 @@ class Database:
 
     def AddWhitelistReply(self, Message:str=None):
         """Adds a Whitelist Reply to the DB"""
-        self._execute("insert into WhitelistReply(Message) values(?)", (Message,))
+        self._execute("INSERT INTO WhitelistReply(Message) values(?)", (Message,))
         return 
 
     def DeleteWhitelistReply(self, Message:str=None):
         """Deletes a Whitelist Reply from the DB"""
-        self._execute("delete from WhitelistReply where Message=?", (Message,))
+        self._execute("DELETE FROM WhitelistReply WHERE Message=?", (Message,))
+        return
+    
+    ### Banner Group ----------------------------------------------------------------------------------------------------------------------------------------------------------
+    def Add_BannerGroup(self, name:str):
+        """Creates a Banner Group Table with the provided `name`"""
+        self._execute("INSERT INTO BannerGroup(name) values(?)", (name,))
+        return
+    
+    def Get_BannerGroup(self, name:str= None, ID:int= None):
+        """Selects a Banner Group Table matching the `name` provided."""
+        (ret, cur) = self._fetchone("SELECT ID FROM BannerGroup WHERE name=? or ID=?", (name, ID,))
+        if not ret:
+            return None
+        cur.close()
+        return ret["ID"]
+    
+    def Update_BannerGroup(self, new_name:str, name:str):
+        """Update a Banner Group"""
+        banner_id = self.Get_BannerGroup(name)
+        (ret, cur) = self._fetchone("UPDATE BannerGroup SET name=? WHERE ID=?", (new_name, banner_id))
+        if not ret:
+            return 
+        cur.close()
         return
        
-    def AddServerDisplayBanner(self, Discord_Guild_ID:int, Discord_Channel_ID:int, Discord_Message_List:list[int]):
-        """Adds a Server Banner to the DB"""
-        self._execute("delete from ServerDisplayBanners where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
-        for message_id in Discord_Message_List:
-            self._execute("insert into ServerDisplayBanners(Discord_Guild_ID, Discord_Channel_ID, Discord_Message_ID) values(?,?,?)", (Discord_Guild_ID, Discord_Channel_ID, message_id))
-        return
+    def Get_one_BannerGroup_info(self, name:str)-> Union[None, dict[str, int]]:
+        """Gets a Specific Banner Groups full information\n
+        return `Banner_info[entry['name']] = {'InstanceName': list[entry['InstanceName']], 'Discord_Channel': list[entry['Discord_Channel_ID']]}`"""
+        banner_id = self.Get_BannerGroup(name)
+        Banner_info = {}
+        (row, cur) = self._fetchall("""SELECT BG.*, Servers.InstanceName FROM Servers, BannerGroup as BG, BannerGroupServers as BGS 
+                                    WHERE BG.ID=? AND Servers.ID=BGS.ServerID AND BGS.BannerGroupID=BG.ID""", (banner_id,))
+        
+        if row:
+            for entry in row:
+                if entry['name'] not in Banner_info:
+                    Banner_info[entry['name']] = {'InstanceName': [], 'Discord_Channel': []}
 
-    def DelServerDisplayBanner(self, Discord_Guild_ID:int, Discord_Channel_ID:int):
-        """Delete a Server Banner for a specific channel in the DB"""
-        self._execute("delete from ServerDisplayBanners where Discord_Guild_ID=? and Discord_Channel_ID=?", (Discord_Guild_ID, Discord_Channel_ID))
-        return
+                if entry['InstanceName'] not in Banner_info[entry['name']]['InstanceName']:
+                    Banner_info[entry['name']]['InstanceName'].append(entry['InstanceName'])
 
-    def GetServerDisplayBanner(self) -> list[dict]:
-        """Gets a Server Banner from the DB
-        `{"GuildID": entry["Discord_Guild_ID"], "ChannelID": entry["Discord_Channel_ID"], "MessageID": entry["Discord_Message_ID"]}`"""
-        SQL = "Select * from ServerDisplayBanners order by ID"
-        SQLArgs = []
-        (rows, cur) = self._fetchall(SQL, tuple(SQLArgs))
-        ret = []
-        for entry in rows:
-            ret.append({"GuildID": int(entry["Discord_Guild_ID"]), "ChannelID": int(entry["Discord_Channel_ID"]), "MessageID": int(entry["Discord_Message_ID"])})
+        (row, cur) = self._fetchall("""SELECT BG.*, BGC.Discord_Channel_ID FROM BannerGroup as BG, BannerGroupChannels as BGC
+                                    WHERE BG.ID=? AND BGC.BannerGroupID=BG.ID""", (banner_id,))
+        if row:
+            for entry in row:
+                if entry['name'] not in Banner_info:
+                        Banner_info[entry['name']] = {'InstanceName': [], 'Discord_Channel': []}
+
+                if entry['Discord_Channel_ID'] not in Banner_info[entry['name']]['Discord_Channel']:
+                    Banner_info[entry['name']]['Discord_Channel'].append(entry['Discord_Channel_ID'])
+
         cur.close()
-        return ret
+        return Banner_info
+    
+    def Get_All_BannerGroups(self)-> Union[None, dict[str, str]]:
+        """Gets all BannerGroups Names/IDs\n
+        returns `Banners[entry["ID"]] = entry["name"]`"""
+        Banners = {}
+        (row, cur) = self._fetchall("SELECT * FROM BannerGroup", ())
+        if not row:
+            return
+        for entry in row:
+            Banners[entry["ID"]] = entry["name"]
+        cur.close()
+        return Banners
+    
+    def Delete_BannerGroup(self, name:str):
+        """Removes a Banner Group."""
+        banner_id = self.Get_BannerGroup(name)
+        if banner_id != None:
+            self._execute("DELETE FROM BannerGroupServers WHERE BannerGroupID=?", (banner_id,))
+            (row, cur) = self._fetchall("SELECT ID FROM BannerGroupChannels WHERE BannerGroupID=?", (banner_id,))
+            if row:
+                for entry in row:
+                    self._execute("DELETE FROM BannerGroupMessages WHERE BannerGroupChannelsID=?", (entry["ID"],))
+                    self._execute("DELETE FROM BannerGroupChannels WHERE ID=?", (entry["ID"],))
+               
+            #Lastly we delete our BannerGroup Table entry.
+            self._execute("DELETE FROM BannerGroup WHERE ID=?", (banner_id,))
+            cur.close()
+   
+    def Get_All_BannerGroup_Info(self)-> Union[None, dict[str, int]]:
+        """Gets all the BannerGroups and sorts them by `Discord_Channel_ID`.\n
+        `example: {916195413839712277: {'name': 'TestBannerGroup', 'guild_id': 602285328320954378, 'servers': [1], 'messages': [1079236992145051668]}}`"""
+        Banners = {}
+        #We need to get each BannerGroupID and then get the corresponding Discord_Message_IDs, ServerIDs and Name from related tables.
+        (row, cur) = self._fetchall("""SELECT BGC.*, BGS.ServerID, BG.name, BG.ID, BGM.Discord_Message_ID
+                                        FROM BannerGroup as BG, BannerGroupServers as BGS, BannerGroupChannels as BGC 
+                                        LEFT JOIN BannerGroupMessages as BGM                       
+                                        ON BGM.BannerGroupChannelsID=BGC.ID
+                                        WHERE BGS.BannerGroupID=BG.ID and BGC.BannerGroupID=BG.ID
+                                        ORDER BY BGC.Discord_Channel_ID""", ())
+
+        for entry in row:
+            #if BannerGroupChannels.Discord_Channel_ID not in Banners:
+            if entry["Discord_Channel_ID"] not in Banners:
+                Banners[entry["Discord_Channel_ID"]] = {"name": entry["name"], "guild_id": entry["Discord_Guild_ID"], "servers": [], "messages": []}
+
+            #if BannerGroupServers.ServerID not in Banners:
+            if entry["ServerID"] not in Banners[entry["Discord_Channel_ID"]]["servers"]:
+                Banners[entry["Discord_Channel_ID"]]["servers"].append(entry["ServerID"])
+            
+            #if BannerGroupMessages.Discord_Message_ID not in Banners
+            if entry["Discord_Message_ID"] not in Banners[entry["Discord_Channel_ID"]]["messages"]:
+                Banners[entry["Discord_Channel_ID"]]["messages"].append(entry["Discord_Message_ID"])
+
+        cur.close()
+        return Banners
+
+    def Add_Server_to_BannerGroup(self, banner_groupname:str, instanceID:str):
+        """Add a Server to an existing Banner Group."""
+        banner_id = self.Get_BannerGroup(banner_groupname)
+        (ret, cur) = self._fetchone("SELECT ID FROM Servers WHERE InstanceID=?", (instanceID,))
+        #If we fail to find the Server by Instance ID; just return.
+        if not ret:
+            cur.close()
+            return
+        
+        server_id = ret["ID"]
+        #Lets use our ServerID and attempt to find a match in our DB. Ideally we don't want a match; so we can add an entry. Otherwise we return.
+        (ret, cur) = self._fetchone("SELECT ServerID FROM BannerGroupServers WHERE ServerID=? and BannerGroupID=?", (server_id, banner_id))
+        if not ret and banner_id != None:
+            self._execute("INSERT INTO BannerGroupServers(ServerID, BannerGroupID) values(?, ?)", (server_id, banner_id))
+            return True
+        cur.close()
+        return False
+    
+    def Remove_Server_from_BannerGroup(self, banner_groupname:str, instanceID:str):
+        """Removes a Server from an existing Banner Group."""
+        (ret, cur) = self._fetchone("SELECT ID FROM Servers WHERE InstanceID=?", (instanceID,))
+        if not ret:
+            return
+        banner_id = self.Get_BannerGroup(banner_groupname)
+        print(ret["ID"], banner_id)
+        if banner_id != None:
+            self._execute("DELETE FROM BannerGroupServers WHERE ServerID=? AND BannerGroupID=?", (ret["ID"], banner_id))
+        cur.close()
+
+    def Add_Channel_to_BannerGroup(self, banner_groupname:str, channelid:int, guildid:int):
+        """Add a Channel to a BannerGroups listing."""
+        banner_id = self.Get_BannerGroup(banner_groupname)
+        (ret, cur) = self._fetchone("SELECT ID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=? and BannerGroupID=?", (channelid, guildid, banner_id))
+        if not ret and banner_id != None:
+            self._execute("INSERT INTO BannerGroupChannels(Discord_Channel_ID, Discord_Guild_ID, BannerGroupID) values(?, ?, ?)", (channelid, guildid, banner_id))
+            return True
+        cur.close()
+        return False
+
+    def Remove_Channel_from_BannerGroup(self, channelid:int, guildid:int):
+        """Remove a Channel from a BannerGroups listing, this also removes any related Banner Group Message table entries."""
+        (ret, cur) = self._fetchone("SELECT BannerGroupID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=?", (channelid, guildid))
+        if not ret:
+            return
+        banner_id = ret["BannerGroupID"]
+        (ret, cur) = self._fetchone("SELECT ID FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid))
+        if not ret:
+            return
+        self._execute("DELETE FROM BannerGroupMessages WHERE BannerGroupChannelsID=?", (ret["ID"],))
+        self._execute("DELETE FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=? AND Discord_Guild_ID=?", (banner_id, channelid, guildid))
+        cur.close()
+
+    def Get_Channels_for_BannerGroup(self, banner_groupname:str):
+        """Returns a list of existing BannerGroups Discord Channel IDs."""
+        banner_id = self.Get_BannerGroup(banner_groupname)
+        bgc_list = []
+        if banner_id != None:
+            #We need to get the BGC ID matching the Banner Group ID and Discord Channel ID First.
+            (row, cur) = self._fetchall("SELECT Discord_Channel_ID FROM BannerGroupChannels WHERE BannerGroupID=?", (banner_id,))
+            if not row:
+                return
+            for entry in row:
+                if entry['Discord_Channel_ID'] not in bgc_list:
+                    bgc_list.append(entry['Discord_Channel_ID']) 
+            cur.close()
+            return bgc_list
+            
+    def Add_Message_to_BannerGroup(self, banner_groupname:str, channelid:int, messageid:int):
+        """Adds a Discord Message ID to a BannerGroup"""
+        banner_id = self.Get_BannerGroup(banner_groupname)
+        if banner_id != None:
+            #We need to get the BannerGroupChannel ID and add Messages using its ID
+            (ret, cur) = self._fetchone("SELECT ID from BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid))
+            if not ret:
+                return
+            BGC_ID = ret["ID"]
+            cur.close()
+            self._execute("INSERT INTO BannerGroupMessages(BannerGroupChannelsID, Discord_Message_ID) values(?, ?)", (BGC_ID, messageid))
+
+    def Remove_Message_from_BannerGroup(self, messageid:int):
+        """Removes a Discord Message ID from a BannerGroup"""
+        self._execute("DELETE FROM BannerGroupMessages WHERE Discord_Message_ID=?", (messageid,))
+   
+
+    def Get_Messages_for_BannerGroup(self, banner_groupname:str):
+        """Returns a dictionary with key = `Discord_Channel_ID` and value = list[`Discord_Message_ID`]"""
+        banner_id = self.Get_BannerGroup(banner_groupname)
+        if banner_id == None:
+            return
+        (ret, cur) = self._fetchall("""SELECT Discord_Message_ID, BannerGroupChannels.ID, BannerGroupChannels.Discord_Channel_ID FROM BannerGroupMessages, BannerGroupChannels 
+                                    WHERE BannerGroupChannels.BannerGroupID=? and BannerGroupMessages.BannerGroupChannelsID=BannerGroupChannels.ID""", (banner_id,))
+        banner_info = {}
+        for entry in ret:
+            if entry["Discord_Channel_ID"] not in banner_info:
+                banner_info[entry["Discord_Channel_ID"]] = {'messages': []}
+            if entry["Discord_Message_ID"] not in banner_info[entry["Discord_Channel_ID"]]:
+                banner_info[entry["Discord_Channel_ID"]]["messages"].append(entry["Discord_Message_ID"])
+        cur.close()
+        return banner_info
 
     def _AddConfig(self, Name, Value):
         self._execute("Insert into config(Name, Value) values(?, ?)", (Name, Value))
@@ -987,348 +1194,3 @@ class DBBanner:
         
         if name != 'attr_list':
             self._db._UpdateBanner(self, **{name: value})
-       
-class DBUpdate:
-    def __init__(self, DB:Database, Version:float=None):
-        self.logger = logging.getLogger(__name__)
-        self.DB = DB
-        self.DBConfig = self.DB.DBConfig
-
-        if Version == None:
-            self.DBConfig.AddSetting('DB_Version', 1.0)
-
-        if 1.1 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.1')
-            self.DBConfig.AddSetting('Guild_ID', None)
-            self.DBConfig.AddSetting('Moderator_role_id', None)
-            self.DBConfig.AddSetting('Permissions', 0)
-            self.DBConfig.AddSetting('Whitelist_Request_Channel', None)
-            self.DBConfig.AddSetting('WhiteList_Wait_Time', 5)
-            self.DBConfig.AddSetting('Auto_Whitelist', False)
-            self.DBConfig.AddSetting('Whitelist_Emoji_Pending', None)
-            self.DBConfig.AddSetting('Whitelist_Emoji_Done', None)
-            self.DBConfig.SetSetting('DB_Version', '1.1')
-
-        if 1.2 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.2')
-            self.user_roles()
-            self.DBConfig.SetSetting('DB_Version', '1.2')
-
-        if 1.3 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.3')
-            #self.nicknames_unique()
-            self.DBConfig.SetSetting('DB_Version', '1.3')
-
-        if 1.4 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.4')
-            self.user_Donator_removal()
-            self.DBConfig.SetSetting('DB_Version', '1.4')
-
-        if 1.5 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.5')
-            self.server_Discord_reaction_removal()
-            self.DBConfig.SetSetting('DB_Version', '1.5')
-
-        if 1.6 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.6')
-            self.server_Discord_Chat_prefix()
-            self.server_Discord_event_channel()
-            self.server_Avatar_url()
-            #self.DBConfig.AddSetting('Server_Info_Display', None)
-            #self.DBConfig.AddSetting('Auto_Display', True)
-            self.DBConfig.SetSetting('DB_Version', '1.6')
-        
-        if 1.7 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.7')
-            self.DBConfig.AddSetting('Banner_Auto_Update', True)
-            self.server_banner_table()
-            self.whitelist_reply_table()
-            self.DBConfig.DeleteSetting('Server_Info_Display')
-            self.DBConfig.DeleteSetting('Auto_Display')
-            self.DBConfig.SetSetting('DB_Version', '1.7')
-        
-        if 1.8 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.8')
-            self.server_hide_column()
-            #self.server_ip_constraint_update()
-            self.server_display_name_reset()
-            #self.server_display_name_constraint_update()
-            self.DBConfig.SetSetting('DB_Version', '1.8')
-
-        if 1.9 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 1.9')
-            self.banner_table_creation()
-            self.DBConfig.SetSetting('DB_Version', '1.9')
-
-        if 2.1 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 2.1')
-            self.server_ip_name_change()
-            self.DBConfig.SetSetting('DB_Version', '2.1')
-
-        if 2.2 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 2.2')
-            self.DBConfig.DeleteSetting('Embed_Auto_Update')
-            self.banner_name_conversion()
-            self.DBConfig.SetSetting('DB_Version', '2.2')
-
-        if 2.4 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 2.4')
-            self.server_table_whitelist_disabled_column()
-            self.regex_pattern_table_creation()
-            self.server_regex_pattern_table_creation()
-            self.server_console_filter_type()
-            self.DBConfig.AddSetting('Message_Timeout', 60)
-            self.DBConfig.SetSetting('DB_Version', '2.4')
-
-        if 2.5 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 2.5')
-            self.DBConfig.AddSetting('Banner_Type', 0)
-            self.DBConfig.SetSetting('DB_Version', '2.5')
-
-        if 2.6 > Version:
-            self.logger.info('**ATTENTION** Updating DB to Version 2.6')
-            #self.user_MC_IngameName_unique_constraint()
-            self.DBConfig.DeleteSetting('Whitelist_Emoji_Pending')
-            self.DBConfig.DeleteSetting('Whitelist_Emoji_Done')
-            self.DBConfig.SetSetting('DB_Version', '2.6')
-        
-        if 2.7 > Version:
-            """Hotfix for Failed Table creation in version 2.4"""
-            self.logger.info('**ATTENTION** Updating DB to Version 2.7')
-            self.server_add_FriendlyName_column()
-            try:
-                SQL = 'select * from ServerRegexPatterns'
-                self.DB._execute(SQL, ())
-            except:
-                self.server_regex_pattern_table_creation()
-            self.DBConfig.SetSetting('DB_Version', '2.7')
-        
-        if 2.8 > Version:
-            """Adds Donator Bypass and Donator Role ID"""
-            self.logger.info('**ATTENTION** Updating DB to Version 2.8')
-            self.db_config_add_donator_setting()
-            self.DBConfig.SetSetting('DB_Version', '2.8')
-
-
-    def user_roles(self):
-        try:
-            SQL = "alter table users add column Role text collate nocase default None"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'user_roles {e}')
-            sys.exit(-1)
-
-    def nicknames_unique(self):
-        try:
-            SQL = "alter table ServerNicknames add constraint Nickname unique"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'nicknames_unique {e}')
-            sys.exit(-1)
-
-    def user_Donator_removal(self):
-        try:
-            SQL = "alter table users drop column Donator"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'user_Donator_removal {e}')
-            sys.exit(-1)
-
-    def server_Discord_reaction_removal(self):
-        try:
-            SQL = "alter table servers drop column Discord_Reaction"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_Discord_reaction_removal {e}')
-            sys.exit(-1)
-
-    def server_Discord_Chat_prefix(self):
-        try:
-            SQL = "alter table servers add column Discord_Chat_Prefix text"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_Discord_Chat_prefix {e}')
-            sys.exit(-1)
-
-    def server_Discord_event_channel(self):
-        try:
-            SQL = "alter table servers add column Discord_Event_Channel text nocase"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_Discord_event_channel {e}')
-            sys.exit(-1)
-
-    def server_Avatar_url(self):
-        try:
-            SQL = "alter table servers add column Avatar_url text"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_Avatar_url {e}')
-            sys.exit(-1)
-
-    def server_banner_table(self):
-        try:
-            SQL = 'create table ServerEmbed (ID integer primary key, Discord_Guild_ID text nocase, Discord_Channel_ID text nocase, Discord_Message_ID text)'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_banner_table {e}')
-            sys.exit(-1)
-    
-    def whitelist_reply_table(self):
-        try:
-            SQL = 'create table WhitelistReply (ID integer primary key, Message text)'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'whitelist_reply_table {e}')
-            sys.exit(-1)
-    
-    def server_hide_column(self):
-        """1.8 Update"""
-        try:
-            SQL = 'alter table servers add column Hidden integer default 0'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_hide_column {e}')
-            sys.exit(-1)
-
-    def server_ip_constraint_update(self):
-        """SQLITE does not support dropping UNIQUE constraint"""
-        try:
-            SQL = 'alter table servers drop constraint IP unique'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_ip_constraint_update {e}')
-            sys.exit(-1)
-
-    def server_display_name_reset(self):
-        try:
-            SQL= 'update Servers set DisplayName=InstanceName'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_display_name_reset {e}')
-            sys.exit(-1)
-
-    def server_display_name_constraint_update(self):
-        """SQLITE does not support adding UNIQUE constraint"""
-        try:
-            SQL = "alter table Servers add constraint DisplayName unique"
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_display_name_constraint_update {e}')
-            sys.exit(-1)
-
-    def banner_table_creation(self):
-        try:
-            SQL = 'create table ServerBanners (ServerID integer not null, background_path text, blur_background_amount integer, color_header text, color_body text, color_host text, color_whitelist_open text, color_whitelist_closed text, color_donator text, color_status_online text, color_status_offline text, color_player_limit_min text, color_player_limit_max text, color_player_online text, foreign key(ServerID) references Servers(ID))'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'banner_table_creation {e}')
-            sys.exit(-1)
-    
-    def server_ip_name_change(self):
-        try:
-            # SQL = 'select IP from Servers limit 1'
-            # self.DB._execute(SQL, ())
-
-            # SQL = "alter table Servers drop column IP"
-            # self.DB._execute(SQL, ())
-
-            SQL = 'alter table Servers add column Host text'
-            self.DB._execute(SQL, ())
-            return
-        except Exception as e:
-            self.logger.error(e)
-            pass
-
-        try:
-            SQL = 'select Display_IP from Servers limit 1'
-            self.DB._execute(SQL, ())
-
-            SQL = 'alter table Servers drop column Display_IP'
-            self.DB._execute(SQL, ())
-
-            SQL = 'alter table Servers add column Host text'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_ip_name_change {e}')
-            sys.exit(-1)
-        
-    def banner_name_conversion(self):
-        try:
-            SQL = 'select * from ServerEmbed limit 1'
-            self.DB._execute(SQL, ())
-
-            SQL = 'alter table ServerEmbed rename to ServerDisplayBanners'
-            self.DB._execute(SQL, ())
-            return
-        except:
-            pass
-
-        try:
-            SQL = 'select * from ServerDisplayBanners'
-            self.DB._execute(SQL, ())
-            return
-        except:
-            pass
-
-        try:
-            SQL = 'create table ServerDisplayBanners (ID integer primary key,Discord_Guild_ID text nocase,Discord_Channel_ID text nocase, Discord_Message_ID text nocase)'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'banner_name_conversion {e}')
-            sys.exit(-1)
-
-    def server_table_whitelist_disabled_column(self):
-        try:
-            SQL = 'alter table Servers add column Whitelist_disabled integer not null default 0'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_table_whitelist_disabled_column {e}')
-            sys.exit(-1)
-
-    def regex_pattern_table_creation(self):
-        try:
-            SQL = 'create table RegexPatterns (ID integer primary key, Name text unique not null, Type integer not null, Pattern text unique not null)'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'regex_pattern_table_creation {e}')
-            sys.exit(-1)
-
-    def server_regex_pattern_table_creation(self):
-        try:
-            SQL = 'create table ServerRegexPatterns (ServerID integeter not null, RegexPatternID integer not null, foreign key (RegexPatternID) references RegexPatterns(ID), foreign key(ServerID) references Servers(ID) UNIQUE(ServerID, RegexPatternID))'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_regex_pattern_table_creation {e}')
-            sys.exit(-1)
-
-    def server_console_filter_type(self):
-        try:
-            SQL = 'alter table Servers add column Console_Filtered_Type integer not null default 0'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_console_filter_type {e}')
-            sys.exit(-1)
-        
-    def server_add_FriendlyName_column(self):
-        try:
-            SQL = 'select FriendlyName from Servers'
-            self.DB._execute(SQL, ())
-            return
-        except:
-            pass
-
-        try:
-            SQL = 'alter table Servers add column FriendlyName text'
-            self.DB._execute(SQL, ())
-        except Exception as e:
-            self.logger.critical(f'server_add_FriendlyName_column {e}')
-            sys.exit(-1)
-    
-    def db_config_add_donator_setting(self):
-        #Adds support for Donator related functionality.
-        try:
-            self.DBConfig.AddSetting("Donator_Bypass", False)
-            self.DBConfig.AddSetting("Donator_role_id", None)
-        except Exception as e:
-            self.logger.critical(f'db_config_add_donator_settings {e}')

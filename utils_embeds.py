@@ -93,21 +93,20 @@ class botEmbeds():
             embed.add_field(name='Event Channel:', value= discord_channel.name, inline= True)
         else:
             embed.add_field(name='Event Channel:', value= db_server.Discord_Event_Channel, inline= True)
-
+        embed.set_footer(text= f'InstanceID: {server.InstanceID}')
         return embed
 
-    async def server_display_embed(self, guild:discord.Guild=None) -> list[discord.Embed]:
-        """Used for `/server display command`"""
+    async def server_display_embed(self, server_list:list[DB.DBServer], guild:discord.Guild=None) -> list[discord.Embed]:
+        """Used for Banner Groups and Display"""
         embed_list = []
-        for server in self.AMPInstances:
-            server = self.AMPInstances[server]
-
-            db_server = self.DB.GetServer(InstanceID= server.InstanceID)
+        for db_server in server_list:
+            server = self.AMPInstances[db_server.InstanceID]
+            
             #If no DB Server or the Server is Hidden; skip.
             if db_server == None or db_server.Hidden == 1:
                 continue
         
-            instance_status = 'Offline'
+            instance_status = '\U0000274c Offline'
             dedicated_status = 'Offline'
             Users = None
             User_list = None
@@ -146,6 +145,7 @@ class botEmbeds():
             else:
                 embed.add_field(name='**Player Limit**:', value= str(Users), inline= True)
             embed.add_field(name='**Players Online**:', value=str(User_list), inline=False)
+            embed.set_footer(text= discord.utils.utcnow().strftime('%Y-%m-%d | %H:%M'))
             embed_list.append(embed)
         
         return embed_list
@@ -183,7 +183,7 @@ class botEmbeds():
         embed.add_field(name='**Dedicated Server Status**:', value= server_status, inline= True)
 
         if db_server.Host != None:
-            embed.add_field(name=f'Host: ', value=db_server.Host, inline=False)
+            embed.add_field(name=f'Host: ', value=db_server.Host, inline=True)
 
         #embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
         embed.add_field(name='Donator Only:', value= str(bool(db_server.Donator)), inline=True)
@@ -193,11 +193,12 @@ class botEmbeds():
         if server.ADS_Running:
             embed.add_field(name='TPS', value=TPS, inline=True)
             embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
-            embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=False)
+            embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=True)
             embed.add_field(name='CPU Usage', value=f'{CPU}/100%', inline=True)
             #!UPTIME is disabled until AMP Impliments the feature.
             #embed.add_field(name='Uptime', value=Uptime, inline=True)
-            embed.add_field(name='Players Online', value=Users_Online, inline=False)
+            embed.add_field(name='Players Online', value=Users_Online, inline=True)
+        embed.set_footer(text= f'InstanceID: {server.InstanceID}')
         return embed
 
     #Depreciated; no longer in use.

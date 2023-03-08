@@ -98,6 +98,14 @@ bot.donator
 bot.moderator
 bot.permissions
 
+bot.bannergroup.*
+bot.bannergroup.rename
+bot.bannergroup.remove
+bot.bannergroup.add
+bot.bannergroup.delete_group
+bot.bannergroup.info
+bot.bannergroup.create_group
+
 bot.utils.*
 bot.utils.message_timeout
 bot.utils.roleid
@@ -144,6 +152,10 @@ server.regex.add
 server.regex.list
 server.regex.delete
 
+server.banner.*
+server.banner.settings
+server.banner.background
+
 server.console.*
 server.console.filter
 server.console.channel
@@ -171,20 +183,18 @@ server.chat.channel
 server.event.*
 server.event.channel
 
-whitelist.*
-whitelist.reply
-whitelist.reply.list
-whitelist.reply.add
-whitelist.reply.remove
-whitelist.request
-whitelist.disabled
-whitelist.false
-whitelist.auto
-whitelist.wait_time
-whitelist.add
-whitelist.request_channel
-whitelist.true
-whitelist.remove
+bot.whitelist.*
+bot.whitelist.auto
+bot.whitelist.wait_time
+bot.whitelist.request_channel
+bot.whitelist.donator_bypass
+
+bot.whitelist_reply.*
+bot.whitelist_reply.list
+bot.whitelist_reply.add
+bot.whitelist_reply.remove
+
+whitelist_request
 
 dbserver.*
 dbserver.cleanup

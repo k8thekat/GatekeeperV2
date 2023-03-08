@@ -38,6 +38,10 @@ import utils
 import utils_embeds
 import utils_ui
 
+#This is used to force cog order to prevent missing methods.
+#MUST USE ENTIRE FILENAME!
+Dependencies = ["AMP_server_cog.py"]
+
 Whitelist_settings_choices = [app_commands.Choice(name= 'True', value= True),
                             app_commands.Choice(name= 'False', value= False)
                             ]
@@ -65,10 +69,13 @@ class Whitelist(commands.Cog):
         self._client.Whitelist_wait_list = {} #[message.id] : {'ampserver' : amp_server, 'context' : context, 'dbuser' : db_user}
 
         self.uBot.sub_command_handler('server', self.server_whitelist)
+        self.uBot.sub_group_command_handler('server settings', self.server_settings_whitelist_set)
+        self.uBot.sub_command_handler('bot', self.db_bot_whitelist)
+        self.uBot.sub_command_handler('bot', self.db_bot_whitelist_reply)
 
-        #!TODO! Need's to be validated/tested.
-        #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist)
-        #self.uBot.sub_group_command_handler('server settings', self.db_server_settings_whitelist_disabled)
+        #Because of the similar named hybrid group; we get a duplicate command under `/whitelist`
+        #I am not overly found of doing it this way; but it currently works.
+        self.whitelist_command_cleanup.start()
     
         self.logger.info(f'**SUCCESS** Initializing {self.name.title()}')
 
@@ -79,7 +86,16 @@ class Whitelist(commands.Cog):
                 db_get = int(db_get)
             return db_get
         return super().__getattribute__(__name)
-
+    
+    @tasks.loop(count = 1)
+    async def whitelist_command_cleanup(self):
+        await self._client.wait_until_ready()
+        self.uBot._remove_commands("whitelist", "add") 
+        self.uBot._remove_commands("whitelist", "remove")
+        self.uBot._remove_commands('bot whitelist', 'add')
+        self.uBot._remove_commands('bot whitelist', 'remove')
+        self.whitelist_command_cleanup.stop()
+        
     # Discord Auto Completes ---------------------------------------------------------------------------------------------------------------
     async def autocomplete_whitelist_replies(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Whitelist Replies"""
@@ -104,51 +120,35 @@ class Whitelist(commands.Cog):
                 self.logger.info(f'Removed {member.name} from Whitelist Wait List.')
        
     #Server Whitelist Commands ------------------------------------------------------------
+    @commands.hybrid_command(name='whitelist')
+    @utils.role_check()
+    @app_commands.autocomplete(server= utils.autocomplete_servers)
+    @app_commands.choices(flag= [Choice(name='False', value= 0), Choice(name='True', value= 1), Choice(name='Disabled', value= 2)])
+    async def server_settings_whitelist_set(self, context:commands.Context, server:str, flag:Choice[int]):
+        """Set the Servers Whitelist Allowed to True, False or Disabled"""
+        self.logger.command(f'{context.author.name} used {context.command.name}')
+     
+        amp_server = await self.uBot._serverCheck(context, server, False)
+        if amp_server:
+            if flag.value in [0, 1]:
+                #Set our Whitelist Flag
+                self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = flag.value
+                #Unhide our Whitelist Open/Closed on the Server Banners
+                self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = False
+                amp_server._setDBattr() #This will update the AMPInstance Attributes
+            
+            elif flag.value == 2:
+                #Hides the Whitelist Open/Closed on the Server Banners
+                self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = True
+                amp_server._setDBattr() #This will update the AMPInstance Attributes
+
+        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Whitelist set to : `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
+                         
     @commands.hybrid_group(name='whitelist')
     @utils.role_check()
     async def server_whitelist(self, context:commands.Context):
         if context.invoked_subcommand is None:
             await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_whitelist.command(name='true')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def dbserver_whitelist_true(self, context:commands.Context, server):
-        """Set Servers Whitelist Allowed to True"""
-        self.logger.command(f'{context.author.name} used Database Server Whitelist True...')
-     
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = True
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Whitelist set to : `True`", ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_whitelist.command(name='false')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    async def dbserver_whitelist_false(self, context:commands.Context, server):
-        """Set Servers Whitelist Allowed to False"""
-        self.logger.command(f'{context.author.name} used Database Server Whitelist False...')
-
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist = False
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Whitelist set to : `False`", ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @server_whitelist.command(name='disabled')
-    @utils.role_check()
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
-    @app_commands.choices(flag= [Choice(name='False', value= 0), Choice(name='True', value= 1)])
-    async def dbserver_whitelist_disabled(self, context:commands.Context, server, flag:Choice[int]):
-        """Hides the Servers Whitelist Status from Display Banners"""
-        self.logger.command(f'{context.author.name} used Database Server Whitelist Disabled...')
-
-        amp_server = await self.uBot._serverCheck(context, server, False)
-        if amp_server:
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Whitelist_disabled = flag.value
-            amp_server._setDBattr() #This will update the AMPInstance Attributes
-        await context.send(f"Server: **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**, Display Whitelist Status on Banners set to : `{flag.name}`", ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @server_whitelist.command(name='add')
     @utils.role_check()
@@ -187,13 +187,7 @@ class Whitelist(commands.Cog):
                 await context.send(f'**{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**: Removed `{name}` from the Whitelist', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     #All DBConfig Whitelist Specific function settings --------------------------------------------------------------
-    @commands.hybrid_group(name='whitelist')
-    @utils.role_check()
-    async def db_bot_whitelist(self, context:commands.Context):
-        if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @db_bot_whitelist.group(name='reply')
+    @commands.hybrid_group(name='whitelist_reply')
     @utils.role_check()
     async def db_bot_whitelist_reply(self, context:commands.Context):
         if context.invoked_subcommand is None:
@@ -235,21 +229,28 @@ class Whitelist(commands.Cog):
         await context.send('Here are all the replies I can use:', ephemeral= True, delete_after= self._client.Message_Timeout)
         for reply in replies:
             await context.send(f'{reply}', ephemeral= True, delete_after= self._client.Message_Timeout)
- 
+    
+    
+    @commands.hybrid_group(name='whitelist')
+    @utils.role_check()
+    async def db_bot_whitelist(self, context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
+
     @db_bot_whitelist.command(name='request_channel')
     @utils.role_check()
     async def db_bot_whitelist_request_channel_set(self, context:commands.Context, channel:discord.abc.GuildChannel):
         """Sets the Whitelist Request Channel for the Bot to send Whitelist Requests for Staff Approval"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Channel Set...')
     
-        self.DBConfig.SetSetting('Whitelist_request_channel',channel.id)
+        self.DBConfig.SetSetting('Whitelist_request_channel', channel.id)
         await context.send(f'Set Bot Whitelist Request Channel to **{channel.name}**', ephemeral= True, delete_after= self._client.Message_Timeout)
     
     @db_bot_whitelist.command(name='wait_time')
     @utils.role_check()
     @app_commands.describe(time= 'Time in minutes Gatekeeper will wait before handling a Whitelist request.')
     async def db_bot_whitelist_wait_time_set(self, context: commands.Context, time: app_commands.Range[int, 0, 60]= 5):
-        """Set Gatekeeper's Whitelist wait time , this value is in minutes!"""
+        """Set Gatekeeper's Whitelist wait time , this value is in minutes! Set to `0` to disable Wait time."""
         self.logger.command(f'{context.author.name} used Bot Whitelist wait time Set...')
         self.DBConfig.Whitelist_wait_time = time
         await context.send(f'Whitelist wait time has been set to **{time} {"minutes" if time > 1 else "minute"}**.', ephemeral= True, delete_after= self._client.Message_Timeout)
@@ -258,8 +259,13 @@ class Whitelist(commands.Cog):
     @utils.role_check()
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
     async def db_bot_whitelist_auto_whitelist(self, context:commands.Context, flag:Choice[int]):
-        """This turns on or off Auto-Whitelisting"""
+        """This turns ON or OFF Auto-Whitelisting"""
         self.logger.command(f'{context.author.name} used Bot Whitelist Auto Whitelist...')
+
+        #lets validate our Whitelist_request_channel still exists.
+        db_setting = self.DBConfig.GetSetting('Whitelist_request_channel')
+        if db_setting != None and context.guild.get_channel(db_setting) == None:
+            return await context.send('Hey uhh your `Whitelist Request Channel` is no longer valid or is not set.', ephemeral= True, delete_after= self._client.Message_Timeout)
        
         if flag.value == 1:
             self.DBConfig.SetSetting('Auto_Whitelist', flag.value)
@@ -272,7 +278,7 @@ class Whitelist(commands.Cog):
     @utils.role_check()
     @app_commands.choices(flag= [Choice(name='True', value= 1), Choice(name='False', value= 0)])
     async def db_bot_whitelist_donator_bypass(self, context:commands.Context, flag:Choice[int]):
-        """This turns on or off Donator Bypass"""
+        """This turns ON or OFF Donator Bypass for Auto-Whitelist Wait time."""
         self.logger.command(f'{context.author.name} used Bot Donator Bypass')
        
         if flag.value == 1:
@@ -282,11 +288,10 @@ class Whitelist(commands.Cog):
             self.DBConfig.SetSetting('Donator_Bypass', flag.value)
             return await context.send('Donators can no longer bypass the Whitelist Wait Time.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-
-    @db_bot_whitelist.command(name= 'request')
+    @commands.hybrid_command(name= 'whitelist_request')
     @app_commands.autocomplete(server = utils.autocomplete_servers_public)
-    async def db_bot_whitelist_request(self, context:commands.Context, server, ign:str= None):
-        """Allows a user to request  Whitelist for a Specific Server."""
+    async def whitelist_request(self, context:commands.Context, server:str, ign:str= None):
+        """Allows a user to request Whitelist for a Specific Server."""
         self.logger.command(f'{context.author.name} used Bot Whitelist Request...')
         amp_server = await self.uBot._serverCheck(context, server)
 
