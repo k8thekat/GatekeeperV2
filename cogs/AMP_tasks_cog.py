@@ -67,7 +67,6 @@ class AMP_Tasks(commands.Cog):
         context = await self._client.get_context(message)
         #Force the Tasks to ignore any "prefix" commands.
         if message.author == self._client.user:
-            self.logger.dev('AMP_Tasks_Cog Found my own Message, oops')
             return
         
         #Since Integrations hijacks any commands with a `/` in front of it. We are now going to be using a `.` in front of any command to bypass.
