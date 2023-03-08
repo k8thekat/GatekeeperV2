@@ -471,7 +471,7 @@ class Banner(commands.Cog):
         
         if flag.value == 1:
             self.DBConfig.SetSetting('Banner_Auto_Update', True)
-            return await context.send(f'All set! The bot will __Auto Update the Banners__ from `/server display` every minute.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f'All set! The bot will __Auto Update the Banners__ every minute.', ephemeral= True, delete_after= self._client.Message_Timeout)
         if flag.value == 0:
             self.DBConfig.SetSetting('Banner_Auto_Update', False)
             return await context.send(f"Well, I guess I won't update the Banners anymore.", ephemeral= True, delete_after= self._client.Message_Timeout)
