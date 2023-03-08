@@ -131,6 +131,15 @@ class DB_Update:
             self.add_bannergroupmessages_table()
             self.DBConfig.SetSetting('DB_Version', '2.9')
 
+        if 3.0 > Version:
+            """Updated the Banner Display System to use the new Group System."""
+            self.logger.info('**ATTENTION** Updating DB to Version 3.0')
+            self.add_bannergroup_table()
+            self.add_bannergroupservers_table()
+            self.add_bannergroupchannels_table()
+            self.add_bannergroupmessages_table()
+            self.DBConfig.SetSetting('DB_Version', '3.0')
+
 
     def user_roles(self):
         try:

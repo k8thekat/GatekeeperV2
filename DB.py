@@ -40,7 +40,7 @@ def dump_to_json(data):
 
 Handler = None
 #!DB Version
-DB_Version = 2.9
+DB_Version = 3.0
 
 class DBHandler():
     def __init__(self):
