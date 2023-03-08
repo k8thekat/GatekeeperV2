@@ -111,7 +111,7 @@ class Handler():
             for script in cur_cog_file_list:
                 #Ignore Pycache or similar files.
                 #Lets Ignore our Custom Permisisons Cog. We will load it on-demand.
-                if script.name.startswith('__') or script.name == 'Permissions_cog.py':
+                if script.name.startswith('__') or script.name == 'Permissions_cog.py' or not script.name.endswith('.py'):
                     cur_cog_file_list.remove(script)
                     continue
 
@@ -126,29 +126,27 @@ class Handler():
                         #If the cog we need isnt loaded; skip. We will come back around to it.
                         if dependency.lower() not in loaded_cogs:
                             continue
-                   
-                if script.name.endswith('.py'):
-                    cog = f'{path}.{script.name[:-3]}'
+                
+                cog = f'{path}.{script.name[:-3]}'
 
-                    try:
-                        if reload:
-                            await self._client.reload_extension(cog)
-                            loaded_cogs.append(script.name.lower()) #Append to our loaded cogs for dependency check
-                            cur_cog_file_list.remove(script) #Remove the entry from our cog list; so we don't attempt to load it again.
+                try:
+                    if reload:
+                        await self._client.reload_extension(cog)
+                        loaded_cogs.append(script.name.lower()) #Append to our loaded cogs for dependency check
+                        cur_cog_file_list.remove(script) #Remove the entry from our cog list; so we don't attempt to load it again.
 
-                        else:
-                            await self._client.load_extension(cog)
-                            loaded_cogs.append(script.name.lower()) #Append to our loaded cogs for dependency check
-                            cur_cog_file_list.remove(script) #Remove the entry from our cog list; so we don't attempt to load it again.
+                    else:
+                        await self._client.load_extension(cog)
+                        loaded_cogs.append(script.name.lower()) #Append to our loaded cogs for dependency check
+                        cur_cog_file_list.remove(script) #Remove the entry from our cog list; so we don't attempt to load it again.
 
-                        self.logger.dev(f'**FINISHED LOADING** {self.name} -> **{cog}**')
+                    self.logger.dev(f'**FINISHED LOADING** {self.name} -> **{cog}**')
 
-                    except discord.ext.commands.errors.ExtensionAlreadyLoaded:
-                        continue
+                except discord.ext.commands.errors.ExtensionAlreadyLoaded:
+                    continue
 
-                    except FileNotFoundError as e:
-                        self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {traceback.format_exc()}')
-                           
+                except FileNotFoundError as e:
+                    self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {traceback.format_exc()}')
         self.logger.info(f'**All Cog Modules Loaded**')
 
                 
