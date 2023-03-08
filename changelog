@@ -1,3 +1,9 @@
+__**Update 4.5.1 and 4.5.2**__
+- Hotfix
+    - Fixed typo in `DB_Update.py` table creation code.
+    - Removed typo in `/bot banner_settings auto_update`
+    - Updated versions.
+
 __**Update 4.5**__
 - changes to `AMP_server_cog.py`
     - relocated and renamed methods to better facilate redability
