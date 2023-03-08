@@ -371,6 +371,7 @@ class DB_Update:
                         foreign key (ServerID) references Servers(ID),
                         foreign key (BannerGroupID) references BannerGroup(ID)
                         )"""
+            self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'add_bannergroupservers_table {e}')
 
@@ -383,6 +384,7 @@ class DB_Update:
                         BannerGroupID integer not null,
                         foreign key (BannerGroupID) references BannerGroup(ID)
                         )"""
+            self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'add_bannergroupchannels_table {e}')
 
@@ -393,5 +395,6 @@ class DB_Update:
                         Discord_Message_ID integer,
                         foreign key (BannerGroupChannelsID) references BannerGroupChannels(ID)
                         )"""
+            self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'add_bannergroupmessages_table {e}')
