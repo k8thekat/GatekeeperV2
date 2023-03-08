@@ -112,6 +112,7 @@ class AMPConsole:
 
             if 'ConsoleEntries' not in console:
                 self.logger.error(f'Console Entries not found for {self.AMPInstance.FriendlyName}')
+                self.AMPInstance._ADScheck()
                 continue
 
             for entry in console['ConsoleEntries']:
