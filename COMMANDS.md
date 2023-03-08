@@ -38,9 +38,17 @@ ___
 - `/bot cog reload` - Reloads all currently loaded Cogs.
 
 ### <u>Bot Banner_Settings Commands</u>: 
-- `/bot banner auto_update (flag)` - Allows the bot to automatically update the `/server display` Banner messages.
+- `/bot banner_settings auto_update (flag)` - Allows the bot to automatically update the `/server display` Banner messages.
     - **TIP**: Use the `/server display` command inplace of your "Server Info" or similar! 
-- `/bot banner type (type)` - Select which type of Banner to display via `/server display`
+- `/bot banner_settings type (type)` - Select which type of Banner to display via `/server display`
+
+### <u>Bot BannerGroup Commands</u>: 
+- `/bot bannergroup create_group (group_name)` - Creates a new Banner Group
+- `/bot bannergroup add (group_name, server, channel)` - Allows the User to add `Channel` or `Server` to a Banner Group.
+- `/bot bannergroup remove (group_name, server, channel)` - Allows the User to remove a `Server` or `Channel` from a Banner Group
+- `/bot bannergroup rename (group_name, new_groupname)` - Allows a User to rename the selected Banner Group.
+- `/bot bannergroup info (group_name)` - Displays information pertaining to the selected Banner Group.
+- `/bot bannergroup delete_group (group_name)` - Allows the User to Delete an entire Banner Group.
 
 ### <u>Bot Regex_Pattern Commands</u>:
 - See [Regex How-to](/REGEX.md) for full documentation.
@@ -52,33 +60,29 @@ ___
     - **TIP**: `new_name` must not match the original `name`
     - `filter_type` dictates where the match will be sent. (eg. `Event` would send all matches to the `Event Channel` for said Server - See [Regex](/README.md) for examples.)
 
-### <u>Whitelist Commands</u>:
-- `/whitelist auto (flag)` - Allows the bot to automatically Whitelist a Users request.
+### <u>Bot Whitelist Commands</u>:
+- `/bot whitelist auto (flag)` - Allows the bot to automatically Whitelist a Users request.
     - **ATTENTION**: `flag` must be *True or False*. Default is False.
         - **TIP**: This will not instantly whitelist the user if whitelist waittime is not set to zero.
-- `/whitelist channel (channel)` - Sets the Discord channel for the bot to monitor for whitelist requests.
-- `/whitelist wait_time (time)` -  Sets the wait time for whitelist request after the message is received. *(eg. time = `5`)*
+- `/bot whitelist channel (channel)` - Sets the Discord channel for the bot to monitor for whitelist requests.
+- `/bot whitelist wait_time (time)` -  Sets the wait time for whitelist request after the message is received. *(eg. time = `5`)*
     - **REMINDER**: All time values are in **Minutes**! Please keep that in mind.
         - **TIP**: Set the value to zero to have the bot instantly whitelist users. Default value is 5 minutes!
-- `/whitelist pending_emoji` - Set an Emoji to be applied to pending/waiting whitelist request.
-    - **ATTENTION**: The reaction/emoji must be from your guild.
-        - **TIP**: The bot will post a message and you react with the emoji/reaction you want to use! 
-- `/whitelist done_emoji` - Set an Emoji for to be applied to finished whitelist requests.
-    - **ATTENTION**: The reaction/emoji must be from your guild.
-        - **TIP**: The bot will post a message and you react with the emoji/reaction you want to use! 
-- `/whitelist reply add (message)` - Adds the message to the possibly list of replies the bot can use during Whitelist handling.
+- `/bot whitelist_reply add (message)` - Adds the message to the possibly list of replies the bot can use during Whitelist handling.
     - **TIP**: Messages support the following parameteres.
         - `<user>` - Which changes to use the message author's name inside your message.
         - `<server>` - Which returns with the provided AMP Instance Name or Display Name respectively.
         - `<guild>` - Which changes to the Discord Guild Name.
         - `<#channelid>` - Which is replaces with a channel jump_to link. Simply use `<#` and `>` wrapped around the channel's id. *(eg. `<#1234567890>`)*
             - It will create a jump_to link during usage; but it gets saved into the DB as the example.
-- `/whitelist reply remove (message)` - Removes the selected message from the list of replies the bot can use during Whitelist handling.
-- `/whitelist reply list` - Lists all the currently available replies the bot can use during Whitelist handling.
-- `/whitelist donator_bypass (flag)` - This turns `ON` or `Off` Donator Bypass of Auto-Whitelisting `wait_time`.
-- `/whitelist request (server, ign)` - Allows a user to request Whitelist for a specific Server.
+- `/bot whitelist_reply remove (message)` - Removes the selected message from the list of replies the bot can use during Whitelist handling.
+- `/bot whitelist_reply list` - Lists all the currently available replies the bot can use during Whitelist handling.
+- `/bot whitelist donator_bypass (flag)` - This turns `ON` or `Off` Donator Bypass of Auto-Whitelisting `wait_time`.
+- `/bot whitelist request_channel (channel)` - Sets the Whitelist Request Channel for the Bot to send Whitelist requests for Staff approval.
+
+### <u>Whitelist_Request Commands</u>:
+- `/whitelist_request (server, ign)` - Allows a user to request Whitelist for a specific Server.
     - **TIP**: `ign` is optional if the Discord User has done this before and or already in the Database.
-- `/whitelist request_channel (channel)` - Sets the Whitelist Request Channel for the Bot to send Whitelist requests for Staff approval.
 
 ### <u>User/Member Group Commands</u>: 
 - `/user info (user)` - Displays a Discord Users information and their Database information.
