@@ -131,6 +131,15 @@ class DB_Update:
             self.add_bannergroupmessages_table()
             self.DBConfig.SetSetting('DB_Version', '2.9')
 
+        if 3.0 > Version:
+            """Updated the Banner Display System to use the new Group System."""
+            self.logger.info('**ATTENTION** Updating DB to Version 3.0')
+            self.add_bannergroup_table()
+            self.add_bannergroupservers_table()
+            self.add_bannergroupchannels_table()
+            self.add_bannergroupmessages_table()
+            self.DBConfig.SetSetting('DB_Version', '3.0')
+
 
     def user_roles(self):
         try:
@@ -371,6 +380,7 @@ class DB_Update:
                         foreign key (ServerID) references Servers(ID),
                         foreign key (BannerGroupID) references BannerGroup(ID)
                         )"""
+            self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'add_bannergroupservers_table {e}')
 
@@ -383,6 +393,7 @@ class DB_Update:
                         BannerGroupID integer not null,
                         foreign key (BannerGroupID) references BannerGroup(ID)
                         )"""
+            self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'add_bannergroupchannels_table {e}')
 
@@ -393,5 +404,6 @@ class DB_Update:
                         Discord_Message_ID integer,
                         foreign key (BannerGroupChannelsID) references BannerGroupChannels(ID)
                         )"""
+            self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'add_bannergroupmessages_table {e}')
