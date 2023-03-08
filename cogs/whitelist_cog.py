@@ -70,22 +70,14 @@ class Whitelist(commands.Cog):
 
         self.uBot.sub_command_handler('server', self.server_whitelist)
         self.uBot.sub_group_command_handler('server settings', self.server_settings_whitelist_set)
+        self.uBot.sub_command_handler('bot', self.db_bot_whitelist)
+        self.uBot.sub_command_handler('bot', self.db_bot_whitelist_reply)
 
         #Because of the similar named hybrid group; we get a duplicate command under `/whitelist`
         #I am not overly found of doing it this way; but it currently works.
-        self.__remove_commands("whitelist", "add") 
-        self.__remove_commands("whitelist", "remove")
+        self.whitelist_command_cleanup.start()
     
         self.logger.info(f'**SUCCESS** Initializing {self.name.title()}')
-
-    def __remove_commands(self, parent_group:str, command:str):
-        """This will remove a command from a group"""
-        #Should call some form of sync command after; but I do not want to auto sync. Regardless the command tree will be cleaned up.
-        group = self._client.get_command(parent_group)
-        #the Group command could not exists on first startup; as the client has not been sync'd.
-        if group != None:
-            group.remove_command(command)
-
 
     def __getattribute__(self, __name: str):
         if __name == 'Whitelist__Request_Channel':
@@ -94,7 +86,16 @@ class Whitelist(commands.Cog):
                 db_get = int(db_get)
             return db_get
         return super().__getattribute__(__name)
-
+    
+    @tasks.loop(count = 1)
+    async def whitelist_command_cleanup(self):
+        await self._client.wait_until_ready()
+        self.uBot._remove_commands("whitelist", "add") 
+        self.uBot._remove_commands("whitelist", "remove")
+        self.uBot._remove_commands('bot whitelist', 'add')
+        self.uBot._remove_commands('bot whitelist', 'remove')
+        self.whitelist_command_cleanup.stop()
+        
     # Discord Auto Completes ---------------------------------------------------------------------------------------------------------------
     async def autocomplete_whitelist_replies(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Whitelist Replies"""
@@ -186,13 +187,7 @@ class Whitelist(commands.Cog):
                 await context.send(f'**{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}**: Removed `{name}` from the Whitelist', ephemeral= True, delete_after= self._client.Message_Timeout)
 
     #All DBConfig Whitelist Specific function settings --------------------------------------------------------------
-    @commands.hybrid_group(name='whitelist')
-    @utils.role_check()
-    async def db_bot_whitelist(self, context:commands.Context):
-        if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
-
-    @db_bot_whitelist.group(name='reply')
+    @commands.hybrid_group(name='whitelist_reply')
     @utils.role_check()
     async def db_bot_whitelist_reply(self, context:commands.Context):
         if context.invoked_subcommand is None:
@@ -234,7 +229,14 @@ class Whitelist(commands.Cog):
         await context.send('Here are all the replies I can use:', ephemeral= True, delete_after= self._client.Message_Timeout)
         for reply in replies:
             await context.send(f'{reply}', ephemeral= True, delete_after= self._client.Message_Timeout)
- 
+    
+    
+    @commands.hybrid_group(name='whitelist')
+    @utils.role_check()
+    async def db_bot_whitelist(self, context:commands.Context):
+        if context.invoked_subcommand is None:
+            await context.send('Invalid command passed...', ephemeral= True, delete_after= self._client.Message_Timeout)
+
     @db_bot_whitelist.command(name='request_channel')
     @utils.role_check()
     async def db_bot_whitelist_request_channel_set(self, context:commands.Context, channel:discord.abc.GuildChannel):
@@ -286,10 +288,9 @@ class Whitelist(commands.Cog):
             self.DBConfig.SetSetting('Donator_Bypass', flag.value)
             return await context.send('Donators can no longer bypass the Whitelist Wait Time.', ephemeral= True, delete_after= self._client.Message_Timeout)
 
-
-    @db_bot_whitelist.command(name= 'request')
+    @commands.hybrid_command(name= 'whitelist_request')
     @app_commands.autocomplete(server = utils.autocomplete_servers_public)
-    async def db_bot_whitelist_request(self, context:commands.Context, server, ign:str= None):
+    async def whitelist_request(self, context:commands.Context, server:str, ign:str= None):
         """Allows a user to request Whitelist for a Specific Server."""
         self.logger.command(f'{context.author.name} used Bot Whitelist Request...')
         amp_server = await self.uBot._serverCheck(context, server)
