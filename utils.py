@@ -146,14 +146,14 @@ async def autocomplete_servers(interaction:discord.Interaction, current:str) -> 
         """Autocomplete for AMP Instance Names"""
         choice_list = __AMP_Handler.get_AMP_instance_names()
         if await async_rolecheck(interaction, perm_node= 'Staff') == True:
-            return [app_commands.Choice(name=f"{value} | ID: {key}", value= key)for key, value in choice_list.items()][:25]
+            return [app_commands.Choice(name=f"{value} | ID: {key}", value= key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
         else:
-            return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items()][:25]
+            return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
         
 async def autocomplete_servers_public(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for AMP Instance Names"""
         choice_list = __AMP_Handler.get_AMP_instance_names(public= True)
-        return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items()][:25]
+        return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
 
 class discordBot():
     def __init__(self, client:discord.Client):
@@ -503,6 +503,15 @@ class botUtils():
                 return
             except Exception as e:
                 self.logger.error(f'We encountered an error in `sub_group_command_handler` - {e}')
+
+    def _remove_commands(self, parent_group:str, command:str):
+        """This will remove a command from a group"""
+        #Should call some form of sync command after; but I do not want to auto sync. Regardless the command tree will be cleaned up.
+        group = self._client.get_command(parent_group)
+        #the Group command could not exists on first startup; as the client has not been sync'd.
+        if group != None:
+            self.logger.dev(f'Removed {command} from {parent_group}')
+            group.remove_command(command)
                 
     async def _serverCheck(self, context:commands.Context, server, online_only:bool=True) -> Union[AMP_Handler.AMP.AMPInstance, bool]:
         """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
