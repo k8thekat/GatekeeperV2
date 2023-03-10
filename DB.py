@@ -475,21 +475,27 @@ class Database:
         return
     
     ### Banner Group ----------------------------------------------------------------------------------------------------------------------------------------------------------
+    @property
+    def DBServer(self):
+        return DBServer
+
     def Add_BannerGroup(self, name:str):
         """Creates a Banner Group Table with the provided `name`"""
         self._execute("INSERT INTO BannerGroup(name) values(?)", (name,))
         return
     
-    def Get_BannerGroup(self, name:str= None, ID:int= None):
-        """Selects a Banner Group Table matching the `name` provided."""
+
+    def Get_BannerGroup(self, name:str= None, ID:int= None) -> Union[str, None]:
+        """Selects a Banner Group Table matching the `name` or `ID` provided."""
         (ret, cur) = self._fetchone("SELECT ID FROM BannerGroup WHERE name=? or ID=?", (name, ID,))
         if not ret:
             return None
         cur.close()
         return ret["ID"]
     
+
     def Update_BannerGroup(self, new_name:str, name:str):
-        """Update a Banner Group"""
+        """Update a Banner Groups Name"""
         banner_id = self.Get_BannerGroup(name)
         (ret, cur) = self._fetchone("UPDATE BannerGroup SET name=? WHERE ID=?", (new_name, banner_id))
         if not ret:
@@ -497,6 +503,7 @@ class Database:
         cur.close()
         return
        
+
     def Get_one_BannerGroup_info(self, name:str)-> Union[None, dict[str, int]]:
         """Gets a Specific Banner Groups full information\n
         return `Banner_info[entry['name']] = {'InstanceName': list[entry['InstanceName']], 'Discord_Channel': list[entry['Discord_Channel_ID']]}`"""
@@ -526,6 +533,7 @@ class Database:
         cur.close()
         return Banner_info
     
+
     def Get_All_BannerGroups(self)-> Union[None, dict[str, str]]:
         """Gets all BannerGroups Names/IDs\n
         returns `Banners[entry["ID"]] = entry["name"]`"""
@@ -538,6 +546,7 @@ class Database:
         cur.close()
         return Banners
     
+
     def Delete_BannerGroup(self, name:str):
         """Removes a Banner Group."""
         banner_id = self.Get_BannerGroup(name)
@@ -553,6 +562,7 @@ class Database:
             self._execute("DELETE FROM BannerGroup WHERE ID=?", (banner_id,))
             cur.close()
    
+
     def Get_All_BannerGroup_Info(self)-> Union[None, dict[str, int]]:
         """Gets all the BannerGroups and sorts them by `Discord_Channel_ID`.\n
         `example: {916195413839712277: {'name': 'TestBannerGroup', 'guild_id': 602285328320954378, 'servers': [1], 'messages': [1079236992145051668]}}`"""
@@ -581,7 +591,8 @@ class Database:
         cur.close()
         return Banners
 
-    def Add_Server_to_BannerGroup(self, banner_groupname:str, instanceID:str):
+
+    def Add_Server_to_BannerGroup(self, banner_groupname:str, instanceID:str) -> Union[None, bool]:
         """Add a Server to an existing Banner Group."""
         banner_id = self.Get_BannerGroup(banner_groupname)
         (ret, cur) = self._fetchone("SELECT ID FROM Servers WHERE InstanceID=?", (instanceID,))
@@ -599,18 +610,37 @@ class Database:
         cur.close()
         return False
     
-    def Remove_Server_from_BannerGroup(self, banner_groupname:str, instanceID:str):
+
+    def Remove_Server_from_BannerGroup(self, banner_groupname:str, instanceID:str) -> None:
         """Removes a Server from an existing Banner Group."""
         (ret, cur) = self._fetchone("SELECT ID FROM Servers WHERE InstanceID=?", (instanceID,))
         if not ret:
-            return
+            return None
         banner_id = self.Get_BannerGroup(banner_groupname)
-        print(ret["ID"], banner_id)
         if banner_id != None:
             self._execute("DELETE FROM BannerGroupServers WHERE ServerID=? AND BannerGroupID=?", (ret["ID"], banner_id))
         cur.close()
 
-    def Add_Channel_to_BannerGroup(self, banner_groupname:str, channelid:int, guildid:int):
+
+    def Get_all_Servers_for_BannerGroup(self, banner_groupname:str) -> list[DBServer]:
+        """Gets all the Servers for a BannerGroup and returns a DBServer List"""
+        banner_id = self.Get_BannerGroup(name= banner_groupname)
+        if banner_id == None:
+            return None
+        
+        (row, cur) = self._fetchall("SELECT ServerID FROM BannerGroupServers WHERE BannerGroupID=?", (banner_id,) )
+        if not row:
+            return None
+        servers = []
+        for entry in row:
+            cur_server = self.GetServer(ServerID= entry["ServerID"])
+            if cur_server != None and cur_server not in servers:
+                servers.append(cur_server)
+        cur.close()
+        return servers
+
+
+    def Add_Channel_to_BannerGroup(self, banner_groupname:str, channelid:int, guildid:int) -> bool:
         """Add a Channel to a BannerGroups listing."""
         banner_id = self.Get_BannerGroup(banner_groupname)
         (ret, cur) = self._fetchone("SELECT ID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=? and BannerGroupID=?", (channelid, guildid, banner_id))
@@ -620,20 +650,22 @@ class Database:
         cur.close()
         return False
 
-    def Remove_Channel_from_BannerGroup(self, channelid:int, guildid:int):
+
+    def Remove_Channel_from_BannerGroup(self, channelid:int, guildid:int) -> None:
         """Remove a Channel from a BannerGroups listing, this also removes any related Banner Group Message table entries."""
         (ret, cur) = self._fetchone("SELECT BannerGroupID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=?", (channelid, guildid))
         if not ret:
-            return
+            return None
         banner_id = ret["BannerGroupID"]
         (ret, cur) = self._fetchone("SELECT ID FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid))
         if not ret:
-            return
+            return None
         self._execute("DELETE FROM BannerGroupMessages WHERE BannerGroupChannelsID=?", (ret["ID"],))
         self._execute("DELETE FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=? AND Discord_Guild_ID=?", (banner_id, channelid, guildid))
         cur.close()
 
-    def Get_Channels_for_BannerGroup(self, banner_groupname:str):
+
+    def Get_Channels_for_BannerGroup(self, banner_groupname:str) -> list[str]:
         """Returns a list of existing BannerGroups Discord Channel IDs."""
         banner_id = self.Get_BannerGroup(banner_groupname)
         bgc_list = []
@@ -641,31 +673,33 @@ class Database:
             #We need to get the BGC ID matching the Banner Group ID and Discord Channel ID First.
             (row, cur) = self._fetchall("SELECT Discord_Channel_ID FROM BannerGroupChannels WHERE BannerGroupID=?", (banner_id,))
             if not row:
-                return
+                return None
             for entry in row:
                 if entry['Discord_Channel_ID'] not in bgc_list:
                     bgc_list.append(entry['Discord_Channel_ID']) 
             cur.close()
             return bgc_list
             
-    def Add_Message_to_BannerGroup(self, banner_groupname:str, channelid:int, messageid:int):
+
+    def Add_Message_to_BannerGroup(self, banner_groupname:str, channelid:int, messageid:int) -> None:
         """Adds a Discord Message ID to a BannerGroup"""
         banner_id = self.Get_BannerGroup(banner_groupname)
         if banner_id != None:
             #We need to get the BannerGroupChannel ID and add Messages using its ID
             (ret, cur) = self._fetchone("SELECT ID from BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid))
             if not ret:
-                return
+                return None
             BGC_ID = ret["ID"]
             cur.close()
             self._execute("INSERT INTO BannerGroupMessages(BannerGroupChannelsID, Discord_Message_ID) values(?, ?)", (BGC_ID, messageid))
 
-    def Remove_Message_from_BannerGroup(self, messageid:int):
+
+    def Remove_Message_from_BannerGroup(self, messageid:int) -> None:
         """Removes a Discord Message ID from a BannerGroup"""
         self._execute("DELETE FROM BannerGroupMessages WHERE Discord_Message_ID=?", (messageid,))
    
 
-    def Get_Messages_for_BannerGroup(self, banner_groupname:str):
+    def Get_Messages_for_BannerGroup(self, banner_groupname:str) -> dict[str, list]:
         """Returns a dictionary with key = `Discord_Channel_ID` and value = list[`Discord_Message_ID`]"""
         banner_id = self.Get_BannerGroup(banner_groupname)
         if banner_id == None:
@@ -680,6 +714,8 @@ class Database:
                 banner_info[entry["Discord_Channel_ID"]]["messages"].append(entry["Discord_Message_ID"])
         cur.close()
         return banner_info
+    
+    #DB Config below here ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def _AddConfig(self, Name, Value):
         self._execute("Insert into config(Name, Value) values(?, ?)", (Name, Value))

@@ -43,7 +43,6 @@ import modules.banner_creator as BC
 
 #This is used to force cog order to prevent missing methods.
 Dependencies = ["AMP_server_cog.py"]
-
 class Banner(commands.Cog):
     def __init__ (self, client:discord.Client):
         self._client = client
@@ -72,7 +71,7 @@ class Banner(commands.Cog):
             self.server_display_update.start()
             self.logger.dev(f'**{self.name.title()}** Server Display Banners Task Loop is Running: {self.server_display_update.is_running()}')
             
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name.title()}**')
+        self.logger.info(f'**SUCCESS** Initializing **{self.name.title()}**')
 
     
     @property
@@ -83,6 +82,9 @@ class Banner(commands.Cog):
     @commands.Cog.listener('on_message_delete')
     async def on_message_delete(self, message:discord.Message):
         """This should handle if someone deletes the Display Messages."""
+        #This should prevent messages sent by Gatekeeper from triggering.
+        if message.author == self._client.user:
+            return
         
         #This should allow on_message_delete to ignore ephermeral message timed delete events.
         if hasattr(message, "type") and message.type == MessageType.chat_input_command:
@@ -108,7 +110,7 @@ class Banner(commands.Cog):
     
     
     async def autocomplete_bannergroups(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        """This provides a Choice List of Banner Group Names"""
+        """This provides a Choice List of Banner Group Names."""
         banner_groups = self.DB.Get_All_BannerGroups()
         #If we don't have any entries. Send no results.
         if banner_groups == None or not len(banner_groups):
@@ -117,7 +119,12 @@ class Banner(commands.Cog):
     
     
     async def autocomplete_bannergroups_channels(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        bg_channels = self.DB.Get_Channels_for_BannerGroup(interaction.namespace.banner_group)
+        """This provides a list of Discord Channels for a Banner Group."""
+        bg_channels = self.DB.Get_Channels_for_BannerGroup(interaction.namespace.group_name)
+        #If we don't have any entries. Send no results.
+        if bg_channels == None or not len(bg_channels):
+            return []
+        
         try:
             #This could possibly fail if the "channel" gets deleted..and only if the `event` fails to fire.
             discord_channels = [interaction.guild.get_channel(value) for value in bg_channels]
@@ -126,6 +133,19 @@ class Banner(commands.Cog):
         except:
             self.logger.error(f'We failed a `get_channel` inside of autocomplete_bannergroups_channels and defaulted to displaying the IDs')
             return [app_commands.Choice(name= str(value), value= str(value))for value in bg_channels if current.lower() in str(value).lower()][:25]
+        
+    ##!TODO! 
+    #Create an autocomplete_bannergroups_servers()
+    #We need to get the servers that are apart of the Bannergroup and provide a Choice list.
+    async def autocomplete_bannergroups_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+        """This provides a list of DB Servers for a Banner Group."""
+        
+        db_servers = self.DB.Get_all_Servers_for_BannerGroup(interaction.namespace.group_name)
+        if db_servers == None or not len(db_servers):
+            return []
+        
+        else:
+            return [app_commands.Choice(name= f"{server.InstanceName} | ID: {server.InstanceID}", value= server.InstanceID )for server in db_servers if current.lower() in server.InstanceName.lower()][:25]
         
 
     async def banner_editor(self, context:commands.Context, amp_server:AMP_Handler.AMP.AMPInstance, db_server_banner=None):
@@ -297,10 +317,10 @@ class Banner(commands.Cog):
         """Allows the User to Create a new Banner Group"""
         try:
             self.DB.Add_BannerGroup(name= group_name)
-            return await context.send(content= f'We created a new Banner Group called `{group_name}` for you.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(content= f'We created a new Banner Group called `{group_name}` for you.', ephemeral= True, delete_after= self._Message_Timeout)
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint failed" in e.args[0]:
-                return await context.send(content= f'Oops, it appears `{group_name}` already exists, please try again.', ephemeral= True, delete_after= self._client.Message_Timeout)
+                return await context.send(content= f'Oops, it appears `{group_name}` already exists, please try again.', ephemeral= True, delete_after= self._Message_Timeout)
 
     @banner_group_group.command(name= 'info')
     @app_commands.autocomplete(group_name= autocomplete_bannergroups)
@@ -331,7 +351,7 @@ class Banner(commands.Cog):
         embed = discord.Embed(title= group_name, color= 0x71368a, description= f"Settings...")
         embed.add_field(name= "Servers", value= "\n".join(servers), inline= False)
         embed.add_field(name= "Channels", value= "\n".join(disc_chan_list), inline= False)
-        return await context.send(embed= embed, ephemeral= True, delete_after= (self._client.Message_Timeout*2))
+        return await context.send(embed= embed, ephemeral= True, delete_after= (self._Message_Timeout*2))
 
     @banner_group_group.command(name='rename')
     @app_commands.autocomplete(group_name= autocomplete_bannergroups)
@@ -339,11 +359,11 @@ class Banner(commands.Cog):
         """Allows a User to rename the selected Banner Group."""
         try:
             self.DB.Update_BannerGroup(new_name= new_groupname, name= group_name)
-            return await context.send(content= f'You are all set! We changed `{group_name}` name to `{new_groupname}`! Magic~', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(content= f'You are all set! We changed `{group_name}` name to `{new_groupname}`! Magic~', ephemeral= True, delete_after= self._Message_Timeout)
 
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint failed" in e.args[0]:
-                return await context.send(content= f'Oops, it appears `{new_groupname}` already exists, please try again.', ephemeral= True, delete_after= self._client.Message_Timeout)
+                return await context.send(content= f'Oops, it appears `{new_groupname}` already exists, please try again.', ephemeral= True, delete_after= self._Message_Timeout)
 
     @banner_group_group.command(name= 'add')
     @app_commands.autocomplete(server= utils.autocomplete_servers)
@@ -352,6 +372,9 @@ class Banner(commands.Cog):
         """Allows the User to add `Channel` or `Server` to a Banner Group."""
         c_status = True
         s_status = True
+        group = self.DB.Get_BannerGroup(name = group_name)
+        if group == None:
+            return await context.send(content= f'This group doesn\'t exist {group_name}; please create the group via `/bot bannergroup create_group {group_name}`.', ephemeral= True, delete_after= self._Message_Timeout)
 
         if server != None:
             db_server = self.DB.GetServer(InstanceID= server)
@@ -368,7 +391,7 @@ class Banner(commands.Cog):
         return await context.send(content= c_str, ephemeral= True, delete_after= self._client.Message_Timeout)
 
     @banner_group_group.command(name='remove')
-    @app_commands.autocomplete(server= utils.autocomplete_servers)
+    @app_commands.autocomplete(server= autocomplete_bannergroups_servers)
     @app_commands.autocomplete(channel = autocomplete_bannergroups_channels)
     @app_commands.autocomplete(group_name= autocomplete_bannergroups)
     async def banner_group_remove(self, context:commands.Context, group_name, server:str= None, channel:str= None):
@@ -401,7 +424,7 @@ class Banner(commands.Cog):
         
         d_format = f"Looks like we just removed" 
         c_str = f"Banner Group: **{group_name}**\n{d_format}{f'` {db_server.InstanceName}`'if server != None else ''}{' and 'if server != None and channel != None else ''}{f'`{self._client.get_channel(int(channel)).mention}`' if channel != None else ''}"
-        return await context.send(content= c_str, ephemeral= True, delete_after= self._client.Message_Timeout)
+        return await context.send(content= c_str, ephemeral= True, delete_after= self._Message_Timeout)
 
     @banner_group_group.command(name='delete_group') 
     @app_commands.autocomplete(group_name= autocomplete_bannergroups)
@@ -419,7 +442,7 @@ class Banner(commands.Cog):
                     self.logger.error(f'Was unable to delete a message id: {entry}, removing from DB')
 
         self.DB.Delete_BannerGroup(name= group_name)
-        await context.send(content= f"Bye Bye `{group_name}`, you will be missed for all of about 3.14159 seconds", ephemeral= True, delete_after= self._client.Message_Timeout)
+        await context.send(content= f"Bye Bye `{group_name}`, you will be missed for all of about 3.14159 seconds", ephemeral= True, delete_after= self._Message_Timeout)
 
     @commands.hybrid_group(name='banner')
     @utils.role_check()
@@ -435,7 +458,7 @@ class Banner(commands.Cog):
         """Sets the Background Image for the selected Server."""
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._Message_Timeout)
 
         db_server = self.DB.GetServer(amp_server.InstanceID)
         banner = db_server.getBanner()
@@ -443,7 +466,7 @@ class Banner(commands.Cog):
         banner.background_path = image_path
         amp_server._setDBattr()
         my_image = Image.open(image_path)
-        await context.send(content= f'Set **{amp_server.FriendlyName}** Banner Image to', file = self.uiBot.banner_file_handler(my_image), ephemeral= True, delete_after= self._client.Message_Timeout)
+        await context.send(content= f'Set **{amp_server.FriendlyName}** Banner Image to', file = self.uiBot.banner_file_handler(my_image), ephemeral= True, delete_after= self._Message_Timeout)
     
     @amp_banner.command(name= 'settings')
     @utils.role_check()
@@ -453,14 +476,14 @@ class Banner(commands.Cog):
         self.logger.command(f'{context.author.name} used Server Banner Settings Editor...')
         amp_server = self.uBot.serverparse(server, context, context.guild.id)
         if amp_server == None:
-            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f"Hey, we uhh can't find the server **{server}**. Please try your command again <3.", ephemeral= True, delete_after= self._Message_Timeout)
 
         await self.banner_editor(context, amp_server)
 
     @commands.hybrid_group(name='banner_settings')
     async def banner_settings(self, context:commands.Context):
         if context.invoked_subcommand is None:
-            await context.send('Invalid command passed...', ephemeral=True, delete_after= self._client.Message_Timeout)
+            await context.send('Invalid command passed...', ephemeral=True, delete_after= self._Message_Timeout)
 
     @banner_settings.command(name='auto_update')
     @utils.role_check()
@@ -471,12 +494,12 @@ class Banner(commands.Cog):
         
         if flag.value == 1:
             self.DBConfig.SetSetting('Banner_Auto_Update', True)
-            return await context.send(f'All set! The bot will __Auto Update the Banners__ every minute.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f'All set! The bot will __Auto Update the Banners__ every minute.', ephemeral= True, delete_after= self._Message_Timeout)
         if flag.value == 0:
             self.DBConfig.SetSetting('Banner_Auto_Update', False)
-            return await context.send(f"Well, I guess I won't update the Banners anymore.", ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send(f"Well, I guess I won't update the Banners anymore.", ephemeral= True, delete_after= self._Message_Timeout)
         else:
-            return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral= True, delete_after= self._Message_Timeout)
 
     @banner_settings.command(name='type')
     @utils.role_check()
@@ -487,11 +510,11 @@ class Banner(commands.Cog):
         
         if type.value == 0:
             self.DBConfig.SetSetting('Banner_Type', 0)
-            return await context.send('Look at me, using **Discord Embeds**.. psht..I mean they atleast work.', ephemeral= True, delete_after= self._client.Message_Timeout)
+            return await context.send('Look at me, using **Discord Embeds**.. psht..I mean they atleast work.', ephemeral= True, delete_after= self._Message_Timeout)
 
         if type.value == 1:
             self.DBConfig.SetSetting('Banner_Type', 1)
-            return await context.send('Looks like we are going to be using **Custom Banner Images**! Oooooh yea~', ephemeral= True, delete_after= self._client.Message_Timeout) 
+            return await context.send('Looks like we are going to be using **Custom Banner Images**! Oooooh yea~', ephemeral= True, delete_after= self._Message_Timeout) 
 
 
 async def setup(client):
