@@ -111,21 +111,27 @@ class Handler():
             for script in cur_cog_file_list:
                 #Ignore Pycache or similar files.
                 #Lets Ignore our Custom Permisisons Cog. We will load it on-demand.
-                if script.name.startswith('__') or script.name == 'Permissions_cog.py' or not script.name.endswith('.py'):
+                if script.name.startswith('__') or script.name.lower() == 'permissions_cog.py' or not script.name.endswith('.py'):
                     cur_cog_file_list.remove(script)
                     continue
 
-                module_name = script.name[4:-3].capitalize() #File name ofc.
+                module_name = script.name[:-3].title() #File name ofc.
                 spec = importlib.util.spec_from_file_location(module_name, script)
                 class_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(class_module)
 
                 module_dependencies = getattr(class_module, f'Dependencies')
                 if module_dependencies != None:
-                    for dependency in getattr(class_module, f'Dependencies'):
-                        #If the cog we need isnt loaded; skip. We will come back around to it.
+                    failed_load = False
+                    for dependency in module_dependencies:
+                        #If the cog we need isnt loaded; skip. We will come back around to it
                         if dependency.lower() not in loaded_cogs:
-                            continue
+                            failed_load = True
+                            break
+
+                    #If our Cogs dependencies are missing; lets go onto our next cog.
+                    if failed_load:
+                        continue
                 
                 cog = f'{path}.{script.name[:-3]}'
 
