@@ -28,6 +28,7 @@ import aiohttp
 import sys
 import re
 from typing import Union
+import traceback
 
 import discord
 from discord import app_commands
@@ -490,7 +491,7 @@ class botUtils():
         except discord.app_commands.errors.CommandAlreadyRegistered:
             return
         except Exception as e:
-            self.logger.error(f'We encountered an error in `sub_command_handler` - {e}')
+            self.logger.error(f'We encountered an error in `sub_command_handler` command:{command} sub_command:{sub_command} - {traceback.print_exception(e)}')
     
     def sub_group_command_handler(self, group:str, command):
         """Gets the `Command Group` and adds the `command` to said `Group`"""
@@ -502,7 +503,7 @@ class botUtils():
             except discord.app_commands.errors.CommandAlreadyRegistered:
                 return
             except Exception as e:
-                self.logger.error(f'We encountered an error in `sub_group_command_handler` - {e}')
+                self.logger.error(f'We encountered an error in `sub_group_command_handler` group:{group} command:{command} - {traceback.print_exception(e)}')
 
     def _remove_commands(self, parent_group:str, command:str):
         """This will remove a command from a group"""
