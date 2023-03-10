@@ -59,7 +59,7 @@ class Regex(commands.Cog):
         #Leave this commented out unless you need to create a sub-command.
         self.uBot.sub_command_handler('bot', self.regex_pattern) #This is used to add a sub command(self,parent_command,sub_command)
 
-        self.logger.info(f'**SUCCESS** Loading Module **{self.name.title()}**') 
+        self.logger.info(f'**SUCCESS** Initializing **{self.name.title()}**') 
 
     async def autocomplete_regex(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Regex Pattern Names"""

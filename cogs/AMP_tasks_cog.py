@@ -48,7 +48,6 @@ class AMP_Tasks(commands.Cog):
         self.bPerms = utils.get_botPerms()
 
         self.uBot = utils.botUtils(client)
-        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
         
         self.amp_server_console_messages_send.start()
         self.logger.dev('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
@@ -61,6 +60,7 @@ class AMP_Tasks(commands.Cog):
 
         # self.amp_server_instance_check.start()
         # self.logger.dev('AMP_Cog Instance Check Event Loop: ' + str(self.amp_server_instance_check.is_running()))
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
         
     @commands.Cog.listener('on_message')
     async def on_message(self, message:discord.Message):
