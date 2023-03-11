@@ -344,7 +344,7 @@ class AMP_Server(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server: 
-            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = {flag.value if type(flag) == Choice else flag}
+            self.DB.GetServer(InstanceID= amp_server.InstanceID).Donator = flag.value
             amp_server._setDBattr() #This will update the AMPConsole Attributes
             return await context.send(f"Set **{amp_server.InstanceName}** Donator Only to `{flag.name if type(flag) == Choice else bool(flag)}`", ephemeral= True, delete_after= self._client.Message_Timeout)
         
