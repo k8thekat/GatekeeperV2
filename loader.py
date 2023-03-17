@@ -104,29 +104,41 @@ class Handler():
         loaded_cogs = []
         #Grab all the cogs inside my `cogs` folder and duplicate the list.
         cog_file_list = pathlib.Path.joinpath(self._cwd,'cogs').iterdir()
-        cur_cog_file_list = [entry for entry in cog_file_list]
+        cur_cog_file_list = list(cog_file_list)
 
         #This while loop will force it to load EVERY cog it finds until the list is empty.
         while len(cur_cog_file_list) > 0:
             for script in cur_cog_file_list:
                 #Ignore Pycache or similar files.
                 #Lets Ignore our Custom Permisisons Cog. We will load it on-demand.
-                if script.name.startswith('__') or script.name == 'Permissions_cog.py' or not script.name.endswith('.py'):
+                if script.name.startswith('__') or script.name.lower() == 'permissions_cog.py' or not script.name.endswith('.py'):
+                    self.logger.dev(f'Removed cog from loader list: {script.name}')
                     cur_cog_file_list.remove(script)
                     continue
 
-                module_name = script.name[4:-3].capitalize() #File name ofc.
+                module_name = script.name[:-3].capitalize() #File name ofc.
                 spec = importlib.util.spec_from_file_location(module_name, script)
                 class_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(class_module)
 
+
                 module_dependencies = getattr(class_module, f'Dependencies')
+                self.logger.dev(f"Checking Dependencies on {script.name}")
                 if module_dependencies != None:
-                    for dependency in getattr(class_module, f'Dependencies'):
+                    
+                    missing_dependencies = False
+                    for dependency in module_dependencies:
                         #If the cog we need isnt loaded; skip. We will come back around to it.
                         if dependency.lower() not in loaded_cogs:
-                            continue
-                
+                            missing_dependencies = True
+                            break
+
+                    #If our Cogs dependecies are missing; lets go onto our next cog.
+                    if missing_dependencies:
+                        self.logger.dev(f"Missing Dependencies: {dependency.lower()} for {script.name}")
+                        continue
+
+                    
                 cog = f'{path}.{script.name[:-3]}'
 
                 try:
@@ -142,11 +154,23 @@ class Handler():
 
                     self.logger.dev(f'**FINISHED LOADING** {self.name} -> **{cog}**')
 
-                except discord.ext.commands.errors.ExtensionAlreadyLoaded:
-                    continue
+                #If the cog is already loaded; we still need to remove it from the list.
+                # except discord.ext.commands.errors.ExtensionAlreadyLoaded:
+                #     cur_cog_file_list.remove(script) 
+                #     self.logger.error(f"**ERROR** Loading Cog {script.name}** - Extension Already Loaded {traceback.format_exc()}")
+                #     continue
 
-                except FileNotFoundError as e:
-                    self.logger.error(f'**ERROR** Loading Cog ** - File Not Found {traceback.format_exc()}')
+                # except FileNotFoundError as e:
+                #     cur_cog_file_list.remove(script) 
+                #     self.logger.error(f'**ERROR** Loading Cog {script.name}** - File Not Found {traceback.format_exc()}')
+                #We just need to catch the error; we won't do anything else with it.
+                
+                except Exception as e:
+                    cur_cog_file_list.remove(script) 
+                    self.logger.dev(f'Removed cog from loader list: {script.name}')
+                    self.logger.error(f'**ERROR** Loading Cog {script.name}** - {e} {traceback.format_exc()}')
+                    continue
+                
         self.logger.info(f'**All Cog Modules Loaded**')
 
                 
