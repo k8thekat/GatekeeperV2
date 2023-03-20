@@ -25,10 +25,11 @@ import json
 import requests
 import pathlib
 import aiohttp
-import sys
+import sys, os
 import re
 from typing import Union
 import traceback
+import aiofiles
 
 import discord
 from discord import app_commands
@@ -118,10 +119,12 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
     await context.send('You do not have permission to use that command...', ephemeral=True)
     return False
 
+
 def role_check():
     """Use this before any Commands that require a Staff/Mod level permission Role, this will also check for Administrator"""
     #return commands.check(async_rolecheck(permission_node=perm))
     return commands.check(async_rolecheck)            
+
 
 def author_check(user_id:int=None):
     """Checks if User ID matchs Context User ID"""
@@ -133,6 +136,7 @@ def author_check(user_id:int=None):
             return False
     return commands.check(predicate)
 
+
 def guild_check(guild_id:int=None):
     """Use this before any commands to limit it to a certain guild usage."""
     async def predicate(context:commands.Context):
@@ -143,6 +147,7 @@ def guild_check(guild_id:int=None):
             return False
     return commands.check(predicate)
 
+
 async def autocomplete_servers(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for AMP Instance Names"""
         choice_list = __AMP_Handler.get_AMP_instance_names()
@@ -150,7 +155,8 @@ async def autocomplete_servers(interaction:discord.Interaction, current:str) -> 
             return [app_commands.Choice(name=f"{value} | ID: {key}", value= key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
         else:
             return [app_commands.Choice(name=f"{value}", value= key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
-        
+
+
 async def autocomplete_servers_public(interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         """Autocomplete for AMP Instance Names"""
         choice_list = __AMP_Handler.get_AMP_instance_names(public= True)
@@ -526,6 +532,33 @@ class botUtils():
         
         await context.send(f'Well this is awkward, it appears the **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}** is `Offline`.', ephemeral=True, delete_after= self._client.Message_Timeout)
         return False
+    
+    async def count_lines(self, path: str, filetype: str = ".py", skip_venv: bool = True):
+        lines = 0
+        for i in os.scandir(path):
+            if i.is_file():
+                if i.path.endswith(filetype):
+                    if skip_venv and re.search(r"(\\|/)?venv(\\|/)", i.path):
+                        continue
+                    lines += len((await (await aiofiles.open(i.path, "r")).read()).split("\n"))
+            elif i.is_dir():
+                lines += await self.count_lines(i.path, filetype)
+        return lines
+    
+
+    async def count_others(self, path: str, filetype: str = ".py", file_contains: str = "def", skip_venv: bool = True):
+        line_count = 0
+        for i in os.scandir(path):
+            if i.is_file():
+                if i.path.endswith(filetype):
+                    if skip_venv and re.search(r"(\\|/)?venv(\\|/)", i.path):
+                        continue
+                    line_count += len(
+                        [line for line in (await (await aiofiles.open(i.path, "r")).read()).split("\n") if file_contains in line]
+                    )
+            elif i.is_dir():
+                line_count += await self.count_others(i.path, filetype, file_contains)
+        return line_count
 
 #Used to maintain a "Global" botPerms() object.               
 bPerms = None

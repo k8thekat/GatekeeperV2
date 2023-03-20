@@ -19,6 +19,11 @@
    02110-1301, USA. 
 '''
 import logging
+import psutil
+from datetime import timedelta
+import time
+import sys
+
 import discord
 from discord.ext import commands
 
@@ -42,12 +47,21 @@ class botEmbeds():
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMPServer_Avatar_urls = []
 
+
+    @property
+    def _uptime(self):
+        return timedelta(seconds=(round(time.time() - self._client._start_time)))
+    @property
+
+
+
     def default_embedmsg(self, title, context:commands.Context, description=None, field=None, field_value=None) -> discord.Embed:
         """This Embed has only one Field Entry."""
         embed=discord.Embed(title=title, description=description, color=0x808000) #color is RED 
         embed.set_author(name=context.author.display_name, icon_url=context.author.avatar)
         embed.add_field(name=field, value=field_value, inline=False)
         return embed
+
 
     async def server_info_embed(self, server:AMP_Handler.AMP.AMPInstance, context:commands.Context) -> discord.Embed:
         """For Individual Server info embed replies"""
@@ -95,6 +109,7 @@ class botEmbeds():
             embed.add_field(name='Event Channel:', value= db_server.Discord_Event_Channel, inline= True)
         embed.set_footer(text= f'InstanceID: {server.InstanceID}')
         return embed
+
 
     async def server_display_embed(self, server_list:list[DB.DBServer], guild:discord.Guild=None) -> list[discord.Embed]:
         """Used for Banner Groups and Display"""
@@ -150,6 +165,7 @@ class botEmbeds():
         
         return embed_list
 
+
     async def server_status_embed(self, context:commands.Context, server:AMP_Handler.AMP.AMPInstance, TPS=None, Users=None, CPU=None, Memory=None, Uptime=None, Users_Online=None) -> discord.Embed:
         """This is the Server Status Embed Message"""
         db_server = self.DB.GetServer(InstanceID= server.InstanceID)
@@ -201,6 +217,7 @@ class botEmbeds():
         embed.set_footer(text= f'InstanceID: {server.InstanceID}')
         return embed
 
+
     #Depreciated; no longer in use.
     async def server_whitelist_embed(self, context:commands.Context, server:AMP_Handler.AMP.AMPInstance) -> discord.Embed:
         """Default Embed Reply for Successful Whitelist requests"""
@@ -229,7 +246,8 @@ class botEmbeds():
             embed.add_field(name='**Host**:', value= str(db_server.Host), inline=True)
             embed.add_field(name='Users Online:' , value=str(User_list), inline=False)
             return embed
-            
+        
+           
     def bot_settings_embed(self, context:commands.Context) -> discord.Embed:
         """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
         embed=discord.Embed(title= f'**Bot Settings**', color= 0x71368a)
@@ -332,7 +350,46 @@ class botEmbeds():
             else:
                 embed.add_field(name= key, value= value, inline= False)
            
+            embed.set_footer(text= f'Need help? Visit Kat\'s Paradise https://discord.gg/BtNyU8DFtt')
         return embed
+    
+
+    async def bot_about_embed(self)-> discord.Embed:
+        """Discord Bot Detailed Information Embed"""
+        #information = await self._client.application_info()
+        owner = self._client.get_user(144462063920611328)
+        embed = discord.Embed(color= 0x71368a)
+        #embed.add_field(name="Latest updates:", value=get_latest_commits(limit=5), inline=False)
+
+        embed.set_author(name=f"Made by {owner.name}", icon_url= owner.display_avatar.url)
+        embed.add_field(name="Gatekeeper Version", value= self._client._version)
+        memory_usage = psutil.Process().memory_full_info().uss / 1024**2
+        cpu_usage = psutil.cpu_percent()
+        embed.add_field(name="Discord Version", value= discord.__version__)
+        embed.add_field(name="System/Python Version", value= sys.version)
+        embed.add_field(name="SQL DB Version", value= self.DBHandler.DB_Version)
+        embed.add_field(name="SQL DB Exists", value= self.DBHandler.SuccessfulDatabase)
+        embed.add_field(name="AMP Connectected", value= self.AMPHandler.SuccessfulConnection)
+        embed.add_field(name="Process", value=f"{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU")
+        embed.add_field(name="Uptime", value=f"{self._uptime}")
+
+        try:
+            embed.add_field(
+                name="Lines",
+                value=f"Lines: {await self.uBot.count_lines('./', '.py'):,}"
+                f"\nFunctions: {await self.uBot.count_others('./', '.py', 'def '):,}"
+                f"\nClasses: {await self.uBot.count_others('./', '.py', 'class '):,}",
+            )
+        except (FileNotFoundError, UnicodeDecodeError):
+            pass
+
+        embed.set_footer(
+            text=f"Made with discord.py v{discord.__version__}",
+            icon_url="https://i.imgur.com/5BFecvA.png",
+        )
+        embed.timestamp = discord.utils.utcnow()
+        return embed
+
 
     def user_info_embed(self, db_user:DB.DBUser, discord_user:discord.User)-> discord.Embed:
         embed=discord.Embed(title=f'{discord_user.name}',description=f'**Discord ID**: {discord_user.id}', color=discord_user.color)

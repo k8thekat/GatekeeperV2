@@ -134,7 +134,7 @@ class Banner(commands.Cog):
             self.logger.error(f'We failed a `get_channel` inside of autocomplete_bannergroups_channels and defaulted to displaying the IDs')
             return [app_commands.Choice(name= str(value), value= str(value))for value in bg_channels if current.lower() in str(value).lower()][:25]
         
-    ##!TODO! 
+        
     #Create an autocomplete_bannergroups_servers()
     #We need to get the servers that are apart of the Bannergroup and provide a Choice list.
     async def autocomplete_bannergroups_servers(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:

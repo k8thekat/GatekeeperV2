@@ -23,6 +23,7 @@ from __future__ import annotations
 import sys
 import logging
 import traceback
+import time
 
 import discord
 from discord import app_commands
@@ -37,7 +38,7 @@ import AMP_Handler
 import DB
 from typing import Union
 
-Version = 'beta-4.5.3'
+Version = 'beta-4.5.4'
 
 class Gatekeeper(commands.Bot):
     def __init__(self, Version:str):
@@ -62,6 +63,8 @@ class Gatekeeper(commands.Bot):
         intents.members = True
         intents.message_content = True
         self.prefix = '$'
+        self._start_time = time.time()
+        self._version = Version
         super().__init__(intents= intents, command_prefix= self.prefix)
         self.Message_Timeout = self.DBConfig.Message_timeout
         self.uBot = utils.botUtils(client= self)
@@ -302,10 +305,9 @@ async def bot_utils_restart(context:commands.Context):
 async def bot_utils_status(context:commands.Context):
     """Status information for the Bot(Versions, AMP Connection, SQL DB Initialization)"""
     client.logger.command(f'{context.author.name} used Bot Status Function...')
+    await context.send(embed= await client.eBot.bot_about_embed())
+    #await context.send(content= f"""**Discord Version**: {discord.__version__}  //  **Python Version**: {sys.version}\n**Gatekeeperv2 Version**: {Version} // **SQL Database Version**: {client.DBHandler.DB_Version}\n**AMP Connected**: {client.AMPHandler.SuccessfulConnection} // **SQL Database**: {client.DBHandler.SuccessfulDatabase}""", ephemeral= True, delete_after= client.Message_Timeout)
 
-    await context.send(f'**Discord Version**: {discord.__version__}  //  **Python Version**: {sys.version}', ephemeral= True, delete_after= client.Message_Timeout)
-    await context.send(f'**Gatekeeperv2 Version**: {Version} // **SQL Database Version**: {client.DBHandler.DB_Version}', ephemeral= True, delete_after= client.Message_Timeout)
-    await context.send(f'**AMP Connected**: {client.AMPHandler.SuccessfulConnection} // **SQL Database**: {client.DBHandler.SuccessfulDatabase}', ephemeral= True, delete_after= client.Message_Timeout)
 
 @bot_utils.command(name='message_timeout')
 @utils.role_check()
@@ -322,6 +324,7 @@ async def bot_utils_message_timeout(context:commands.Context, time:Union[None, i
         content_str = f'will no longer be deleted'
 
     await context.send(content= f'**Ephemeral Messages** {content_str} after being sent.', ephemeral= True, delete_after= client.Message_Timeout)
+
 
 @bot_utils.command(name='sync')
 @utils.role_check()
@@ -371,6 +374,7 @@ async def bot_cog(context:commands.Context):
     if context.invoked_subcommand is None:
         await context.send('Invalid command passed...', ephemeral= True, delete_after= client.Message_Timeout)
    
+
 @bot_cog.command(name='load')
 @utils.role_check()
 async def bot_cog_loader(context:commands.Context, cog:str):
@@ -383,6 +387,7 @@ async def bot_cog_loader(context:commands.Context, cog:str):
         await context.send(f'**ERROR** Loading Extension `{cog}` - `{traceback.format_exc()}`', ephemeral= True, delete_after= client.Message_Timeout)
     else:
         await context.send(f'**SUCCESS** Loading Extension `{cog}`', ephemeral= True, delete_after= client.Message_Timeout)
+
 
 @bot_cog.command(name='unload')
 @utils.role_check()
@@ -400,6 +405,7 @@ async def bot_cog_unloader(context:commands.Context, cog: str):
     else:
         await context.send(f'**SUCCESS** Un-Loading Extension `{cog}`', ephemeral= True, delete_after= client.Message_Timeout)
 
+
 @bot_cog.command(name='reload')
 @utils.role_check()
 async def bot_cog_reload(context:commands.Context):
@@ -408,6 +414,7 @@ async def bot_cog_reload(context:commands.Context):
 
     await client.Handler.cog_auto_loader(reload= True)
     await context.send(f'**SUCCESS** Reloading All Extensions ', ephemeral= True, delete_after= client.Message_Timeout) 
+
 
 def client_run(tokens):
     client.logger.info('Gatekeeper v2 Intializing...')
