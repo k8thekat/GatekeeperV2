@@ -443,8 +443,13 @@ class Whitelist(commands.Cog):
                     #This is for all the Replies
                     if len(self.DB.GetAllWhitelistReplies()) != 0:
                         whitelist_reply = random.choice(self.DB.GetAllWhitelistReplies())
-                        #
-                        await cur_message_context.channel.send(content= f'{cur_message_context.author.mention} \n{self.uBot.whitelist_reply_handler(whitelist_reply, cur_message_context, cur_amp_server)}', reference= cur_message, delete_after= self._client.Message_Timeout)
+                        try:
+                            await cur_message_context.channel.send(content= f'{cur_message_context.author.mention} \n{self.uBot.whitelist_reply_handler(whitelist_reply, cur_message_context, cur_amp_server)}', reference= cur_message, delete_after= self._client.Message_Timeout)
+                        #If for some reason the bot cannot send a message in that channel. (Returns a 403 Forbidden Error)
+                        #We will DM the user.
+                        except discord.errors.Forbidden:
+                            await cur_message_context.author.send(content= f'From **{cur_message_context.guild.name}**\n {self.uBot.whitelist_reply_handler(whitelist_reply, cur_message_context, cur_amp_server)}')
+                    
                     else:
                         await cur_message_context.channel.send(content= f'You are all set! We whitelisted {cur_message_context.author.mention} on **{db_server.FriendlyName}** ', reference= cur_message, delete_after= self._client.Message_Timeout)
 
