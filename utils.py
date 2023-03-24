@@ -19,7 +19,7 @@
    02110-1301, USA. 
 
 '''
-from future import __annotations__
+from __future__ import annotations
 from datetime import datetime
 import logging
 import json
