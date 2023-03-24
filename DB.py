@@ -19,6 +19,7 @@
    02110-1301, USA. 
 
 '''
+from __future__ import annotations
 import sqlite3
 import pathlib
 import datetime
