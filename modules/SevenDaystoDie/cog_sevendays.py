@@ -19,6 +19,8 @@
    02110-1301, USA. 
 
 '''
+
+from __future__ import annotations
 from discord.ext import commands
 import os
 import logging
@@ -28,25 +30,26 @@ import AMP_Handler
 import DB
 
 DisplayImageSources = ['steam:251570']
+
+
 class Sevendays(commands.Cog):
-    def __init__ (self,client):
+    def __init__(self, client):
         self._client = client
         self.name = os.path.basename(__file__)
-        self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
+        self.logger = logging.getLogger(__name__)  # Point all print/logging statments here!
 
         self.AMPHandler = AMP_Handler.getAMPHandler()
-        self.AMP = self.AMPHandler.AMP #Main AMP object
-        self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
+        self.AMP = self.AMPHandler.AMP  # Main AMP object
+        self.AMPInstances = self.AMPHandler.AMP_Instances  # Main AMP Instance Dictionary
 
         self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB #Main Database object
+        self.DB = self.DBHandler.DB  # Main Database object
         self.DBCOnfig = self.DB.DBConfig
 
         self.uBot = utils.botUtils(client)
         self.dBot = utils.discordBot(client)
-        #self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
+        # self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
         self.logger.info(f'**SUCCESS** Initializing Module **{self.name.capitalize()}**')
-
 
 
 async def setup(client):

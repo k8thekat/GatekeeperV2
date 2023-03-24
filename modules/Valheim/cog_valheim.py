@@ -19,6 +19,7 @@
    02110-1301, USA. 
 
 '''
+from __future__ import annotations
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -30,30 +31,33 @@ import AMP_Handler
 import DB as DB
 
 DisplayImageSources = ['steam:892970']
+
+
 class Valheim(commands.Cog):
-    def __init__ (self,client:commands.Bot):
+    def __init__(self, client: commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
 
-        self.logger = logging.getLogger(__name__) #Point all print/logging statments here!
+        self.logger = logging.getLogger(__name__)  # Point all print/logging statments here!
 
         self.AMPHandler = AMP_Handler.getAMPHandler()
-        self.AMP = self.AMPHandler.AMP #Main AMP object
-        self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
+        self.AMP = self.AMPHandler.AMP  # Main AMP object
+        self.AMPInstances = self.AMPHandler.AMP_Instances  # Main AMP Instance Dictionary
 
-        #use DBHandler for all DB related needs.
+        # use DBHandler for all DB related needs.
         self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB #Main Database object
+        self.DB = self.DBHandler.DB  # Main Database object
         self.DBCOnfig = self.DB.DBConfig
 
-        #utils.botUtils provide access to utility functions such as serverparse,role_parse,channel_parse,user_parse.
+        # utils.botUtils provide access to utility functions such as serverparse,role_parse,channel_parse,user_parse.
         self.uBot = utils.botUtils(client)
-        #utils.discordBot provides access to utility functions such as sending/deleting messages, kicking/ban users.
+        # utils.discordBot provides access to utility functions such as sending/deleting messages, kicking/ban users.
         self.dBot = utils.discordBot(client)
 
-        #Leave this commented out unless you need to create a sub-command.
-        #self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
+        # Leave this commented out unless you need to create a sub-command.
+        # self.uBot.sub_command_handler('user',self.info) #This is used to add a sub command(self,parent_command,sub_command)
         self.logger.info(f'**SUCCESS** Loading Module **{self.name.capitalize()}**')
-        
+
+
 async def setup(client):
     await client.add_cog(Valheim(client))
