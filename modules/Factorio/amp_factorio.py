@@ -19,26 +19,29 @@
    02110-1301, USA. 
 
 '''
+from __future__ import annotations
 import AMP
 import AMP_Console
 
 
-#Resources
-#https://wiki.factorio.com/Console
+# Resources
+# https://wiki.factorio.com/Console
 
 DisplayImageSources = ['steam:427520']
+
+
 class AMPFactorio(AMP.AMPInstance):
-    def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
+    def __init__(self, instanceID: int = 0, serverdata: dict = {}, default_console: bool = False, Handler=None, TargetName: str = None):
         self.APIModule = 'Factorio'
-        
-        super().__init__(instanceID,serverdata, Handler=Handler, TargetName=TargetName)
-        self.Console = AMPFactorioConsole(AMPInstance = self)
+
+        super().__init__(instanceID, serverdata, Handler=Handler, TargetName=TargetName)
+        self.Console = AMPFactorioConsole(AMPInstance=self)
 
         self.default_background_banner_path = 'resources/banners/Factorio_Banner.jpg'
-        
+
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/factorio_avatar.png?raw=true'
-            
+
     def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions for Factorio Modules"""
         self.logger.warning(f'Setting up {self.FriendlyName} Factorio Module permissions...')
@@ -47,14 +50,15 @@ class AMPFactorio(AMP.AMPInstance):
             if perm.startswith('-'):
                 enabled = False
                 perm = perm[1:]
-     
+
             if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
                 self.logger.dev(f'Set {perm} for {self.AMP_BotRoleID} to {enabled}')
 
-    def Chat_Message(self, message:str, author:str=None, prefix:str=None):
-        #See https://wiki.factorio.com/Rich_text
+    def Chat_Message(self, message: str, author: str = None, prefix: str = None):
+        # See https://wiki.factorio.com/Rich_text
         self.ConsoleMessage(f'[color=blue]"[Discord]"[/color] [color=default]<{author}>: {message}[/color]')
 
+
 class AMPFactorioConsole(AMP_Console.AMPConsole):
-    def __init__(self, AMPInstance = AMPFactorio):
+    def __init__(self, AMPInstance=AMPFactorio):
         super().__init__(AMPInstance)
