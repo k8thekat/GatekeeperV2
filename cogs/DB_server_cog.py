@@ -19,7 +19,7 @@
    02110-1301, USA. 
 
 '''
-from future import __annotations__
+from __future__ import annotations
 import os
 import logging
 from typing import Union
