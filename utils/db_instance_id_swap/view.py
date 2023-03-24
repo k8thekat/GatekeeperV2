@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from utils.db_instance_id_swap.button import Approve_Button, Cancel_Button
 from DB import DBServer
 

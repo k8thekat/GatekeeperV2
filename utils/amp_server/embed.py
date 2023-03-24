@@ -1,3 +1,4 @@
+from __future__ import annotations
 from AMP import AMPInstance
 from utils.check import validate_avatar
 

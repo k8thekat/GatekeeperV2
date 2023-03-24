@@ -19,7 +19,7 @@
    02110-1301, USA. 
 
 '''
-
+from __future__ import annotations
 from datetime import datetime, timezone
 from multiprocessing import Value
 from threading import Thread

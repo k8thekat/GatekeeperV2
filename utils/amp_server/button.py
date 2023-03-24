@@ -1,3 +1,4 @@
+from __future__ import annotations
 from discord import ButtonStyle
 from discord.ui import Button
 

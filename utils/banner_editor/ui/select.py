@@ -1,3 +1,4 @@
+from __future__ import annotations
 from discord.ui import Select
 from discord import SelectOption
 from discord import Interaction
