@@ -21,7 +21,7 @@
 # AMP API
 # by k8thekat // Lightning
 # 11/10/2021
-from future import __annotations__
+from __future__ import annotations
 import requests
 import requests.sessions
 import pyotp  # 2Factor Authentication Python Module
