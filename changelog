@@ -1,3 +1,27 @@
+__**Update**__
+- stealth update; no version change with this.
+- Fixed minor issues inside `banner_cog`
+- Fixed issue with older verions of python trying to run GK (should support 3.8++ now.)
+
+__**Update 4.5.3**__
+- Minor fixes to logger statements on `AMP_tasks_cog`, `regex_cog`, `cog_template` and `Permissions_cog`.
+- updated `banner_cog`
+    - Updated naming scheme for logging statements.
+    - Added `autocomplete_bannergroups_servers` for `/bot bannergroup remove`
+        - Updated autocomplete for `/bot bannergroup remove`
+    - Added `@property` for `self._client.Message_Timeout` to `_Message_Timeout`
+    - Fixed edge case inside `autocomplete_bannergroups_channels` that could fail on `empty` or `None` returns.
+- updated `DB`
+    - Added `@property` to help linter with list returns.
+    - Added `return types` to many methods.
+    - Added `Get_all_Servers_for_Bannergroup` to be used in `autocomplete_bannergroups_servers`
+    - Cleaned up methods and updated return statements.
+- updated `utils`
+    - Added `traceback` prints to `sub_command_handler` and `sub_group_command_handler`
+- updated `loader.py`
+    - updated naming convetion for `module_name`
+    - Fixed logic for checking dependencies of a cog.
+
 __**Update 4.5.1 and 4.5.2**__
 - Hotfix
     - Fixed typo in `DB_Update.py` table creation code.
