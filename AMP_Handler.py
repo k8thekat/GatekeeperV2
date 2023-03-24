@@ -20,7 +20,8 @@
 '''
 import logging
 import pathlib
-import os, sys
+import os
+import sys
 import importlib
 from argparse import Namespace
 import time
@@ -30,29 +31,41 @@ import traceback
 import AMP
 import DB
 
+from typing import Union
+from AMP import AMPInstance
+
 #import utils
 Handler = None
 AMP_setup = False
 
+
 def AMP_init(args: Namespace):
     global AMP_setup
-    handler = getAMPHandler(args= args)
-    handler.setup_AMPInstances() 
+    handler: AMPHandler = AMPHandler()._setup(args=args)
+    handler.setup_AMPInstances()
     AMP_setup = True
     amp_server_instance_check()
+
 
 def amp_server_instance_check():
     """Checks for new AMP Instances every 30 seconds.."""
     while True:
-        handler = getAMPHandler()
+        handler: AMPHandler = AMPHandler()
         handler.logger.dev('Checking AMP Instance(s) Status...')
-        handler._instanceValidation(AMP= handler.AMP)
+        handler._instanceValidation(AMP=handler.AMP)
         handler.AMP._instance_ThreadManager()
         time.sleep(30)
 
+
 class AMPHandler():
-    def __init__(self, args: Namespace):
-        self.args = args
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, "_instance"):
+            cls._instance = super(AMPHandler, cls).__new__(
+                cls, *args, **kwargs)
+        return cls._instance
+
+    def _setup(self, args: Union[Namespace, None]):
+        self.args: Namespace | None = args
         self.logger = logging.getLogger()
         self._cwd = pathlib.Path.cwd()
         self.name = os.path.basename(__file__)
@@ -61,11 +74,11 @@ class AMPHandler():
         self.tokens = ''
 
         self.superUser = False
-    
+
         self.SessionIDlist = {}
 
         self.AMP_Modules = {}
-        self.AMP_Instances = {}
+        self.AMP_Instances: dict[str, AMPInstance] = {}
 
         self.AMP_Console_Modules = {}
         self.AMP_Console_Threads = {}
@@ -74,50 +87,53 @@ class AMPHandler():
         #self.InstancesFound = False
 
         self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB #Main Database object
+        self.DB = self.DBHandler.DB  # Main Database object
         self.DBConfig = self.DBHandler.DBConfig
 
         self.val_settings()
         self.moduleHandler()
-       
+        return self
 
     def setup_AMPInstances(self):
         """Intializes the connection to AMP and creates AMP_Instance objects."""
-        self.AMP = AMP.AMPInstance(Handler = self)
-        self._instanceValidation(AMP= self.AMP, startup= True)
+        self.AMP = AMP.AMPInstance(Handler=self)
+        self._instanceValidation(AMP=self.AMP, startup=True)
 
-        #This removes Super Admins from the bot user! Controlled through parser args!
+        # This removes Super Admins from the bot user! Controlled through parser args!
         if not self.args.super and not self.args.dev:
-            self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID, self.AMP.super_AdminID, False) 
+            self.AMP.setAMPUserRoleMembership(self.AMP.AMP_UserID, self.AMP.super_AdminID, False)
             self.logger.warning(f'***ATTENTION*** Removing {self.tokens.AMPUser} from `Super Admins` Role!')
-    
-    def get_AMP_instance_names(self, public: bool= False) -> dict[str, str]:
+
+    def get_AMP_instance_names(self, public: bool = False) -> dict[str, str]:
         """Creates a list of Instance Names/DisplayName or Friendly Name."""
-        AMP_Instances_Names = {}
+        AMP_Instances_Names_dict: dict[str, str] = {}
+
         for instanceID, server in self.AMP_Instances.items():
-            #If this is a "Public" Server Autocomplete or List/etc lets not SHOW our Hidden servers.
+            # If this is a "Public" Server Autocomplete or List/etc lets not SHOW our Hidden servers.
             if public and server.Hidden:
                 continue
-            
-            #Using TargetName as a unique identifier for the server if they match names.
+
+            # Using TargetName as a unique identifier for the server if they match names.
             if server.DisplayName != None:
-                server_name = server.DisplayName
-             
+                server_name: str = server.DisplayName
+
             else:
-                if server.FriendlyName not in AMP_Instances_Names:
+                if server.FriendlyName not in AMP_Instances_Names_dict:
                     server_name = server.FriendlyName
+
                 else:
                     server_name = server.InstanceName
 
             if hasattr(server, 'TargetName') and server.TargetName != None:
                 server_name = f'({server.TargetName}) | ' + server_name
-                #TargetName = f'({server.TargetName}) | ' 
+                #TargetName = f'({server.TargetName}) | '
 
-            AMP_Instances_Names[instanceID] = server_name
+            else:
+                AMP_Instances_Names_dict[instanceID] = server_name
 
-        return AMP_Instances_Names
-    
-    #Checks for Errors in Config
+        return AMP_Instances_Names_dict
+
+    # Checks for Errors in Config
     def val_settings(self):
         """Validates the tokens.py settings and 2FA."""
         self.logger.info('AMPHandler is validating your token file...')
@@ -139,11 +155,11 @@ class AMPHandler():
         if not tokens.AMPurl.startswith('http://') and not tokens.AMPurl.startswith('https://'):
             self.logger.critical('** Please verify your AMPurl. It either needs "http://" or "https://" depending on your AMP/Network setup. **')
             reset = True
-            
+
         if tokens.AMPurl.endswith('/'):
             #self.logger.warning(f'** Please remove the forward slash at the end of {tokens.AMPurl} **, we temporarily did it for you. This may break things...')
             tokens.AMPurl = tokens.AMPurl[:-1]
-        
+
         tokens.AMPAuth = tokens.AMPAuth.strip()
         if len(tokens.AMPAuth) == 0:
             self.AMP2FA = False
@@ -156,7 +172,7 @@ class AMPHandler():
         if reset:
             input("Press any Key to Exit")
             sys.exit(0)
-    
+
     def moduleHandler(self):
         """AMPs class Loader for specific server types."""
         self.logger.dev('AMPHandler moduleHandler loading modules...')
@@ -174,7 +190,7 @@ class AMPHandler():
                         # self.AMP_Modules[module_name] = getattr(class_module,f'AMP{module_name}')
                         # self.AMP_Console_Modules[module_name] = getattr(class_module,f'AMP{module_name}Console')
                         #!ATTENTION! This may change in the future. Depends on the table update.
-                        for DIS in getattr(class_module,f'DisplayImageSources'):
+                        for DIS in getattr(class_module, f'DisplayImageSources'):
                             self.AMP_Modules[DIS] = getattr(class_module, f'AMP{module_name}')
                             self.AMP_Console_Modules[DIS] = getattr(class_module, f'AMP{module_name}Console')
 
@@ -183,34 +199,34 @@ class AMPHandler():
                     except Exception as e:
                         self.logger.error(f'**ERROR** {self.name} Loading AMP Module **{module_name}** - {traceback.format_exc()}')
                         continue
-   
+
         except Exception as e:
             self.logger.error(f'**ERROR** {self.name} Loading AMP Module ** - File Not Found {traceback.format_exc()}')
-                    
-    def _instanceValidation(self, AMP: AMP.AMPInstance, startup:bool = False):
+
+    def _instanceValidation(self, AMP: AMP.AMPInstance, startup: bool = False):
         """This checks if any new instances have been created since last check. If so, updates AMP_Instances and creates the object."""
         result = AMP.getInstances()
-        amp_instance_keys = list(self.AMP_Instances.keys()) #This could be empty on startup;
+        amp_instance_keys = list(self.AMP_Instances.keys())  # This could be empty on startup;
         available_instances = []
         if len(result["result"][0]['AvailableInstances']) == 0:
             self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
             time.sleep(30)
             return
-        
+
         for Target in result["result"]:
-            for amp_instance in Target['AvailableInstances']: #entry = name['result']['AvailableInstances'][0]['InstanceIDs']
-                
-                #This exempts the AMPTemplate Gatekeeper *hopefully* by looking at the url for the banner image; which should contain the word Gatekeeper in it.
-                #This could fail if I ever design another service/template and store the display image in the same repo; unlikely though.
+            for amp_instance in Target['AvailableInstances']:  # entry = name['result']['AvailableInstances'][0]['InstanceIDs']
+
+                # This exempts the AMPTemplate Gatekeeper *hopefully* by looking at the url for the banner image; which should contain the word Gatekeeper in it.
+                # This could fail if I ever design another service/template and store the display image in the same repo; unlikely though.
                 if amp_instance['Module'] == 'ADS':
                     continue
 
                 flag_reg = re.search("(gatekeeper)", amp_instance['DisplayImageSource'].lower())
-                #If the flag exists and finds a match, lets continue
-                if flag_reg != None and flag_reg.group(): 
-                    continue 
-                
-                #Creating a new list of Instances with just their IDs.
+                # If the flag exists and finds a match, lets continue
+                if flag_reg != None and flag_reg.group():
+                    continue
+
+                # Creating a new list of Instances with just their IDs.
                 available_instances.append(amp_instance['InstanceID'])
 
                 if amp_instance['InstanceID'] in amp_instance_keys:
@@ -218,32 +234,25 @@ class AMPHandler():
 
                 if not startup:
                     self.logger.info(f'Found a New AMP Instance since Startup; Creating AMP Object for {amp_instance["FriendlyName"]}')
-                    
+
                 if amp_instance['DisplayImageSource'] in self.AMP_Modules:
                     name = str(self.AMP_Modules[amp_instance["DisplayImageSource"]]).split("'")[1]
                     image_source = amp_instance['DisplayImageSource']
                 else:
                     name = "Generic"
                     image_source = "Generic"
-                
+
                 self.logger.dev(f'Loaded __{name}__ for {amp_instance["FriendlyName"]}')
-                server = self.AMP_Modules[image_source](instanceID= amp_instance['InstanceID'], serverdata= amp_instance, Handler= self)
+                server = self.AMP_Modules[image_source](instanceID=amp_instance['InstanceID'], serverdata=amp_instance, Handler=self)
                 self.AMP_Instances[server.InstanceID] = server
 
-      
-        #AMPHandler AMP Instances will be empty on first startup; we need to NOT compare for any missing instances.
+        # AMPHandler AMP Instances will be empty on first startup; we need to NOT compare for any missing instances.
         if startup:
             return
-        
+
         for instanceID in amp_instance_keys:
             if instanceID not in available_instances:
                 amp_server = self.AMP_Instances[instanceID]
                 self.logger.warning(f'Found the AMP Instance {amp_server.InstanceName} that no longer exists.')
                 self.logger.warning(f'Removing {amp_server.InstanceName} from `Gatekeepers` available Instance list.')
                 self.AMP_Instances.pop(instanceID)
-
-def getAMPHandler(args: Namespace= False) -> AMPHandler:
-    global Handler
-    if Handler == None:
-        Handler = AMPHandler(args= args)
-    return Handler

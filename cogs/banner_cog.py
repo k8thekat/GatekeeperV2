@@ -39,39 +39,30 @@ import utils_ui
 import utils_embeds
 import AMP_Handler
 import DB as DB
-import modules.banner_creator as BC
+import utils.banner_creator as BC
+
+from utils.helper.command import Helper_Command
+from utils.cogs.base_cog import Gatekeeper_Cog
 
 #This is used to force cog order to prevent missing methods.
 Dependencies = ["AMP_server_cog.py"]
-class Banner(commands.Cog):
-    def __init__ (self, client:discord.Client):
-        self._client = client
-        self.name = os.path.basename(__file__)
-        self.logger = logging.getLogger() #Point all print/logging statments here!
-
-        self.AMPHandler = AMP_Handler.getAMPHandler()
-        self.AMP = self.AMPHandler.AMP #Main AMP object
-        self.AMPInstances = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
-
-        self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB #Main Database object
-        self.DBConfig = self.DB.DBConfig
-
+class Banner(Gatekeeper_Cog):
+    def __init__ (self, client: commands.Bot):
+        super().__init__(client= client)
         self.uBot = utils.botUtils(client)
         self.eBot = utils_embeds.botEmbeds(client)
         self.uiBot = utils_ui
         self.dBot = utils.discordBot(client)
         self.BC = BC
 
-        self.uBot.sub_command_handler('server', self.amp_banner) #This adds server specific amp_banner commands to the `/server` parent command.
-        self.uBot.sub_command_handler('bot', self.banner_settings)
-        self.uBot.sub_command_handler('bot', self.banner_group_group)
+        self._command_helper.sub_command_handler('server', self.amp_banner) #This adds server specific amp_banner commands to the `/server` parent command.
+        self._command_helper.sub_command_handler('bot', self.banner_settings)
+        self._command_helper.sub_command_handler('bot', self.banner_group_group)
 
-        if self.DBConfig.GetSetting('Banner_Auto_Update') == True:
+        if self._DBConfig.GetSetting('Banner_Auto_Update') == True:
             self.server_display_update.start()
-            self.logger.dev(f'**{self.name.title()}** Server Display Banners Task Loop is Running: {self.server_display_update.is_running()}')
+            self._logger.dev(f'**{self._name}** Server Display Banners Task Loop is Running: {self.server_display_update.is_running()}')
             
-        self.logger.info(f'**SUCCESS** Initializing **{self.name.title()}**')
 
     
     @property
@@ -157,7 +148,7 @@ class Banner(commands.Cog):
         sent_msg = await context.send('Creating Banner Editor...', ephemeral= True, delete_after= 60)
 
         #Create my View first
-        editor_view = self.uiBot.Banner_Editor_View(db_banner=db_server_banner, amp_server= amp_server, banner_message = sent_msg)
+        editor_view = self.uiBot.Banner_Editor_View(db_banner=db_server_banner,amp_handler= self.AMPHandler, amp_server= amp_server, banner_message = sent_msg)
         banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
         await sent_msg.edit(content= '**Banner Editor**', attachments= [banner_file], view= editor_view)
 

@@ -54,9 +54,9 @@ class Setup:
         logger.init(self.args)
         self.logger = logging.getLogger()
 
-        self.logger.dev(f'Current Startup Args:{self.args}')
+        self.logger.dev(f'Current Startup Args:{self.args}') #type:ignore
 
-        self.logger.dev("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!")
+        self.logger.dev("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!") #type:ignore
 
         if not self.args.discord:
             self.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
@@ -70,6 +70,7 @@ class Setup:
 
         #This connects and creates all our AMP related parts
         import AMP_Handler
+        AMP_Handler.
         self.AMP_Thread = threading.Thread(target= AMP_Handler.AMP_init, name= 'AMP Handler', args= [self.args,])
         self.AMP_Thread.start()
 
@@ -78,6 +79,7 @@ class Setup:
                 time.sleep(.5)
 
             if self.args.dev and pathlib.Path('tokens_dev.py').exists():
+                #FIXME -- Switch to `.env` See https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
                 import tokens_dev as tokens
 
             else:
@@ -88,7 +90,7 @@ class Setup:
       
     def python_ver_check(self):
         if not sys.version_info.major >= 3 and not sys.version_info.minor >= 10:
-            self.logger.critical(f'Unable to Start Gatekeeper, Python Version is {sys.version_info.major + "." + sys.version_info.minor} we require Python Version >= 3.10')
+            self.logger.critical(f'Unable to Start Gatekeeper, Python Version is {str(sys.version_info.major) + "." + str(sys.version_info.minor)} we require Python Version >= 3.10')
             sys.exit(1)
 
     def pip_install(self):

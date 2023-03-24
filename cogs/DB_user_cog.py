@@ -32,6 +32,8 @@ import utils_embeds
 import AMP_Handler
 import DB
 
+from utils.name_converters import name_to_uuid_MC
+
 #This is used to force cog order to prevent missing methods.
 Dependencies = None
 
@@ -93,12 +95,12 @@ class DB_User(commands.Cog):
         
     @user.command(name='add')
     @utils.role_check()
-    async def user_add(self, context:commands.Context, user: Union[discord.Member, discord.User], mc_ign:str=None, mc_uuid:str=None, steamid:str=None):
+    async def user_add(self, context:commands.Context, user: Union[discord.Member, discord.User], mc_ign: Union[str, None], mc_uuid:str=None, steamid:str=None):
         """Adds the Discord Users information to the Database"""
-        self.logger.command(f'{context.author.name} used User Add Function')
+        self.logger.command(f'{context.author.name} used User Add Function') #type:ignore
        
-        if mc_ign != None:
-            mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
+        if isinstance(mc_ign, str):
+            mc_uuid = name_to_uuid_MC(mc_ign)
 
         db_user = self.DB.GetUser(user.id)
         if db_user == None:
@@ -128,7 +130,7 @@ class DB_User(commands.Cog):
             if mc_ign.lower() == 'none':
                 params['mc_uuid'] = 'none'
             else:
-                mc_uuid = self.uBot.name_to_uuid_MC(mc_ign)
+                mc_uuid = name_to_uuid_MC(mc_ign)
                 params['mc_uuid'] = mc_uuid
 
         db_user = self.DB.GetUser(user.id)

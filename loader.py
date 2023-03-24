@@ -29,7 +29,8 @@ import traceback
 import discord
 
 #custom scripts
-import AMP_Handler
+from AMP_Handler import AMPHandler
+from AMP import AMPInstance
 
 #loop = asyncio.new_event_loop()
 loaded = []
@@ -44,8 +45,8 @@ class Handler():
 
         self.logger = logging.getLogger()
 
-        self.AMPHandler = AMP_Handler.getAMPHandler()
-        self.AMP = self.AMPHandler.AMP
+        self.AMPHandler: AMPHandler = AMPHandler()
+        self.AMP: AMPInstance = self.AMPHandler.AMP
         self.AMPInstances = self.AMPHandler.AMP_Instances
         self.AMP_Modules = self.AMPHandler.AMP_Modules
         self.Cog_Modules = {}
