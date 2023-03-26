@@ -2,8 +2,8 @@ from discord.ui import Button
 from discord import Interaction, Message, ButtonStyle
 
 
-from AMP import AMPInstance
-from discordBot import Gatekeeper
+from amp import AMPInstance
+from Gatekeeper import Gatekeeper
 from utils.whitelist.ui.view import Whitelist_view
 from utils.check import async_rolecheck
 

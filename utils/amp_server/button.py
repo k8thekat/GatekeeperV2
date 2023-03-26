@@ -3,7 +3,7 @@ from discord import ButtonStyle
 from discord.ui import Button
 
 from utils.check import async_rolecheck
-from AMP import AMPInstance
+from amp import AMPInstance
 
 import asyncio
 import logging

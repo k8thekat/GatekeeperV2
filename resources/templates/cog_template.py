@@ -16,7 +16,7 @@
 '''
 from typing import Union
 
-from discordBot import Gatekeeper
+from Gatekeeper import Gatekeeper
 from utils.cogs.base_cog import Gatekeeper_Cog
 from utils.check import role_check, guild_check
 

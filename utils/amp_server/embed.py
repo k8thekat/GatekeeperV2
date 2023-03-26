@@ -1,10 +1,10 @@
 from __future__ import annotations
-from AMP import AMPInstance
+from amp import AMPInstance
 from utils.check import validate_avatar
 
 from discord.ext import commands
 from discord import Embed, Role
-from DB import DBHandler, DBServer
+from db import DBHandler, DBServer
 
 from typing import Union
 
@@ -32,7 +32,7 @@ async def server_status_embed(context: commands.Context, server: AMPInstance) ->
     else:
         instance_status: str = 'Offline'
 
-    if server.ADS_Running:
+    if server._App_Running:
         server_status: str = 'Online'
     else:
         server_status: str = 'Offline'
@@ -47,7 +47,7 @@ async def server_status_embed(context: commands.Context, server: AMPInstance) ->
     if server.DisplayName != None:
         server_name = db_server.DisplayName  # FIXME Need to add an `attr` to DBServer called `DisplayName`
 
-    embed: Embed = Embed(title=f"{server_name} - [{server.TargetName}]", description=f'Instance Server Status: **{instance_status}**', color=embed_color)
+    embed: Embed = Embed(title=f"{server_name} - [{server._TargetName}]", description=f'Instance Server Status: **{instance_status}**', color=embed_color)
 
     avatar: str | None = await validate_avatar(db_server)
     if avatar != None:
@@ -63,7 +63,7 @@ async def server_status_embed(context: commands.Context, server: AMPInstance) ->
     embed.add_field(name='Whitelist Open:', value=str(bool(db_server.Whitelist)), inline=True)
     # embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False) #This Generates a BLANK Field entirely.
 
-    if server.ADS_Running:
+    if server._App_Running:
         embed.add_field(name='TPS', value=TPS, inline=True)
         embed.add_field(name='Player Count', value=f'{USERS[0]}/{USERS[1]}', inline=True)
         embed.add_field(name='Memory Usage', value=f'{MEMORY[0]}/{MEMORY[1]}', inline=True)
@@ -82,7 +82,7 @@ async def server_info_embed(server: AMP_Handler.AMP.AMPInstance, context: comman
     if db_server.DisplayName != None:
         server_name = db_server.DisplayName
 
-    embed = discord.Embed(title=f'__**{server_name}**__ - {[server.TargetName]}', color=0x00ff00, description=server.Description)
+    embed = discord.Embed(title=f'__**{server_name}**__ - {[server._TargetName]}', color=0x00ff00, description=server.Description)
 
     discord_role = db_server.Discord_Role
     if discord_role != None:
@@ -141,7 +141,7 @@ async def server_display_embed(server_list: list[DB.DBServer], guild: discord.Gu
         if server.Running:
             instance_status = 'Online'
             # ADS AKA Application status
-            if server._ADScheck() and server.ADS_Running:
+            if server._ADScheck() and server._App_Running:
                 dedicated_status = 'Online'
                 Users = server.getUsersOnline()
                 if len(server.getUserList()) >= 1:

@@ -37,9 +37,9 @@ from utils.autocomplete import autocomplete_servers
 from utils.cogs.base_cog import Gatekeeper_Cog
 from utils.amp_server.embed import server_status_embed, server_info_embed
 from utils.amp_server.view import StatusView
-from discordBot import Gatekeeper
-from DB import DBServer
-from AMP import AMPInstance
+from Gatekeeper import Gatekeeper
+from db import DBServer
+from amp import AMPInstance
 
 
 # This is used to force cog order to prevent missing methods.
@@ -123,7 +123,7 @@ class AMP_Server(Gatekeeper_Cog):
         amp_server: AMPInstance | None = serverparse(server)
         if isinstance(amp_server, AMPInstance) and not amp_server._ADScheck():
             amp_server.StartInstance()
-            amp_server.ADS_Running = True
+            amp_server._App_Running = True
             await context.send(f'Starting the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral=True, delete_after=self._client.Message_Timeout)
         else:
             return await context.send(f'Hmm it appears the server is already `Running..`', ephemeral=True, delete_after=self._client.Message_Timeout)
@@ -138,7 +138,7 @@ class AMP_Server(Gatekeeper_Cog):
         amp_server = serverCheck(context, server)
         if isinstance(amp_server, AMPInstance) and amp_server._ADScheck():
             amp_server.StopInstance()
-            amp_server.ADS_Running = False
+            amp_server._App_Running = False
             await context.send(f'Stopping the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral=True, delete_after=self._client.Message_Timeout)
         else:
             return await context.send(f'Hmm it appears the server is not `Running..`', ephemeral=True, delete_after=self._client.Message_Timeout)
@@ -153,7 +153,7 @@ class AMP_Server(Gatekeeper_Cog):
         amp_server = serverCheck(context, server)
         if isinstance(amp_server, AMPInstance):
             amp_server.RestartInstance()
-            amp_server.ADS_Running = True
+            amp_server._App_Running = True
             await context.send(f'Restarting the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral=True, delete_after=self._client.Message_Timeout)
 
     @server.command(name='kill')
@@ -166,7 +166,7 @@ class AMP_Server(Gatekeeper_Cog):
         amp_server = serverCheck(context, server)
         if isinstance(amp_server, AMPInstance):
             amp_server.KillInstance()
-            amp_server.ADS_Running = False
+            amp_server._App_Running = False
             await context.send(f'Killing the AMP Dedicated Server **{amp_server.InstanceName}**', ephemeral=True, delete_after=self._client.Message_Timeout)
 
     @server.command(name='msg')

@@ -20,7 +20,7 @@
 
 '''
 from utils.cogs.base_cog import Gatekeeper_Cog
-from discordBot import Gatekeeper
+from Gatekeeper import Gatekeeper
 
 DisplayImageSources = ['steam:251570']
 

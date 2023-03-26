@@ -26,83 +26,72 @@ import pip
 import threading
 from threading import current_thread
 import time
-import pathlib
+import logging
+
+import logger
+from amp_handler import AMPHandler
+from db import DBHandler
+
+import Gatekeeper
+from dotenv.main import load_dotenv
+import os
+
 
 class Setup:
-    def __init__(self):
-        #Use action="store_true", then check the arg via "args.name" eg. "args.dev"
-        parser = argparse.ArgumentParser(description='AMP Discord Bot')
-        parser.add_argument('-token', help='Bypasse tokens validation check.',required= False, action="store_true")
-        parser.add_argument('-super', help='This leaves AMP Super Admin role intact, use at your own risk.', required= False, action="store_true")
+    load_dotenv()
+    TOKEN: str = os.environ["TOKEN"].strip()
 
+    def __init__(self):
+        # Use action="store_true", then check the arg via "args.name" eg. "args.dev"
+        # By default argparase has -h/--h.
+        parser = argparse.ArgumentParser(description='Gatekeeper - AMP Discord Bot')
+        parser.add_argument("-super", help='This leaves AMP Super Admin role intact *Warning* Potential security risk', required=False, action="store_true")
         # All the args below are used for development purpose.
-        parser.add_argument('-dev', help='Enable development print statments.',required= False, action="store_true")
-        parser.add_argument('-command', help='Enable command usage print statements.', required= False, action="store_true")
-        parser.add_argument('-discord', help='Disables Discord Intigration (used for testing)',required= False, action="store_false")
-        parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required= False, action="store_true")
+        parser.add_argument("-dev", help='Enable development logger statments.', required=False, action="store_true")
+        parser.add_argument("-debug", help='Enables DEBUGGING level for logging', required=False, action="store_true")
+        parser.add_argument("arg1", action="store_true")
         self.args = parser.parse_args()
 
-        self.pip_install()
+        self._pip_setup()
+        self._python_ver_check()
 
-        #Renaming Main Thread to "Gatekeeper"
-        Gatekeeper = current_thread()
-        Gatekeeper.name = 'Gatekeeper'
+        # Renaming Main Thread to "Gatekeeper"
+        bot_thread = current_thread()
+        bot_thread.name = "Gatekeeper"
 
-        #Custom Logger functionality.
-        import logging 
-        import logger
+        # Setup Logger functionality.
         logger.init(self.args)
-        self.logger = logging.getLogger()
+        self._logger = logging.getLogger()
+        self._logger.info(f'Current Startup Args:{self.args}')  # type:ignore
 
-        self.logger.dev(f'Current Startup Args:{self.args}') #type:ignore
+        # This sets up our SQLite Database!
+        self._DBHandler = DBHandler()
+        self._DB = self._DBHandler.DB
+        self._DB_Config = self._DB.DBConfig
+        self._logger.info(f'SQL Database Version: {self._DBHandler.DB_Version} // SQL Database: {self._DBHandler.SuccessfulDatabase}')
 
-        self.logger.dev("**ATTENTION** YOU ARE IN DEVELOPMENT MODE** All features are not present and stability is not guaranteed!") #type:ignore
-
-        if not self.args.discord:
-            self.logger.critical("***ATTENTION*** Discord Intergration has been DISABLED!")
-
-        #This sets up our SQLite Database!
-        import DB
-        self.DBHandler = DB.getDBHandler()
-        self.DB = self.DBHandler.DB
-        self.DB_Config = self.DB.DBConfig
-        self.logger.info(f'SQL Database Version: {self.DB.DBHandler.DB_Version} // SQL Database: {self.DB.DBHandler.SuccessfulDatabase}')
-
-        #This connects and creates all our AMP related parts
-        import AMP_Handler
-        AMP_Handler.
-        self.AMP_Thread = threading.Thread(target= AMP_Handler.AMP_init, name= 'AMP Handler', args= [self.args,])
+        self.AMP_Thread = threading.Thread(target=AMPHandler, name='AMPHandler', args=[self.args, ])
         self.AMP_Thread.start()
+        while (AMPHandler.AMP_SETUP == False):
+            time.sleep(.5)
 
-        if self.args.discord:
-            while(AMP_Handler.AMP_setup == False):
-                time.sleep(.5)
+        Gatekeeper.client_run(self.TOKEN)
 
-            if self.args.dev and pathlib.Path('tokens_dev.py').exists():
-                #FIXME -- Switch to `.env` See https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
-                import tokens_dev as tokens
-
-            else:
-                import tokens
-                
-            import discordBot
-            discordBot.client_run(tokens)
-      
-    def python_ver_check(self):
-        if not sys.version_info.major >= 3 and not sys.version_info.minor >= 10:
-            self.logger.critical(f'Unable to Start Gatekeeper, Python Version is {str(sys.version_info.major) + "." + str(sys.version_info.minor)} we require Python Version >= 3.10')
+    def _python_ver_check(self):
+        if not sys.version_info.major >= 3 and not sys.version_info.minor >= 8:
+            self._logger.critical(f'Unable to Start Gatekeeper, Python Version is {str(sys.version_info.major) + "." + str(sys.version_info.minor)} we require Python Version >= 3.8')
             sys.exit(1)
 
-    def pip_install(self):
-        pip_version = pip.__version__.split('.')
-        pip_v_major = int(pip_version[0])
-        pip_v_minor = int(pip_version[1])
+    def _pip_setup(self):
+        """Validated the version of PIP installed due to certain versions of packages requiring certain versions of PIP. Then installs the required packages."""
+        pip_version: list[str] = pip.__version__.split('.')
+        pip_v_major: int = int(pip_version[0])
+        pip_v_minor: int = int(pip_version[1])
 
         if pip_v_major > 22 or (pip_v_major == 22 and pip_v_minor >= 1):
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r','requirements.txt'])
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
         else:
-            self.logger.critical(f'Unable to Start Gatekeeper, PIP Version is {pip.__version__}, we require PIP Version >= 22.1')
+            self._logger.critical(f'Unable to Start Gatekeeper, PIP Version is {pip.__version__}, we require PIP Version >= 22.1')
+
 
 Start = Setup()
-
-    

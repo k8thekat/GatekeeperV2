@@ -1,6 +1,6 @@
 from discord import Interaction, app_commands
 
-from AMP_Handler import AMPHandler
+from amp_handler import AMPHandler
 from utils.check import async_rolecheck
 
 
