@@ -13,7 +13,6 @@ import os
 from argparse import Namespace
 from pyotp import TOTP  # 2Factor Authentication Python Module
 
-
 from amp_handler import AMPHandler
 
 
