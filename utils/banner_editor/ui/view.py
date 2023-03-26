@@ -10,9 +10,9 @@ from utils.banner_editor.ui.select import Copy_To_Select
 from utils.banner_editor.edited_banner import Edited_DB_Banner
 from utils.banner_editor.ui.button import Save_Banner_Button, Reset_Banner_Button, Cancel_Banner_Button, Copy_To_All_Banner_Button, Copy_To_Banner_Button
 from utils.banner_editor.ui.select import Banner_Editor_Select
-from AMP import AMPInstance
-from AMP_Handler import AMPHandler
-from DB import DBBanner
+from amp import AMPInstance
+from amp_handler import AMPHandler
+from db import DBBanner
 
 
 class Copy_To_View(View):

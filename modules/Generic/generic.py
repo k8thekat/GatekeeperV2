@@ -20,7 +20,7 @@
 
 '''
 from utils.cogs.base_cog import Gatekeeper_Cog
-from discordBot import Gatekeeper
+from Gatekeeper import Gatekeeper
 
 class Generic(Gatekeeper_Cog):
     def __init__(self, client: Gatekeeper) -> None:

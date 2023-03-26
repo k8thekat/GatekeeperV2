@@ -7,15 +7,15 @@ import discord
 from discord import Member, Interaction, Guild
 from discord.ext import commands
 
-import DB
-from DB import DBHandler, DBServer
+import db
+from db import DBHandler, DBServer
 from utils.permissions import Gatekeeper_Permissions
 from utils.helper.parser import serverparse
-from AMP import AMPInstance
+from amp import AMPInstance
 
 
 async def async_rolecheck(context: Union[commands.Context, Interaction, Member], perm_node: str = None):
-    _DBHandler: DBHandler = DB.getDBHandler()
+    _DBHandler: DBHandler = db.getDBHandler()
     _DBConfig = _DBHandler.DBConfig
     _mod_role = _DBConfig.GetSetting('Moderator_role_id')
     _logger = logging.getLogger(__name__)
@@ -112,7 +112,7 @@ def guild_check(guild_id: int):
     async def predicate(context: commands.Context) -> bool:
 
         if isinstance(context.guild, Guild):
-            guild_id: int= context.guild.id 
+            guild_id: int = context.guild.id
             return True
         else:
             await context.send('You do not have permission to use that command...', ephemeral=True)
@@ -121,37 +121,38 @@ def guild_check(guild_id: int):
 
 
 async def validate_avatar(db_server: DBServer) -> Union[str, None]:
-        """This checks the DB Server objects Avatar_url and returns the proper object type. \n
-        Must be either `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
-        if db_server.Avatar_url == None:
-            return None
-        #This handles web URL avatar icon urls.
-        if db_server.Avatar_url.startswith("https://") or db_server.Avatar_url.startswith("http://"):
-            if db_server.Avatar_url not in self.AMPServer_Avatar_urls:
-                await asyncio.sleep(.5)
-                #Validating if the URL actually works/exists via response.status codes.
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(db_server.Avatar_url) as response:
-                        if response.status == 200:
-                            self.AMPServer_Avatar_urls.append(db_server.Avatar_url)
-                            return db_server.Avatar_url
-                        else:
-                            self.logger.error(f'We are getting Error Code {response.status}, not sure whats going on...')
-                            return None
-            else:
-                return db_server.Avatar_url
+    """This checks the DB Server objects Avatar_url and returns the proper object type. \n
+    Must be either `webp`, `jpeg`, `jpg`, `png`, or `gif` if it's animated."""
+    if db_server.Avatar_url == None:
+        return None
+    # This handles web URL avatar icon urls.
+    if db_server.Avatar_url.startswith("https://") or db_server.Avatar_url.startswith("http://"):
+        if db_server.Avatar_url not in self.AMPServer_Avatar_urls:
+            await asyncio.sleep(.5)
+            # Validating if the URL actually works/exists via response.status codes.
+            async with aiohttp.ClientSession() as session:
+                async with session.get(db_server.Avatar_url) as response:
+                    if response.status == 200:
+                        self.AMPServer_Avatar_urls.append(db_server.Avatar_url)
+                        return db_server.Avatar_url
+                    else:
+                        self.logger.error(f'We are getting Error Code {response.status}, not sure whats going on...')
+                        return None
         else:
-            return None
-            
-async def serverCheck(context:commands.Context, server, online_only:bool=True) -> Union[AMPInstance, bool]:
+            return db_server.Avatar_url
+    else:
+        return None
+
+
+async def serverCheck(context: commands.Context, server, online_only: bool = True) -> Union[AMPInstance, bool]:
     """Verifies if the AMP Server exists and if its Instance is running and its ADS is Running"""
     amp_server = serverparse(server, context, context.guild.id)
-    
+
     if online_only == False:
         return amp_server
 
     if amp_server.Running and amp_server._ADScheck():
         return amp_server
-    
-    await context.send(f'Well this is awkward, it appears the **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}** is `Offline`.', ephemeral=True, delete_after= self._client.Message_Timeout)
+
+    await context.send(f'Well this is awkward, it appears the **{amp_server.FriendlyName if amp_server.FriendlyName != None else amp_server.InstanceName}** is `Offline`.', ephemeral=True, delete_after=self._client.Message_Timeout)
     return False

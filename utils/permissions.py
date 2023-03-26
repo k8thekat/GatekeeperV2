@@ -1,5 +1,5 @@
 import logging
-import DB
+import db
 import pathlib
 import json
 import sys
@@ -7,7 +7,7 @@ import sys
 from discord.ext import commands
 
 from typing import Union
-from DB import DBUser, DBHandler
+from db import DBUser, DBHandler
 
 
 class Gatekeeper_Permissions():
@@ -19,7 +19,7 @@ class Gatekeeper_Permissions():
 
     def __init__(self) -> None:
         self.logger = logging.getLogger()
-        self.DBHandler: DBHandler = DB.getDBHandler()
+        self.DBHandler: DBHandler = db.getDBHandler()
         self.DB = self.DBHandler.DB
 
         self._last_modified: float = 0

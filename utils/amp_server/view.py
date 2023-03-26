@@ -2,7 +2,7 @@ from __future__ import annotations
 from discord.ui import View
 from discord.ext import commands
 
-from AMP import AMPInstance
+from amp import AMPInstance
 from utils.amp_server.button import StartButton, StopButton, RestartButton, KillButton
 
 

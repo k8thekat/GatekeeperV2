@@ -28,7 +28,7 @@ import time
 import logging
 from typing import Union
 
-from DB_Update import DB_Update
+from db_update import DB_Update
 
 
 def dump_to_json(data):
@@ -90,13 +90,6 @@ class DBHandler():
             self.DB_Server.Discord_Console_Channel = None  # Should be a str, can be an int. eg 289450670581350401
         except:
             self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
-
-
-def getDBHandler() -> DBHandler:
-    global Handler
-    if Handler == None:
-        Handler = DBHandler()
-    return Handler
 
 
 class Database:

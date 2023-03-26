@@ -34,8 +34,8 @@ from discord.ext import commands, tasks
 from discord.app_commands import Choice
 from discord import MessageType
 
-import AMP_Handler
-import DB as DB
+import amp_handler
+import db as db
 import utils.banner_creator as BC
 
 from utils.helper.command import Helper_Command
@@ -129,7 +129,7 @@ class Banner(Gatekeeper_Cog):
         else:
             return [app_commands.Choice(name=f"{server.InstanceName} | ID: {server.InstanceID}", value=server.InstanceID)for server in db_servers if current.lower() in server.InstanceName.lower()][:25]
 
-    async def banner_editor(self, context: commands.Context, amp_server: AMP_Handler.AMP.AMPInstance, db_server_banner=None):
+    async def banner_editor(self, context: commands.Context, amp_server: amp_handler.amp.AMPInstance, db_server_banner=None):
         """Handles sending the banner."""
         db_server = self.DB.GetServer(amp_server.InstanceID)
 

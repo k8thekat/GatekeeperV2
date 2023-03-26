@@ -5,7 +5,7 @@ from discord import Interaction
 from typing import Optional
 import difflib
 
-import AMP_Handler
+import amp_handler
 from utils.banner_editor.ui.textinput import Copy_To_TextInput
 from utils.banner_editor.ui.view import Copy_To_View
 from utils.banner_editor.edited_banner import Edited_DB_Banner
@@ -17,7 +17,7 @@ class Copy_To_Modal(Modal):
     def __init__(self, edited_banner: Edited_DB_Banner, title: str = "Copy To Server", timeout: Optional[float] = None) -> None:
         super().__init__(title=title, timeout=timeout)
         self._edited_banner: Edited_DB_Banner = edited_banner  # Need to pass this along to our view...
-        self._amp_instance_names: dict[str, str] = AMP_Handler.getAMPHandler().get_AMP_instance_names()
+        self._amp_instance_names: dict[str, str] = amp_handler.getAMPHandler().get_AMP_instance_names()
         self._txt_input: Copy_To_TextInput = Copy_To_TextInput()
         self.add_item(self._txt_input)
 
@@ -36,7 +36,7 @@ class Copy_To_Modal(Modal):
 
 
 class Banner_Modal(Modal):
-    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: discord.Message, amp_server: AMP_Handler.AMP.AMPInstance, timeout=None, custom_id='Banner Modal'):
+    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: discord.Message, amp_server: amp_handler.amp.AMPInstance, timeout=None, custom_id='Banner Modal'):
         self._edited_db_banner = edited_db_banner
         self._banner_message = banner_message
         self._banner_view = view

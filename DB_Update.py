@@ -1,8 +1,9 @@
 import logging
 import sys
 
+
 class DB_Update:
-    def __init__(self, DB, Version:float=None):
+    def __init__(self, DB, Version: float = None):
         self.logger = logging.getLogger(__name__)
         self.DB = DB
         self.DBConfig = self.DB.DBConfig
@@ -29,7 +30,7 @@ class DB_Update:
 
         if 1.3 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.3')
-            #self.nicknames_unique()
+            # self.nicknames_unique()
             self.DBConfig.SetSetting('DB_Version', '1.3')
 
         if 1.4 > Version:
@@ -50,7 +51,7 @@ class DB_Update:
             #self.DBConfig.AddSetting('Server_Info_Display', None)
             #self.DBConfig.AddSetting('Auto_Display', True)
             self.DBConfig.SetSetting('DB_Version', '1.6')
-        
+
         if 1.7 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.7')
             self.DBConfig.AddSetting('Banner_Auto_Update', True)
@@ -59,13 +60,13 @@ class DB_Update:
             self.DBConfig.DeleteSetting('Server_Info_Display')
             self.DBConfig.DeleteSetting('Auto_Display')
             self.DBConfig.SetSetting('DB_Version', '1.7')
-        
+
         if 1.8 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 1.8')
             self.server_hide_column()
-            #self.server_ip_constraint_update()
+            # self.server_ip_constraint_update()
             self.server_display_name_reset()
-            #self.server_display_name_constraint_update()
+            # self.server_display_name_constraint_update()
             self.DBConfig.SetSetting('DB_Version', '1.8')
 
         if 1.9 > Version:
@@ -100,11 +101,11 @@ class DB_Update:
 
         if 2.6 > Version:
             self.logger.info('**ATTENTION** Updating DB to Version 2.6')
-            #self.user_MC_IngameName_unique_constraint()
+            # self.user_MC_IngameName_unique_constraint()
             self.DBConfig.DeleteSetting('Whitelist_Emoji_Pending')
             self.DBConfig.DeleteSetting('Whitelist_Emoji_Done')
             self.DBConfig.SetSetting('DB_Version', '2.6')
-        
+
         if 2.7 > Version:
             """Hotfix for Failed Table creation in version 2.4"""
             self.logger.info('**ATTENTION** Updating DB to Version 2.7')
@@ -115,7 +116,7 @@ class DB_Update:
             except:
                 self.server_regex_pattern_table_creation()
             self.DBConfig.SetSetting('DB_Version', '2.7')
-        
+
         if 2.8 > Version:
             """Adds Donator Bypass and Donator Role ID"""
             self.logger.info('**ATTENTION** Updating DB to Version 2.8')
@@ -139,7 +140,6 @@ class DB_Update:
             self.add_bannergroupchannels_table()
             self.add_bannergroupmessages_table()
             self.DBConfig.SetSetting('DB_Version', '3.0')
-
 
     def user_roles(self):
         try:
@@ -204,7 +204,7 @@ class DB_Update:
         except Exception as e:
             self.logger.critical(f'server_banner_table {e}')
             sys.exit(-1)
-    
+
     def whitelist_reply_table(self):
         try:
             SQL = 'create table WhitelistReply (ID integer primary key, Message text)'
@@ -212,7 +212,7 @@ class DB_Update:
         except Exception as e:
             self.logger.critical(f'whitelist_reply_table {e}')
             sys.exit(-1)
-    
+
     def server_hide_column(self):
         """1.8 Update"""
         try:
@@ -233,7 +233,7 @@ class DB_Update:
 
     def server_display_name_reset(self):
         try:
-            SQL= 'update Servers set DisplayName=InstanceName'
+            SQL = 'update Servers set DisplayName=InstanceName'
             self.DB._execute(SQL, ())
         except Exception as e:
             self.logger.critical(f'server_display_name_reset {e}')
@@ -255,7 +255,7 @@ class DB_Update:
         except Exception as e:
             self.logger.critical(f'banner_table_creation {e}')
             sys.exit(-1)
-    
+
     def server_ip_name_change(self):
         try:
             # SQL = 'select IP from Servers limit 1'
@@ -283,7 +283,7 @@ class DB_Update:
         except Exception as e:
             self.logger.critical(f'server_ip_name_change {e}')
             sys.exit(-1)
-        
+
     def banner_name_conversion(self):
         try:
             SQL = 'select * from ServerEmbed limit 1'
@@ -340,7 +340,7 @@ class DB_Update:
         except Exception as e:
             self.logger.critical(f'server_console_filter_type {e}')
             sys.exit(-1)
-        
+
     def server_add_FriendlyName_column(self):
         try:
             SQL = 'select FriendlyName from Servers'
@@ -355,15 +355,14 @@ class DB_Update:
         except Exception as e:
             self.logger.critical(f'server_add_FriendlyName_column {e}')
             sys.exit(-1)
-    
+
     def db_config_add_donator_setting(self):
-        #Adds support for Donator related functionality.
+        # Adds support for Donator related functionality.
         try:
             self.DBConfig.AddSetting("Donator_Bypass", False)
             self.DBConfig.AddSetting("Donator_role_id", None)
         except Exception as e:
             self.logger.critical(f'db_config_add_donator_settings {e}')
-
 
     def add_bannergroup_table(self):
         try:

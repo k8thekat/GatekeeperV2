@@ -19,7 +19,7 @@
    02110-1301, USA. 
 
 '''
-from discordBot import Gatekeeper
+from Gatekeeper import Gatekeeper
 from utils.cogs.base_cog import Gatekeeper_Cog
 
 DisplayImageSources = ['steam:427520']

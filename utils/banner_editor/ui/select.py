@@ -4,14 +4,14 @@ from discord import SelectOption
 from discord import Interaction
 
 from utils.banner_editor.edited_banner import Edited_DB_Banner
-import AMP_Handler
-from DB import DBServer
+import amp_handler
+from db import DBServer
 
 
 class Copy_To_Select(Select):
     def __init__(self, *, options: dict[str, str], edited_banner: Edited_DB_Banner) -> None:
         self._edited_banner: Edited_DB_Banner = edited_banner
-        self._amp_handler: AMP_Handler.AMPHandler = AMP_Handler.getAMPHandler()
+        self._amp_handler: amp_handler.AMPHandler = amp_handler.getAMPHandler()
         self._select_options: list[SelectOption] = []
         # In this scenarion; the options aka AMP Instances come as {"InstanceID": "Instance Name"}
         for instanceid, instancename in options.items():
@@ -30,7 +30,7 @@ class Copy_To_Select(Select):
 
 
 class Banner_Editor_Select(Select):
-    def __init__(self, edited_db_banner: Edited_DB_Banner, view: Banner_Editor_View, amp_server: AMP_Handler.AMP.AMPInstance, banner_message: discord.Message, custom_id: str = None, min_values: int = 1, max_values: int = 1, row: int = None, disabled: bool = False, placeholder: str = None):
+    def __init__(self, edited_db_banner: Edited_DB_Banner, view: Banner_Editor_View, amp_server: amp_handler.amp.AMPInstance, banner_message: discord.Message, custom_id: str = None, min_values: int = 1, max_values: int = 1, row: int = None, disabled: bool = False, placeholder: str = None):
         self.logger = logging.getLogger()
         options = []
         self._banner_view = view

@@ -6,11 +6,11 @@ from discord.ext.commands import Bot
 import os
 import logging
 
-from AMP_Handler import AMPHandler
-from AMP import AMPInstance
-import DB
-from DB import DBHandler, Database, DBConfig
-from discordBot import Gatekeeper
+from amp_handler import AMPHandler
+from amp import AMPInstance
+import db
+from db import DBHandler, Database, DBConfig
+from Gatekeeper import Gatekeeper
 
 from utils.helper.command import Helper_Command
 
@@ -28,7 +28,7 @@ class Gatekeeper_Cog(Cog):
         # self.AMPInstances: dict[str, str] = self.AMPHandler.AMP_Instances #Main AMP Instance Dictionary
 
         # All our DB Related classes
-        self._DBHandler: DBHandler = DB.getDBHandler()
+        self._DBHandler: DBHandler = db.getDBHandler()
         self._DB: Database = self._DBHandler.DB  # Main Database object
         self._DBConfig: DBConfig = self._DB.DBConfig
 

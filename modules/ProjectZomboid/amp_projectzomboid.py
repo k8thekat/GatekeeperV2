@@ -19,40 +19,42 @@
    02110-1301, USA. 
 
 '''
-import AMP
-import AMP_Console
+import amp
+import amp_console
 
 
 DisplayImageSources = ['steam:108600']
-class AMPProjectzomboid(AMP.AMPInstance):
-    def __init__(self, instanceID:int= 0, serverdata:dict= {}, default_console:bool= False, Handler=None, TargetName:str = None):
+
+
+class AMPProjectzomboid(amp.AMPInstance):
+    def __init__(self, instanceID: int = 0, serverdata: dict = {}, default_console: bool = False, Handler=None, _TargetName: str = None):
         self.perms = []
         self.APIModule = 'Project Zomboid'
-        
-        super().__init__(instanceID, serverdata, Handler=Handler, TargetName=TargetName)
-        self.Console = AMPProjectzomboidConsole(AMPInstance = self)
+
+        super().__init__(instanceID, serverdata, Handler=Handler, _TargetName=_TargetName)
+        self.Console = AMPProjectzomboidConsole(AMPInstance=self)
 
         self.default_background_banner_path = 'resources/banners/Project_Zomboid_banner_1.jpg'
 
         if self.Avatar_url == None:
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/project_zomboid_avatar.png?raw=true'
 
-    # This isn't the best implementation... 
+    # This isn't the best implementation...
     # Project Zomboid has one-way chat from game to Discord. You need to enable that.
-    # This method will allow messages from Discord to be posted in-game. 
+    # This method will allow messages from Discord to be posted in-game.
     # However, they are server broadcasts and will be posted in the middle of the screen.
-    def Chat_Message(self, message:str, author:str=None, author_prefix:str=None, server_prefix:str=None):
-            """Sends a customized message via servermsg through the console."""
-            self.Login()
-            content = 'servermsg "[Discord]'
-            if server_prefix != None:
-                content += f'({server_prefix}) '
+    def Chat_Message(self, message: str, author: str = None, author_prefix: str = None, server_prefix: str = None):
+        """Sends a customized message via servermsg through the console."""
+        self.Login()
+        content = 'servermsg "[Discord]'
+        if server_prefix != None:
+            content += f'({server_prefix}) '
 
-            if author_prefix != None:
-                content += f'({author_prefix}) '
-                
-            content += f'[{author}]: {message}"'
-            self.ConsoleMessage(content)
+        if author_prefix != None:
+            content += f'({author_prefix}) '
+
+        content += f'[{author}]: {message}"'
+        self.ConsoleMessage(content)
 
     def Broadcast_Message(self, message, prefix: str = None):
         """Used to Send a Broadcast Message to the Server"""
@@ -60,11 +62,11 @@ class AMPProjectzomboid(AMP.AMPInstance):
         content = 'servermsg "'
         if prefix != None:
             content += f'<{prefix}> '
-        
+
         content += f'{message}"'
         self.ConsoleMessage(content)
 
 
-class AMPProjectzomboidConsole(AMP_Console.AMPConsole):
-    def __init__(self, AMPInstance = AMPProjectzomboid):
+class AMPProjectzomboidConsole(amp_console.AMPConsole):
+    def __init__(self, AMPInstance=AMPProjectzomboid):
         super().__init__(AMPInstance)

@@ -5,10 +5,10 @@ from typing import Text, Union, Sequence
 import logging
 import difflib
 
-from AMP import AMPInstance
-from discordBot import Gatekeeper
+from amp import AMPInstance
+from Gatekeeper import Gatekeeper
 from utils.context import GatekeeperGuildContext
-from AMP_Handler import AMPHandler
+from amp_handler import AMPHandler
 
 
 def role_parse(parameter: str, context: GatekeeperGuildContext) -> Union[Role, None]:

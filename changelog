@@ -71,7 +71,7 @@ __**Update 4.5**__
 
 - Updated `AMP_Handler.py`
     - Changed layout of server names when using autocompletes
-        - Removed displaying of `TargetName` when equal to `None`.
+        - Removed displaying of `_TargetName` when equal to `None`.
 
 - Updated `utils.py`
     - Added `sub_group_command_handler()` for adding commands to existing groups when accross seperate files.
@@ -216,7 +216,7 @@ __**Update 4.4.0**__
     - Refactored `Gatekeeper` AMP Instances to `DB` handling.
         - Can now handle `Duplicate Instance Names` if `Friendly Name` is set for one of the Duplicate Instance and is unique.
             - Changed how discord based `Autocompletes` for AMP Servers is handled. 
-                - Added `TargetName` to `AMP` classes for helping identify similar named Instances.
+                - Added `_TargetName` to `AMP` classes for helping identify similar named Instances.
                 - Rebuilt `AMPHandler.get_Instance_Names()` to handle new system.
                 - Rebuilt `utils.serverparse` to handle the new system.
                 - Should allow for duplicate `AMP Instance Names`

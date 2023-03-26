@@ -26,43 +26,44 @@ from discord.ext import commands
 from typing import Union
 
 import utils
-from DB import DBUser
+from db import DBUser
 from utils.cogs.base_cog import Gatekeeper_Cog
 from utils.permissions import Gatekeeper_Permissions
 
-#FIXME This may break, circular import.
-from discordBot import Gatekeeper
+# FIXME This may break, circular import.
+from Gatekeeper import Gatekeeper
 from utils.check import role_check
 
-#This is used to force cog order to prevent missing methods.
+# This is used to force cog order to prevent missing methods.
 Dependencies = ["DB_user_cog.py"]
 
-class Permissions(Gatekeeper_Cog):
-    def __init__ (self, client: Gatekeeper):
-        super().__init__(client= client)
-        self._bPerms: Gatekeeper_Permissions = Gatekeeper_Permissions()
-        self._command_helper.sub_command_handler('user', self.user_role) #This is used to add a sub command(self,parent_command,sub_command)
-  
 
-    async def autocomplete_permission_roles(self, interaction:discord.Interaction,current:str) -> list[app_commands.Choice[str]]:
+class Permissions(Gatekeeper_Cog):
+    def __init__(self, client: Gatekeeper):
+        super().__init__(client=client)
+        self._bPerms: Gatekeeper_Permissions = Gatekeeper_Permissions()
+        self._command_helper.sub_command_handler('user', self.user_role)  # This is used to add a sub command(self,parent_command,sub_command)
+
+    async def autocomplete_permission_roles(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """This is for roles inside of the bot_perms file. Returns a list of all the roles.."""
-        
+
         choice_list: list[str] = self._bPerms.get_roles()
         return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()][:25]
-    
+
     @commands.hybrid_command(name='role')
     @role_check()
-    @app_commands.autocomplete(role= autocomplete_permission_roles)
-    async def user_role(self, context:commands.Context, user:Union[discord.User, discord.Member], role: str):
+    @app_commands.autocomplete(role=autocomplete_permission_roles)
+    async def user_role(self, context: commands.Context, user: Union[discord.User, discord.Member], role: str):
         """Set a users Permission Role for commands."""
-        self._logger.command(f'{context.author.name} used User Role Function') #type:ignore
+        self._logger.command(f'{context.author.name} used User Role Function')  # type:ignore
 
         db_user: DBUser | None = self._DB.GetUser(str(user.id))
         if db_user != None:
             db_user.Role = role
-            await context.send(f"We set the User: **{user.name}** permission's role to `{role}`.", ephemeral=True, delete_after= self._client.Message_Timeout)
+            await context.send(f"We set the User: **{user.name}** permission's role to `{role}`.", ephemeral=True, delete_after=self._client.Message_Timeout)
         else:
-            await context.send(f'We failed to find the User: {user.name}, please make sure they are in the DB.', ephemeral=True, delete_after= self._client.Message_Timeout)
+            await context.send(f'We failed to find the User: {user.name}, please make sure they are in the DB.', ephemeral=True, delete_after=self._client.Message_Timeout)
+
 
 async def setup(client):
     await client.add_cog(Permissions(client))

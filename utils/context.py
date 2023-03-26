@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 if TYPE_CHECKING:
-    from discordBot import Gatekeeper
+    from Gatekeeper import Gatekeeper
 
 class GatekeeperContext(commands.Context["Gatekeeper"]):
     bot: Gatekeeper
