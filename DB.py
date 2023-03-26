@@ -1147,24 +1147,24 @@ class DBConfig:
 
 class DBBanner:
     def __init__(self, DB: Database, ServerID: int = None, background_path: str = None):
-        self.attr_list = {'_db': DB,
-                          'ServerID': int(ServerID),
-                          'background_path': background_path,
-                          'blur_background_amount': 0,
-                          'color_header': "#85c1e9",
-                          'color_body': "#f2f3f4",
-                          'color_host': "#5dade2",
-                          'color_whitelist_open': "#f7dc6f",
-                          'color_whitelist_closed': "#cb4335",
-                          'color_donator': "#212f3c",
-                          'color_status_online': "#28b463",
-                          'color_status_offline': "#e74c3c",
-                          'color_player_limit_min': "#ba4a00",
-                          'color_player_limit_max': "#5dade2",
-                          'color_player_online': "#f7dc6f"}
+        self._attr_list = {'_db': DB,
+                           'ServerID': int(ServerID),
+                           'background_path': background_path,
+                           'blur_background_amount': 0,
+                           'color_header': "#85c1e9",
+                           'color_body': "#f2f3f4",
+                           'color_host': "#5dade2",
+                           'color_whitelist_open': "#f7dc6f",
+                           'color_whitelist_closed': "#cb4335",
+                           'color_donator': "#212f3c",
+                           'color_status_online': "#28b463",
+                           'color_status_offline': "#e74c3c",
+                           'color_player_limit_min': "#ba4a00",
+                           'color_player_limit_max': "#5dade2",
+                           'color_player_online': "#f7dc6f"}
 
-        for attr in self.attr_list:
-            super().__setattr__(attr, self.attr_list[attr])
+        for attr in self._attr_list:
+            super().__setattr__(attr, self._attr_list[attr])
 
         (row, cur) = self._db._fetchone("Select * from ServerBanners where ServerID=?", (self.ServerID,))
         if row:
@@ -1176,11 +1176,11 @@ class DBBanner:
             SQL = "insert into ServerBanners ("
             SQLVars = []
 
-            for entry in self.attr_list:
+            for entry in self._attr_list:
                 if entry.startswith('_'):
                     continue
                 SQL += entry + ","
-                SQLVars.append(self.attr_list[entry])
+                SQLVars.append(self._attr_list[entry])
 
             SQL = SQL[:-1] + ") values (" + ("?," * len(SQLVars))[:-1] + ")"
             # create the tuple needed
@@ -1198,5 +1198,5 @@ class DBBanner:
 
         super().__setattr__(name, value)
 
-        if name != 'attr_list':
+        if not name.startswith("_"):
             self._db._UpdateBanner(self, **{name: value})

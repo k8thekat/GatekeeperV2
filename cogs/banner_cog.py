@@ -41,6 +41,8 @@ import utils_embeds
 import AMP_Handler
 import DB as DB
 import modules.banner_creator as BC
+from utils_dev.banner_editor.ui.view import Banner_Editor_View
+
 
 # This is used to force cog order to prevent missing methods.
 Dependencies = ["AMP_server_cog.py"]
@@ -132,7 +134,7 @@ class Banner(commands.Cog):
         sent_msg = await context.send('Creating Banner Editor...', ephemeral=True, delete_after=60)
 
         # Create my View first
-        editor_view = self.uiBot.Banner_Editor_View(db_banner=db_server_banner, amp_server=amp_server, banner_message=sent_msg)
+        editor_view = Banner_Editor_View(amp_handler=self.AMPHandler, db_banner=db_server_banner, amp_server=amp_server, banner_message=sent_msg)
         banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
         await sent_msg.edit(content='**Banner Editor**', attachments=[banner_file], view=editor_view)
 

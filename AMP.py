@@ -246,8 +246,8 @@ class AMPInstance():
     def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions Nodes for AMP Gatekeeper Role"""
         self.logger.info('Setting AMP Role Permissions for `Gatekeeper`...')
-        import AMP_Permissions as AMPPerms
-        #import amp_permissions as AMPPerms
+        #import AMP_Permissions as AMPPerms
+        import amp_permissions as AMPPerms
         core = AMPPerms.perms_super()
         for perm in core:
             enabled = True
