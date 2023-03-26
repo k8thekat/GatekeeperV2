@@ -12,3 +12,4 @@ cogs/testcog.py
 discordBot.db*
 .env
 sqlite3.exe
+.env
