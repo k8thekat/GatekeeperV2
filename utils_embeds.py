@@ -99,11 +99,17 @@ class botEmbeds():
         embed.set_footer(text=f'InstanceID: {server.InstanceID}')
         return embed
 
-    async def server_display_embed(self, server_list: list[DB.DBServer], guild: discord.Guild = None) -> list[discord.Embed]:
+    async def server_display_embed(self, server_list: list[DB.DBServer], banner_name: str, guild: discord.Guild = None, ) -> list[discord.Embed]:
         """Used for Banner Groups and Display"""
         embed_list = []
         for db_server in server_list:
-            server = self.AMPInstances[db_server.InstanceID]
+            if not isinstance(db_server, DB.DBServer):
+                continue
+
+            try:
+                server = self.AMPInstances[db_server.InstanceID]
+            except:
+                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
 
             # If no DB Server or the Server is Hidden; skip.
             if db_server == None or db_server.Hidden == 1:

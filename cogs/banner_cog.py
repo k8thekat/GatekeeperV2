@@ -137,7 +137,7 @@ class Banner(commands.Cog):
         await sent_msg.edit(content='**Banner Editor**', attachments=[banner_file], view=editor_view)
 
     async def _embed_generator(self, banner_name: str, server_list: list[str], message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
-        embed_list = await self.eBot.server_display_embed(server_list=server_list, guild=discord_guild)
+        embed_list = await self.eBot.server_display_embed(server_list=server_list, guild=discord_guild, banner_name=banner_name)
         if len(embed_list) == 0:
             self.logger.warn('We failed to find any Banners for your Instances.')
             return
@@ -184,12 +184,18 @@ class Banner(commands.Cog):
 
     async def _banner_generator(self, banner_name: str, server_list: list[str], message_list: list[discord.Message], discord_guild: discord.Guild, discord_channel: discord.TextChannel):
         banner_image_list = []
+
         for db_server in server_list:
+
             if db_server.Hidden == 1:
                 continue
 
             # We need the AMP object for the Banner Generator.
-            amp_server = self.AMPHandler.AMP_Instances[db_server.InstanceID]
+            try:
+                amp_server = self.AMPHandler.AMP_Instances[db_server.InstanceID]
+            except:
+                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
+
             banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
             # Store all the images as a `discord.File` for ease of iterations.
             banner_image_list.append(banner_file)
