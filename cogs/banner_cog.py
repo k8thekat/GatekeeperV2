@@ -187,6 +187,9 @@ class Banner(commands.Cog):
 
         for db_server in server_list:
 
+            if db_server == None:
+                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
+
             if db_server.Hidden == 1:
                 continue
 

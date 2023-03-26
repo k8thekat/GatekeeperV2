@@ -103,8 +103,8 @@ class botEmbeds():
         """Used for Banner Groups and Display"""
         embed_list = []
         for db_server in server_list:
-            if not isinstance(db_server, DB.DBServer):
-                continue
+            if db_server == None:
+                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
 
             try:
                 server = self.AMPInstances[db_server.InstanceID]
