@@ -10,4 +10,5 @@ cogs/dev_cog.py
 cogs/testcog.py
 *.disabled
 discordBot.db*
+.env
 sqlite3.exe
