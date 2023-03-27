@@ -3,8 +3,11 @@ from multiprocessing import Value
 from typing import Union
 import json
 import pathlib
-from numpy import isin
-from requests import Response, post, get
+import traceback
+
+import aiohttp
+from aiohttp import ClientResponse
+
 import time
 import sys
 import logging
@@ -47,7 +50,7 @@ class AMP_API():
         if self._InstanceID == '0':
             self._val_settings()
 
-    def _call_api(self, api: str, parameters: dict[str, str]):
+    async def _call_api(self, api: str, parameters: dict[str, str]):
         """This is the API Call function"""
         # TODO -- Use ValueError()
         # set vars for typical return errors depending on the issue returned.
@@ -56,13 +59,14 @@ class AMP_API():
         # UNAUTHORIZED_ACCESS:str = "AMP/Gatekeeper does not have the required permissions to interact with this instance."
         # `ValueError(UNAUTHORIZED_ACCESS) or ValueError(FAILED_STATUS)`
         self._logger.info(f'Function {api} was called with {parameters}')
-        _post_req: Response | None
+        _post_req: ClientResponse | None
         jsonhandler = json.dumps(parameters)
 
         # while (True):
         try:
-            _post_req = post(self._URL + api, headers=self._AMPheader, data=jsonhandler)
-            self._logger.debug(f'Post Request Prints: {_post_req.json()}')
+            async with aiohttp.ClientSession() as session:
+                _post_req = session.post(self._URL + api, headers=self._AMPheader, data=jsonhandler)
+                self._logger.debug(f'Post Request Prints: {_post_req.json()}')
             # self._logger.error(f'{self._InstanceName}: AMP API recieved no Data; sleeping for 5 seconds...')
             # time.sleep(5)
         # FIXME - Need to not catch all Excepts..
@@ -152,7 +156,8 @@ class AMP_API():
             self.AMPURL = self.AMPURL[:-1]
 
         # lets attempt to connect to the url with request
-        result = get(url=self.AMPURL)
+        async with aiohttp.ClientSession() as session:
+            result = session.get(url=self.AMPURL)
         if not result.status_code == 200:
             self._logger.critical(f"** Please verify your AMPurl, it responded with the response code: {result.status_code}")
 
