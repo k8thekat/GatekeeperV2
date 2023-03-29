@@ -32,7 +32,7 @@ import threading
 from typing import Union
 from amp_handler import AMPHandler
 
-from db import DBServer, Database, DBHandler, DBConfig
+from DB import DBServer, Database, DBHandler, DBConfig
 from amp_api import AMP_API
 from amp_console import AMPConsole
 

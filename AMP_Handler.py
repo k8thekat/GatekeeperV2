@@ -31,7 +31,7 @@ from threading import Thread
 import requests
 
 
-from db import DBConfig, DBHandler, Database
+from DB import DBConfig, DBHandler, Database
 from amp_instance import AMPInstance
 
 from dotenv.main import load_dotenv

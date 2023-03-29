@@ -36,8 +36,6 @@ from discord.app_commands import Choice
 # Custom scripts
 from amp_handler import AMPHandler
 from amp_instance import AMPInstance
-import db
-from db import DBConfig, Database, DBHandler
 from typing import Union
 
 from utils.permissions import Gatekeeper_Permissions
@@ -47,10 +45,13 @@ from utils.check import role_check
 from utils.name_converters import name_to_uuid_MC
 from utils.emojis import Gatekeeper_Emojis
 
+from argparse import ArgumentParser
+
 Version = 'beta-4.5.4'
 
 
 class Gatekeeper(commands.Bot):
+    # FIXME -- Move all DB related vars to here
     def __init__(self, Version: str) -> None:
         self._logger = logging.getLogger()
         self.DBHandler: DBHandler = db.getDBHandler()
@@ -82,6 +83,7 @@ class Gatekeeper(commands.Bot):
         self.Whitelist_wait_list: dict[int, str] = {}
 
     async def setup_hook(self) -> None:
+
         self._logger.info(f'Discord Version: {discord.__version__}  // Gatekeeper v2 Version: {client.Bot_Version} // Python Version {sys.version}')
         if self.Bot_Version != Version:
             self.update_loop.start()
@@ -142,20 +144,11 @@ class Gatekeeper(commands.Bot):
         return True
 
 
-async def autocomplete_loadedcogs(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-    """Cog Autocomplete template."""
-    choice_list: list[str] = []
-    for key in client.cogs:
-        if key not in choice_list:
-            choice_list.append(key)
-    return [app_commands.Choice(name=choice, value=choice) for choice in choice_list if current.lower() in choice.lower()]
-
 client: Gatekeeper = Gatekeeper(Version=Version)
 
+
+@commands.hybrid_command(name='gk_sync')
 # This needs to be a hybrid and a slash command so people can sync commands when they invite the bot.
-
-
-@commands.hybrid_command()(name='gk_sync')
 @role_check()
 async def bot_utils_sync(context: GatekeeperGuildContext, local: bool = True, reset: bool = False):
     """Syncs Bot Commands to the current guild this command was used in."""
@@ -168,13 +161,13 @@ async def bot_utils_sync(context: GatekeeperGuildContext, local: bool = True, re
         if local:
             # Local command tree reset
             client.tree.clear_commands(guild=context.guild)
-            client._logger.command(f'Bot Commands Reset Locally and Sync\'d: {await client.tree.sync(guild=context.guild)}')  # type:ignore
+            client._logger.info(f'Bot Commands Reset Locally and Sync\'d: {await client.tree.sync(guild=context.guild)}')  # type:ignore
             return await context.send('**WARNING** Resetting Gatekeeper Commands Locally...', ephemeral=True, delete_after=client.Message_Timeout)
 
         elif context.author.id == 144462063920611328:
             # Global command tree reset, limited by k8thekat discord ID
             client.tree.clear_commands(guild=None)
-            client._logger.command(f'Bot Commands Reset Global and Sync\'d: {await client.tree.sync(guild=None)}')  # type:ignore
+            client._logger.info(f'Bot Commands Reset Global and Sync\'d: {await client.tree.sync(guild=None)}')  # type:ignore
             return await context.send('**WARNING** Resetting Gatekeeper Commands Globally...', ephemeral=True, delete_after=client.Message_Timeout)
         else:
             return await context.send('**ERROR** You do not have permission to reset the commands.', ephemeral=True, delete_after=client.Message_Timeout)
@@ -182,15 +175,29 @@ async def bot_utils_sync(context: GatekeeperGuildContext, local: bool = True, re
     if local:
         # Local command tree sync
         client.tree.copy_global_to(guild=context.guild)
-        client._logger.command(f'Bot Commands Sync\'d Locally: {await client.tree.sync(guild=context.guild)}')  # type:ignore
+        client._logger.info(f'Bot Commands Sync\'d Locally: {await client.tree.sync(guild=context.guild)}')  # type:ignore
         return await context.send(f'Successfully Sync\'d Gatekeeper Commands to {context.guild.name}...', ephemeral=True, delete_after=client.Message_Timeout)
 
     elif context.author.id == 144462063920611328:
         # Global command tree sync, limited by k8thekat discord ID
-        client._logger.command(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild=None)}')  # type:ignore
+        client._logger.info(f'Bot Commands Sync\'d Globally: {await client.tree.sync(guild=None)}')  # type:ignore
         await context.send('Successfully Sync\'d Gatekeeper Commands Globally...', ephemeral=True, delete_after=client.Message_Timeout)
 
 
 def client_run(tokens):
+    # TODO - Maybe move all Namespace Parser logic to here?
+    # -- Move logger init from start.py here
+    # -- Move pip version check from start.py here
+    # -- Move python version check from start.py here
+    # -- Rename the thread here too.
+    # Use action="store_true", then check the arg via "args.name" eg. "args.dev"
+    # By default argparase has -h/--h.
+    parser: ArgumentParser = ArgumentParser(description='Gatekeeper - AMP Discord Bot')
+    parser.add_argument("-super", help='This leaves AMP Super Admin role intact *Warning* Potential security risk', required=False, action="store_true")
+    # All the args below are used for development purpose.
+    parser.add_argument("-dev", help='Enable development logger statments.', required=False, action="store_true")
+    parser.add_argument("-debug", help='Enables DEBUGGING level for logging', required=False, action="store_true")
+    parser.add_argument("arg1", action="store_true")
+    client._args = parser.parse_args()
     client._logger.info('Gatekeeper v2 Intializing...')
     client.run(tokens.token, reconnect=True, log_handler=None)

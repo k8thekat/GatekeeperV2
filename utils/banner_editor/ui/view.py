@@ -10,16 +10,9 @@ from utils.banner_editor.ui.select import Copy_To_Select
 from utils.banner_editor.edited_banner import Edited_DB_Banner
 from utils.banner_editor.ui.button import Save_Banner_Button, Reset_Banner_Button, Cancel_Banner_Button, Copy_To_All_Banner_Button, Copy_To_Banner_Button
 from utils.banner_editor.ui.select import Banner_Editor_Select
-from amp import AMPInstance
+from amp_instance import AMPInstance
 from amp_handler import AMPHandler
-from db import DBBanner
-
-
-class Copy_To_View(View):
-    def __init__(self, *, timeout: Optional[float] = None, select_options: dict[str, str], edited_banner: Edited_DB_Banner):
-        super().__init__(timeout=timeout)
-        self._edited_banner: Edited_DB_Banner = edited_banner
-        self.add_item(Copy_To_Select(options=select_options, edited_banner=self._edited_banner))
+from DB import DBBanner
 
 
 class Banner_Editor_View(View):

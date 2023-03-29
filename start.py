@@ -64,16 +64,16 @@ class Setup:
         self._logger = logging.getLogger()
         self._logger.info(f'Current Startup Args:{self.args}')  # type:ignore
 
-        # This sets up our SQLite Database!
-        self._DBHandler = DBHandler()
-        self._DB = self._DBHandler.DB
-        self._DB_Config = self._DB.DBConfig
-        self._logger.info(f'SQL Database Version: {self._DBHandler.DB_Version} // SQL Database: {self._DBHandler.SuccessfulDatabase}')
+        # # This sets up our SQLite Database!
+        # self._DBHandler = DBHandler()
+        # self._DB = self._DBHandler.DB
+        # self._DB_Config = self._DB.DBConfig
+        # self._logger.info(f'SQL Database Version: {self._DBHandler.DB_Version} // SQL Database: {self._DBHandler.SuccessfulDatabase}')
 
-        self.AMP_Thread = threading.Thread(target=AMPHandler, name='AMPHandler', args=[self.args, ])
-        self.AMP_Thread.start()
-        while (AMPHandler.AMP_SETUP == False):
-            time.sleep(.5)
+        # self.AMP_Thread = threading.Thread(target=AMPHandler, name='AMPHandler', args=[self.args, ])
+        # self.AMP_Thread.start()
+        # while (AMPHandler.AMP_SETUP == False):
+        #     time.sleep(.5)
 
         Gatekeeper.client_run(self.TOKEN)
 

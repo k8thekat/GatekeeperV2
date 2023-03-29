@@ -1,5 +1,4 @@
 from __future__ import annotations
-from multiprocessing import Value
 from typing import Union
 import json
 import pathlib
@@ -205,13 +204,13 @@ class AMP_API():
                 if isinstance(result, BaseException):
                     return result
 
-                if hasattr(result, "sessionID"):
+                elif hasattr(result, "sessionID"):
                     self._session_id = result['sessionID']
-                    self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
+                    self._SESSION_IDS[self._InstanceID] = self._session_id
                     self.Running = True
 
                 else:
-                    self._logger.warning(f'{self.FriendlyName} - Instance is Offline')
+                    self._logger.warning(f'{self._InstanceName} - Instance is Offline')
                     self.Running = False
                     return False
 
@@ -219,7 +218,7 @@ class AMP_API():
                 self._logger.dev(f'Core/Login Exception: {traceback.format_exc()}')
                 self._logger.dev(result)
 
-                self._logger.warning(f'{self.FriendlyName} - Instance is Offline')
+                self._logger.warning(f'{self._InstanceName} - Instance is Offline')
                 self.Running = False
                 return False
 

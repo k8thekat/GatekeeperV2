@@ -4,7 +4,9 @@ import re
 from PIL import Image
 import io
 
-from discord import File
+from discord import File, Interaction
+from discord.app_commands import Choice
+
 
 async def count_lines(path: str, filetype: str = ".py", skip_venv: bool = True) -> int:
     lines: int = 0
@@ -32,10 +34,3 @@ async def count_others(path: str, filetype: str = ".py", file_contains: str = "d
         elif i.is_dir():
             line_count += await count_others(i.path, filetype, file_contains)
     return line_count
-
-def banner_file_handler(image:Image.Image) -> File:
-    with io.BytesIO() as image_binary:
-        image.save(image_binary, 'PNG')
-        image_binary.seek(0)
-        return File(fp=image_binary, filename='image.png')
-    

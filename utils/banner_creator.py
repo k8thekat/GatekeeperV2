@@ -3,15 +3,21 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageColor
 import pathlib
 import random
 
-import db
+from typing import TYPE_CHECKING
+
+import DB
 import amp_handler
 import logging
+
+if TYPE_CHECKING:
+    from DB import DBBanner
+    from amp_instance import AMPInstance
 
 
 class Banner_Generator():
     """Custom Banner Generator for Gatekeeper. """
 
-    def __init__(self, AMPServer: amp_handler.amp.AMPInstance, DBBanner: db.DBBanner, Banner_path: str = None, blur_background: bool = None):
+    def __init__(self, AMPServer: AMPInstance, DBBanner: DBBanner, Banner_path: str = None, blur_background: bool = None):
         # Turn that str into a Purepath for cross OS support
         self._font = pathlib.Path("resources/fonts/ReemKufiFun-Regular.ttf").as_posix()
         self._logger = logging.getLogger()

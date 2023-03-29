@@ -1,5 +1,8 @@
 from __future__ import annotations
-from db import DBBanner
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from DB import DBBanner
 
 
 class Edited_DB_Banner(DBBanner):
@@ -14,7 +17,7 @@ class Edited_DB_Banner(DBBanner):
         self._invalid_keys: list[str] = ['_db', 'ServerID', 'background_path']
         self.reset_db()
 
-    def save_db(self):
+    def save_db(self) -> DBBanner:
         for key in self._db_banner._attr_list:
             if key in self._invalid_keys:
                 continue
@@ -24,7 +27,7 @@ class Edited_DB_Banner(DBBanner):
 
         return self._db_banner
 
-    def reset_db(self):
+    def reset_db(self) -> DBBanner:
         for key in self._db_banner._attr_list:
             if key in self._invalid_keys:
                 continue

@@ -1,14 +1,23 @@
 from __future__ import annotations
 from discord.ui import Modal
-from discord import Interaction
+from discord import Interaction, Message
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 import difflib
 
-import amp_handler
+from amp_handler import AMPHandler
 from utils.banner_editor.ui.textinput import Copy_To_TextInput
-from utils.banner_editor.ui.view import Copy_To_View
+from utils.banner_editor.ui.view2 import Copy_To_View
 from utils.banner_editor.edited_banner import Edited_DB_Banner
+from utils.banner_editor.ui.textinput import Banner_Blur_Input, Banner_Color_Input
+from utils.banner_editor.util import banner_file_handler
+from utils.banner_creator import Banner_Generator
+
+
+if TYPE_CHECKING:
+    from amp_instance import AMPInstance
+    from utils.banner_editor.ui.view import Banner_Editor_View
+    from amp_instance import AMPInstance
 
 
 class Copy_To_Modal(Modal):
@@ -17,18 +26,19 @@ class Copy_To_Modal(Modal):
     def __init__(self, edited_banner: Edited_DB_Banner, title: str = "Copy To Server", timeout: Optional[float] = None) -> None:
         super().__init__(title=title, timeout=timeout)
         self._edited_banner: Edited_DB_Banner = edited_banner  # Need to pass this along to our view...
-        self._amp_instance_names: dict[str, str] = amp_handler.getAMPHandler().get_AMP_instance_names()
+        self._amp_instance_names: dict[str, str] = AMPHandler().get_AMP_instance_names()  # FIXME -- Wrong method being called.
         self._txt_input: Copy_To_TextInput = Copy_To_TextInput()
         self.add_item(self._txt_input)
 
     async def on_submit(self, interaction: Interaction) -> None:
         result: list[str] = difflib.get_close_matches(self._txt_input.value, self._amp_instance_names.values(), n=5)
-        print(result)
 
-        # TODO need to generate our view with the results.
         result_options: dict[str, str] = {}
         for value in result:
-            result_options[value] = self._amp_instance_names[value]
+            for instanceid in self._amp_instance_names:
+                if self._amp_instance_names[instanceid] == value:
+                    result_options[instanceid] = value
+                    break
 
         copy_to_view: Copy_To_View = Copy_To_View(select_options=result_options, edited_banner=self._edited_banner)
         await interaction.response.send_message(content=f"{self._txt_input.value} was provided. Here is the matching Servers..", view=copy_to_view)
@@ -36,7 +46,7 @@ class Copy_To_Modal(Modal):
 
 
 class Banner_Modal(Modal):
-    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: discord.Message, amp_server: amp_handler.amp.AMPInstance, timeout=None, custom_id='Banner Modal'):
+    def __init__(self, input_type: str, select_value: str, title: str, view: Banner_Editor_View, edited_db_banner: Edited_DB_Banner, banner_message: Message, amp_server: AMPInstance, timeout=None, custom_id='Banner Modal'):
         self._edited_db_banner = edited_db_banner
         self._banner_message = banner_message
         self._banner_view = view
@@ -55,7 +65,7 @@ class Banner_Modal(Modal):
             self._int_code_input = Banner_Blur_Input(edited_db_banner=self._edited_db_banner, select_value=self._select_value, view=self._banner_view)
             self.add_item(self._int_code_input)
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: Interaction):
         # Depending on the Selection made; changes the validation code and the reply.
         if self._input_type == 'int':
             if await self._int_code_input.callback() == False:
@@ -69,4 +79,4 @@ class Banner_Modal(Modal):
         if self._banner_view._first_interaction:
             await interaction.response.defer()
         # Then we send the updated Banner object to the View.
-        await self._banner_message.edit(attachments=[banner_file_handler(BC.Banner_Generator(self._amp_server, self._edited_db_banner)._image_())], view=self._banner_view)
+        await self._banner_message.edit(attachments=[banner_file_handler(Banner_Generator(self._amp_server, self._edited_db_banner)._image_())], view=self._banner_view)
