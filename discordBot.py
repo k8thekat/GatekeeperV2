@@ -37,7 +37,7 @@ import AMP_Handler
 import DB
 from typing import Union
 
-Version = 'beta-4.5.4'
+Version = 'beta-4.5.5'
 
 
 class Gatekeeper(commands.Bot):

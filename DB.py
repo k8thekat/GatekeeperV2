@@ -683,6 +683,15 @@ class Database:
         cur.close()
         return banner_info
 
+    def get_all_bannergroup_messages(self):
+        """Grabs all entries inside BannerGroupMessages table"""
+        (ret, cur) = self._fetchone("""SELECT count(Discord_Message_ID) AS num FROM BannerGroupMessages""", ())
+        cur.close()
+        if not ret:
+            return 0
+        else:
+            return ret["num"]
+
     def _AddConfig(self, Name, Value):
         self._execute("Insert into config(Name, Value) values(?, ?)", (Name, Value))
         (ret, cur) = self._fetchone("Select ID from Config where Name=?", (Name,))

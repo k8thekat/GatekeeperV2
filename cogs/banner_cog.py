@@ -20,6 +20,7 @@
 
 '''
 from __future__ import annotations
+from importlib.resources import is_resource
 import os
 import logging
 import pathlib
@@ -74,6 +75,7 @@ class Banner(commands.Cog):
 
         if self.DBConfig.GetSetting('Banner_Auto_Update') == True:
             self.server_display_update.start()
+            self.banner_loop_time_control.start()
             self.logger.dev(f'**{self.name.title()}** Server Display Banners Task Loop is Running: {self.server_display_update.is_running()}')
 
         self.logger.info(f'**SUCCESS** Loading Module **{self.name.title()}**')
@@ -256,6 +258,20 @@ class Banner(commands.Cog):
                 await asyncio.sleep(2)
 
     @tasks.loop(minutes=1)
+    async def banner_loop_time_control(self):
+        """Dynamically adjusts the `server_display_update` loop time."""
+        base_time = 60  # seconds
+        # for each message we have in the DB; lets add to our base_time so we can *hopefully* avoid API ratelimit from discord.
+        num_messages = self.DB.get_all_bannergroup_messages()
+        base_time += (num_messages * 10)
+
+        if self.server_display_update.seconds == base_time:
+            return
+        else:
+            self.logger.info(f'We adjusted our Banner Update time from {self.server_display_update.seconds} seconds to {base_time} seconds.')
+            self.server_display_update.change_interval(seconds=base_time)
+
+    @tasks.loop(seconds=60)
     async def server_display_update(self):
         """This will handle the constant updating of Server Display Messages"""
         if not self._client.is_ready():
@@ -478,9 +494,21 @@ class Banner(commands.Cog):
 
         if flag.value == 1:
             self.DBConfig.SetSetting('Banner_Auto_Update', True)
-            return await context.send(f'All set! The bot will __Auto Update the Banners__ every minute.', ephemeral=True, delete_after=self._client.Message_Timeout)
+
+            if not self.server_display_update.is_running():
+                self.server_display_update.start()
+            if not self.banner_loop_time_control.is_running():
+                self.banner_loop_time_control.start()
+
+            return await context.send(f'All set! The bot will __Auto Update the Banners__ .', ephemeral=True, delete_after=self._client.Message_Timeout)
         if flag.value == 0:
             self.DBConfig.SetSetting('Banner_Auto_Update', False)
+
+        if self.server_display_update.is_running():
+            self.banner_loop_time_control.stop()
+        if self.banner_loop_time_control.is_running():
+            self.server_display_update.stop()
+
             return await context.send(f"Well, I guess I won't update the Banners anymore.", ephemeral=True, delete_after=self._client.Message_Timeout)
         else:
             return await context.send('Hey! You gotta pick `True` or `False`.', ephemeral=True, delete_after=self._client.Message_Timeout)
