@@ -28,7 +28,7 @@ import time
 import logging
 from typing import Union
 
-from db_update import DB_Update
+from DB_Update import DB_Update
 
 
 def dump_to_json(data):
@@ -52,44 +52,44 @@ class DBHandler():
                 cls, *args, **kwargs)
         return cls._instance
 
-    def _setup(self):
+    def __init__(self):
         global DB_Version
-        self.logger = logging.getLogger(__name__)
-        self.DB = Database(Handler=self)
-        self.DBConfig = self.DB.DBConfig
-        self.SuccessfulDatabase = True
-        self.Bot_Version = ''
-        self.bot_sync_required = False
+        self._logger = logging.getLogger(__name__)
+        self._DB = Database(Handler=self)
+        self._DBConfig = self._DB.DBConfig
+        self._SuccessfulDatabase = True
+        self._Bot_Version = ''
+        self._bot_sync_required = False
 
         # Always update this value when changing Tables!
-        self.DB_Version = DB_Version
+        self._DB_Version = DB_Version
 
         #self.DBConfig.SetSetting('DB_Version', 2.5)
         # This should ONLY BE TRUE on new Database's going forward.
-        if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
-            DB_Update(self.DB, 1.0)
+        if self._DBConfig.GetSetting('DB_Version') == None and self._DB.DBExists:
+            DB_Update(self._DB, 1.0)
             return
 
         # This is to handle 1.0.0 Converting to new DB Version systems.
-        if type(self.DBConfig.GetSetting('DB_Version')) == str and self.DBConfig.GetSetting('DB_Version') == '1.0.0':
-            self.DBConfig.SetSetting('DB_Version', '1.0')
+        if type(self._DBConfig.GetSetting('DB_Version')) == str and self._DBConfig.GetSetting('DB_Version') == '1.0.0':
+            self._DBConfig.SetSetting('DB_Version', '1.0')
 
         # This handles version checks and calling all updates from version 1.0
-        if self.DB_Version > float(self.DBConfig.GetSetting('DB_Version')):
-            self.logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}")
-            self.DBUpdate = DB_Update(self.DB, float(self.DBConfig.GetSetting('DB_Version')))
+        if self._DB_Version > float(self._DBConfig.GetSetting('DB_Version')):
+            self._logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self._DB_Version}, your Database is on Version: {self._DBConfig.GetSetting('DB_Version')}")
+            self.DBUpdate = DB_Update(self._DB, float(self._DBConfig.GetSetting('DB_Version')))
 
-        self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
+        self._logger.info(f'DB Handler Initialization...DB Version: {self._DBConfig.GetSetting("DB_Version")}')
 
-    def dbServerConsoleSetup(self, server):
-        """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
-        self.DB_Server = self.DB.GetServer(server.InstanceID)
-        try:
-            self.DB_Server.Console_Flag = True
-            self.DB_Server.Console_Filtered = True
-            self.DB_Server.Discord_Console_Channel = None  # Should be a str, can be an int. eg 289450670581350401
-        except:
-            self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
+    # def dbServerConsoleSetup(self, server):
+    #     """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
+    #     self.DB_Server = self._DB.GetServer(server.InstanceID)
+    #     try:
+    #         self.DB_Server.Console_Flag = True
+    #         self.DB_Server.Console_Filtered = True
+    #         self.DB_Server.Discord_Console_Channel = None  # Should be a str, can be an int. eg 289450670581350401
+    #     except:
+    #         self._logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
 
 
 class Database:
@@ -103,7 +103,7 @@ class Database:
         if Handler:
             self.DBHandler = Handler
         else:
-            self.DBHandler = getDBHandler()
+            self.DBHandler = DBHandler()
 
         self._db = sqlite3.connect("discordBot.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, check_same_thread=False)
         self._db.row_factory = sqlite3.Row

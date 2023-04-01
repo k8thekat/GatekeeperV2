@@ -1,16 +1,64 @@
 import logging
-import db
 import pathlib
 import json
 import sys
 
 from discord.ext import commands
+from discord import Permissions
 
 from typing import Union
-from db import DBUser, DBHandler
+from DB import DBUser, DBHandler
+
+Gatekeeper_Default_Permissions: Permissions = Permissions.general()
+# general()
+# view channels
+# manage channels
+# manage roles
+# manage emojis and stickers
+# view audit log
+# view server insights
+# manage webhooks
+# manage server
+
+
+# membership()
+Gatekeeper_Default_Permissions.change_nickname: bool = True
+
+# create invite
+# change nickname
+# manage nicknames
+# kick members
+# ban members
+# timeout members
+
+# text()
+Gatekeeper_Default_Permissions.send_messages: bool = True
+Gatekeeper_Default_Permissions.send_messages_in_threads: bool = True
+# send message and create posts
+# send message in threads and posts
+# create public
+# create private threads
+# embed links
+# attach files
+# add reactions
+# use external emoji
+# use external stickers
+# mention @everyone, @here and all roles
+# manage messages
+# manage threads and posts
+# read message history
+# send TTS
+# use app commands
+
+# events()
+# manage events
+
+# advanced()
+# administrator
 
 
 class Gatekeeper_Permissions():
+    # FIXME -- Rework entire class -- May retire all this functionality
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, "_instance"):
             cls._instance = super(Gatekeeper_Permissions, cls).__new__(
@@ -19,8 +67,8 @@ class Gatekeeper_Permissions():
 
     def __init__(self) -> None:
         self.logger = logging.getLogger()
-        self.DBHandler: DBHandler = db.getDBHandler()
-        self.DB = self.DBHandler.DB
+        self.DBHandler: DBHandler = DBHandler()
+        self.DB = self.DBHandler._DB
 
         self._last_modified: float = 0
         self.permissions = None
@@ -134,15 +182,3 @@ class Gatekeeper_Permissions():
                     else:
                         continue
         return None
-
-
-# Used to maintain a "Global" botPerms() object.
-bPerms = None  # type:ignore
-
-
-def get_botPerms() -> Gatekeeper_Permissions:
-    """Returns the Global botPerms() object; otherwise creates it."""
-    global bPerms
-    if bPerms == None:
-        bPerms: Gatekeeper_Permissions = Gatekeeper_Permissions()
-    return bPerms

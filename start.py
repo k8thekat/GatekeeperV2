@@ -23,23 +23,14 @@ import sys
 import subprocess
 import argparse
 import pip
-import threading
 from threading import current_thread
-import time
 import logging
 
-import logger
-from amp_handler import AMPHandler
-from db import DBHandler
-
 import Gatekeeper
-from dotenv.main import load_dotenv
-import os
+import logger
 
 
 class Setup:
-    load_dotenv()
-    TOKEN: str = os.environ["TOKEN"].strip()
 
     def __init__(self):
         # Use action="store_true", then check the arg via "args.name" eg. "args.dev"
@@ -50,7 +41,7 @@ class Setup:
         parser.add_argument("-dev", help='Enable development logger statments.', required=False, action="store_true")
         parser.add_argument("-debug", help='Enables DEBUGGING level for logging', required=False, action="store_true")
         parser.add_argument("arg1", action="store_true")
-        self.args = parser.parse_args()
+        self._args = parser.parse_args()
 
         self._pip_setup()
         self._python_ver_check()
@@ -60,9 +51,9 @@ class Setup:
         bot_thread.name = "Gatekeeper"
 
         # Setup Logger functionality.
-        logger.init(self.args)
+        logger.init(self._args)
         self._logger = logging.getLogger()
-        self._logger.info(f'Current Startup Args:{self.args}')  # type:ignore
+        self._logger.info(f'Current Startup Args: {self._args}')
 
         # # This sets up our SQLite Database!
         # self._DBHandler = DBHandler()
@@ -75,7 +66,7 @@ class Setup:
         # while (AMPHandler.AMP_SETUP == False):
         #     time.sleep(.5)
 
-        Gatekeeper.client_run(self.TOKEN)
+        Gatekeeper.client_run(args=self._args)
 
     def _python_ver_check(self):
         if not sys.version_info.major >= 3 and not sys.version_info.minor >= 8:

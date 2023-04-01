@@ -1,22 +1,35 @@
 
-def default_embedmsg(title, context: commands.Context, description=None, field=None, field_value=None) -> discord.Embed:
+import psutil
+import sys
+
+import discord
+from discord import Embed, Interaction
+
+from DB import DBHandler
+from Gatekeeper import Gatekeeper
+from utils.utils import count_lines, count_others
+
+
+def default_embedmsg(title, interaction: Interaction, description=None, field=None, field_value=None) -> Embed:
     """This Embed has only one Field Entry."""
-    embed = discord.Embed(title=title, description=description, color=0x808000)  # color is RED
-    embed.set_author(name=context.author.display_name, icon_url=context.author.avatar)
+    embed = Embed(title=title, description=description, color=0x808000)  # color is RED
+    embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar)
     embed.add_field(name=field, value=field_value, inline=False)
     return embed
 
 
-def bot_settings_embed(context: commands.Context) -> discord.Embed:
+def bot_settings_embed(interaction: Interaction) -> Embed:
     """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
-    embed = discord.Embed(title=f'**Bot Settings**', color=0x71368a)
-    embed.set_thumbnail(url=context.guild.icon)
+    _db_handler: DBHandler = DBHandler()
+    _db_config = _db_handler._DBConfig
+    embed = Embed(title=f'**Bot Settings**', color=0x71368a)
+    embed.set_thumbnail(url=interaction.guild.icon)
     embed.add_field(name='\u1CBC\u1CBC', value='\u1CBC\u1CBC', inline=False)
 
     # This allows me to control which settings display first.
     layout = ["bot_version",
               "db_version",
-              "guild_id",
+              # "guild_id",
               "moderator_role_id",
               "permissions",
               "message_timeout",
@@ -29,14 +42,14 @@ def bot_settings_embed(context: commands.Context) -> discord.Embed:
               "donator_bypass"]
 
     # Take our list and store it in a seperate list and lowercase the strings.
-    db_config_settingslist = [x.lower() for x in self.DBConfig.GetSettingList()]
+    db_config_settingslist = [x.lower() for x in _db_config.GetSettingList()]
     for key in layout:
         # If the key is not in the DB; skip.
         if key not in db_config_settingslist:
             continue
 
         db_config_settingslist.remove(key)
-        value = self.DBConfig.GetSetting(key)
+        value = _db_config.GetSetting(key)
         key = key.lower()
         if key == 'auto_whitelist':
             embed.add_field(name='Auto Whitelisting:', value=f'{"True" if value == 1 else "False"}')
@@ -46,7 +59,7 @@ def bot_settings_embed(context: commands.Context) -> discord.Embed:
 
         elif key == 'whitelist_request_channel':
             if value != 'None':
-                value = context.guild.get_channel(value)
+                value = interaction.guild.get_channel(value)
 
             embed.add_field(name='Whitelist Request Channel:', value=f'{value.name.title() if value != None else "Not Set"}', inline=False)
 
@@ -76,21 +89,21 @@ def bot_settings_embed(context: commands.Context) -> discord.Embed:
         elif key == 'bot_version':
             embed.add_field(name='Gatekeeper Version:', value=f'{value}', inline=True)
 
-        elif key == 'guild_id':
-            if self._client != None and value != 'None':
-                value = self._client.get_guild(value)
+        # elif key == 'guild_id':
+        #     if self._client != None and value != 'None':
+        #         value = interaction..get_guild(value)
 
-                embed.add_field(name='Guild ID:', value=f'{value.name.title() if value != None else "Not Set"}', inline=False)
+        #         embed.add_field(name='Guild ID:', value=f'{value.name.title() if value != None else "Not Set"}', inline=False)
 
         elif key == 'moderator_role_id':
             if value != 'None':
-                value = context.guild.get_role(value)
+                value = interaction.guild.get_role(value)
 
             embed.add_field(name='Moderator Role:', value=f'{value.name.title() if value != None else "Not Set"}', inline=True)
 
         elif key == "donator_role_id":
             if value != 'None':
-                value = context.guild.get_role(value)
+                value = interaction.guild.get_role(value)
 
             embed.add_field(name='Donator Role ID:', value=f'{value.name.title() if value != None else "Not Set"}', inline=True)
 
@@ -99,7 +112,7 @@ def bot_settings_embed(context: commands.Context) -> discord.Embed:
 
     # This iterates through the remaining keys of the Settings List and adds them to the Embed.
     for key in db_config_settingslist:
-        value = self.DBConfig.GetSetting(key)
+        value = _db_config.GetSetting(key)
         key = key.replace("_", " ").title()  # Turns `auto_whitelist`` into `Auto Whitelist`
 
         # For our possible bool entries (0, 1) to True and False respectively.
@@ -108,35 +121,36 @@ def bot_settings_embed(context: commands.Context) -> discord.Embed:
         else:
             embed.add_field(name=key, value=value, inline=False)
 
-        embed.set_footer(text=f'Need help? Visit Kat\'s Paradise https://discord.gg/BtNyU8DFtt')
+        embed.set_footer(text=f"Need help? Visit Kat's Paradise https://discord.gg/BtNyU8DFtt")
     return embed
 
 
-async def bot_about_embed() -> discord.Embed:
+async def bot_about_embed(client: Gatekeeper) -> Embed:
     """Discord Bot Detailed Information Embed"""
     # information = await self._client.application_info()
-    owner = self._client.get_user(144462063920611328)
-    embed = discord.Embed(color=0x71368a)
+    owner = client.get_user(144462063920611328)
+    embed = Embed(color=0x71368a)
     #embed.add_field(name="Latest updates:", value=get_latest_commits(limit=5), inline=False)
 
     embed.set_author(name=f"Made by {owner.name}", icon_url=owner.display_avatar.url)
-    embed.add_field(name="Gatekeeper Version", value=self._client._version)
+    embed.add_field(name="Gatekeeper Version", value=client._version)
     memory_usage = psutil.Process().memory_full_info().uss / 1024**2
     cpu_usage = psutil.cpu_percent()
     embed.add_field(name="Discord Version", value=discord.__version__)
     embed.add_field(name="System/Python Version", value=sys.version)
-    embed.add_field(name="SQL DB Version", value=self.DBHandler.DB_Version)
-    embed.add_field(name="SQL DB Exists", value=self.DBHandler.SuccessfulDatabase)
-    embed.add_field(name="AMP Connectected", value=self.AMPHandler.SuccessfulConnection)
+    embed.add_field(name="SQL DB Version", value=client._DBHandler._DB_Version)
+    embed.add_field(name="SQL DB Exists", value=client._DBHandler._SuccessfulDatabase)
+    # FIXME -- This may return; unsure if I want to make it apart of the main bot or a cog.
+    #embed.add_field(name="AMP Connectected", value=client._AMPHandler.SuccessfulConnection)
     embed.add_field(name="Process", value=f"{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU")
-    embed.add_field(name="Uptime", value=f"{self._uptime}")
+    embed.add_field(name="Uptime", value=f"{client._uptime}")
 
     try:
         embed.add_field(
             name="Lines",
-            value=f"Lines: {await self.uBot.count_lines('./', '.py'):,}"
-            f"\nFunctions: {await self.uBot.count_others('./', '.py', 'def '):,}"
-            f"\nClasses: {await self.uBot.count_others('./', '.py', 'class '):,}",
+            value=f"Lines: {await count_lines('./', '.py'):,}"
+            f"\nFunctions: {await count_others('./', '.py', 'def '):,}"
+            f"\nClasses: {await count_others('./', '.py', 'class '):,}",
         )
     except (FileNotFoundError, UnicodeDecodeError):
         pass

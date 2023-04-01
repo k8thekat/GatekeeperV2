@@ -46,13 +46,13 @@ def init(args) -> None:
     if args.dev:
         logginglevel = logging.DEV  # type:ignore
 
-    # This is for displaying slash commands information for tracing info!
-    command_level = 19
-    command_label = 'COMMAND'
+    # # This is for displaying slash commands information for tracing info!
+    # command_level = 19
+    # command_label = 'COMMAND'
 
-    logs.add_logging_level(command_label, command_level)
-    if args.command:
-        logginglevel = logging.COMMAND  # type:ignore
+    # logs.add_logging_level(command_label, command_level)
+    # if args.command:
+    #     logginglevel = logging.COMMAND  # type:ignore
 
     logging.basicConfig(level=logginglevel, format='%(asctime)s [%(threadName)s] [%(levelname)s]  %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',

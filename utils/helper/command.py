@@ -8,14 +8,15 @@ import traceback
 
 
 class Helper_Command():
+    _logger = logging.getLogger()
+
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, "_instance"):
             cls._instance = super(Helper_Command, cls).__new__(
                 cls, *args, **kwargs)
         return cls._instance
 
-    def _setup(self, client: Bot):
-        self._logger = logging.getLogger("")
+    def __init__(self, client: Bot):
         self._client: Bot = client
         return self
 
