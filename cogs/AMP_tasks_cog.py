@@ -71,39 +71,39 @@ class AMP_Tasks(commands.Cog):
         if message.author == self._client.user:
             return
 
-        # Since Integrations hijacks any commands with a `/` in front of it. We are now going to be using a `.` in front of any command to bypass.
-        if message.content.startswith('.'):
-            # Remove the prefix char.
-            message.content = message.content[1:]
+        for amp_server in self.AMPInstances:
+            self.AMPServer = self.AMPInstances[amp_server]
+            if not self.AMPServer.Running:
+                continue
+            self.AMPServer._ADScheck()
 
-            for amp_server in self.AMPInstances:
-                self.AMPServer = self.AMPInstances[amp_server]
-                if not self.AMPServer.Running:
-                    continue
-                self.AMPServer._ADScheck()
+            # Check and see if our Discord Console Channel matches the current message.id
+            if self.AMPServer.Discord_Console_Channel == message.channel.id:
 
-                # Check and see if our Discord Console Channel matches the current message.id
-                if self.AMPServer.Discord_Console_Channel == message.channel.id:
+                # Makes sure we are not responding to a webhook message (ourselves/bots/etc)
+                if message.webhook_id == None:
+                    # This checks user permissions. Just in case.
+                    if await utils.async_rolecheck(context=context, perm_node='server.console.interact'):
+                        # Since Integrations hijacks any commands with a `/` in front of it. We are now going to be using a `.` in front of any command to bypass.
+                        if message.content.startswith('.'):
+                            # Remove the prefix char.
+                            message.content = message.content[1:]
 
-                    # Makes sure we are not responding to a webhook message (ourselves/bots/etc)
-                    if message.webhook_id == None:
-                        # This checks user permissions. Just in case.
-                        if await utils.async_rolecheck(context=context, perm_node='server.console.interact'):
-                            self.AMPServer.ConsoleMessage(message.content)
-                            return
-
-                # Check and see if our Discord Chat channel matches the message.id
-                if self.AMPServer.Discord_Chat_Channel == message.channel.id:
-                    if message.author == self._client.user:
-                        self.logger.dev('AMP_Tasks_Cog Found my own Message, oops')
+                        self.AMPServer.ConsoleMessage(message.content)
                         return
-                    # If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This is usually a USER sending a message..
-                    if message.webhook_id == None:
-                        # This fetch's a users prefix from the bot_perms.json file.
-                        author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
 
-                        # This calls the generic AMP Function; each server will handle this differently
-                        self.AMPServer.Chat_Message(message.content, author=message.author.name, author_prefix=author_prefix)
+            # Check and see if our Discord Chat channel matches the message.id
+            if self.AMPServer.Discord_Chat_Channel == message.channel.id:
+                if message.author == self._client.user:
+                    self.logger.dev('AMP_Tasks_Cog Found my own Message, oops')
+                    return
+                # If its NOT a webhook (eg a bot/outside source uses webhooks) send the message as normal. This is usually a USER sending a message..
+                if message.webhook_id == None:
+                    # This fetch's a users prefix from the bot_perms.json file.
+                    author_prefix = await self.bPerms.get_role_prefix(str(message.author.id))
+
+                    # This calls the generic AMP Function; each server will handle this differently
+                    self.AMPServer.Chat_Message(message.content, author=message.author.name, author_prefix=author_prefix)
 
         return message
 
