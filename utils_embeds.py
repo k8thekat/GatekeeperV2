@@ -154,7 +154,7 @@ class botEmbeds():
             else:
                 embed.add_field(name='**Player Limit**:', value=str(Users), inline=True)
             embed.add_field(name='**Players Online**:', value=str(User_list), inline=False)
-            embed.set_footer(text=discord.utils.utcnow().strftime('%Y-%m-%d | %H:%M'))
+            embed.set_footer(text=discord.utils.utcnow().strftime('%Y-%m-%d | %H:%M') + " UTC")
             embed_list.append(embed)
 
         return embed_list
