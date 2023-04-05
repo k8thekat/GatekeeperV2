@@ -47,10 +47,8 @@ class botEmbeds():
 
     def default_embedmsg(self, title, context: commands.Context, description=None, field=None, field_value=None) -> discord.Embed:
         """This Embed has only one Field Entry."""
-        embed = discord.Embed(
-            title=title, description=description, color=0x808000)  # color is RED
-        embed.set_author(name=context.author.display_name,
-                         icon_url=context.author.avatar)
+        embed = discord.Embed(title=title, description=description, color=0x808000)  # color is RED
+        embed.set_author(name=context.author.display_name, icon_url=context.author.avatar)
         embed.add_field(name=field, value=field_value, inline=False)
         return embed
 
@@ -61,61 +59,43 @@ class botEmbeds():
         if db_server.DisplayName != None:
             server_name = db_server.DisplayName
 
-        embed = discord.Embed(
-            title=f'__**{server_name}**__ - {[server.TargetName]}', color=0x00ff00, description=server.Description)
+        embed = discord.Embed(title=f'__**{server_name}**__ - {[server.TargetName]}', color=0x00ff00, description=server.Description)
 
         discord_role = db_server.Discord_Role
         if discord_role != None:
-            discord_role = context.guild.get_role(
-                int(db_server.Discord_Role)).name
+            discord_role = context.guild.get_role(int(db_server.Discord_Role)).name
 
         avatar = await self.uBot.validate_avatar(db_server)
         if avatar != None:
             embed.set_thumbnail(url=avatar)
 
         embed.add_field(name=f'Host:', value=str(db_server.Host), inline=False)
-        embed.add_field(name='Donator Only:', value=str(
-            bool(db_server.Donator)), inline=True)
-        embed.add_field(name='Whitelist Open:', value=str(
-            bool(db_server.Whitelist)), inline=True)
+        embed.add_field(name='Donator Only:', value=str(bool(db_server.Donator)), inline=True)
+        embed.add_field(name='Whitelist Open:', value=str(bool(db_server.Whitelist)), inline=True)
         embed.add_field(name='Role:', value=str(discord_role), inline=False)
-        embed.add_field(name='Hidden', value=bool(
-            db_server.Hidden), inline=True)
-        embed.add_field(name='Whitelist Hidden', value=bool(
-            db_server.Whitelist_disabled), inline=True)
+        embed.add_field(name='Hidden', value=bool(db_server.Hidden), inline=True)
+        embed.add_field(name='Whitelist Hidden', value=bool(db_server.Whitelist_disabled), inline=True)
 
-        embed.add_field(name='Filtered Console:', value=str(
-            bool(db_server.Whitelist)), inline=False)
-        embed.add_field(name='Console Filter Type:', value=bool(
-            db_server.Console_Filtered_Type), inline=True)
+        embed.add_field(name='Filtered Console:', value=str(bool(db_server.Whitelist)), inline=False)
+        embed.add_field(name='Console Filter Type:', value=bool(db_server.Console_Filtered_Type), inline=True)
         if db_server.Discord_Console_Channel != None:
-            discord_channel = context.guild.get_channel(
-                db_server.Discord_Console_Channel)
-            embed.add_field(name='Console Channel:',
-                            value=discord_channel.name, inline=False)
+            discord_channel = context.guild.get_channel(db_server.Discord_Console_Channel)
+            embed.add_field(name='Console Channel:', value=discord_channel.name, inline=False)
         else:
-            embed.add_field(name='Console Channel:',
-                            value=db_server.Discord_Console_Channel, inline=False)
+            embed.add_field(name='Console Channel:', value=db_server.Discord_Console_Channel, inline=False)
 
-        embed.add_field(name='Discord Chat Prefix:', value=str(
-            db_server.Discord_Chat_Prefix), inline=False)
+        embed.add_field(name='Discord Chat Prefix:', value=str(db_server.Discord_Chat_Prefix), inline=False)
         if db_server.Discord_Chat_Channel != None:
-            discord_channel = context.guild.get_channel(
-                db_server.Discord_Chat_Channel)
-            embed.add_field(name='Chat Channel:',
-                            value=discord_channel.name, inline=True)
+            discord_channel = context.guild.get_channel(db_server.Discord_Chat_Channel)
+            embed.add_field(name='Chat Channel:', value=discord_channel.name, inline=True)
         else:
-            embed.add_field(name='Chat Channel:',
-                            value=db_server.Discord_Chat_Channel, inline=True)
+            embed.add_field(name='Chat Channel:', value=db_server.Discord_Chat_Channel, inline=True)
 
         if db_server.Discord_Event_Channel != None:
-            discord_channel = context.guild.get_channel(
-                db_server.Discord_Event_Channel)
-            embed.add_field(name='Event Channel:',
-                            value=discord_channel.name, inline=True)
+            discord_channel = context.guild.get_channel(db_server.Discord_Event_Channel)
+            embed.add_field(name='Event Channel:', value=discord_channel.name, inline=True)
         else:
-            embed.add_field(name='Event Channel:',
-                            value=db_server.Discord_Event_Channel, inline=True)
+            embed.add_field(name='Event Channel:', value=db_server.Discord_Event_Channel, inline=True)
         embed.set_footer(text=f'InstanceID: {server.InstanceID}')
         return embed
 
@@ -124,14 +104,12 @@ class botEmbeds():
         embed_list = []
         for db_server in server_list:
             if db_server == None:
-                self.DB.Remove_Server_from_BannerGroup(
-                    banner_groupname=banner_name, instanceID=db_server.InstanceID)
+                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
 
             try:
                 server = self.AMPInstances[db_server.InstanceID]
             except:
-                self.DB.Remove_Server_from_BannerGroup(
-                    banner_groupname=banner_name, instanceID=db_server.InstanceID)
+                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
 
             # If no DB Server or the Server is Hidden; skip.
             if db_server == None or db_server.Hidden == 1:
@@ -161,32 +139,22 @@ class botEmbeds():
             if server.DisplayName != None:
                 server_name = db_server.DisplayName
 
-            embed = discord.Embed(
-                title=f'**=======  {server_name}  =======**', description=server.Description, color=embed_color)
+            embed = discord.Embed(title=f'**=======  {server_name}  =======**', description=server.Description, color=embed_color)
             # This is for future custom avatar support.
             avatar = await self.uBot.validate_avatar(db_server)
             if avatar != None:
                 embed.set_thumbnail(url=avatar)
-            embed.add_field(name='**Instance Status**:',
-                            value=instance_status, inline=False)
-            embed.add_field(name='**Dedicated Server Status**:',
-                            value=dedicated_status, inline=False)
-            embed.add_field(name='**Host**:',
-                            value=str(db_server.Host), inline=True)
-            embed.add_field(name='**Donator Only**:',
-                            value=str(bool(db_server.Donator)), inline=True)
-            embed.add_field(name='**Whitelist Open**:',
-                            value=str(bool(db_server.Whitelist)), inline=True)
+            embed.add_field(name='**Instance Status**:', value=instance_status, inline=False)
+            embed.add_field(name='**Dedicated Server Status**:', value=dedicated_status, inline=False)
+            embed.add_field(name='**Host**:', value=str(db_server.Host), inline=True)
+            embed.add_field(name='**Donator Only**:', value=str(bool(db_server.Donator)), inline=True)
+            embed.add_field(name='**Whitelist Open**:', value=str(bool(db_server.Whitelist)), inline=True)
             if Users != None:
-                embed.add_field(name=f'**Players**:',
-                                value=f'{Users[0]}/{Users[1]}', inline=True)
+                embed.add_field(name=f'**Players**:', value=f'{Users[0]}/{Users[1]}', inline=True)
             else:
-                embed.add_field(name='**Player Limit**:',
-                                value=str(Users), inline=True)
-            embed.add_field(name='**Players Online**:',
-                            value=str(User_list), inline=False)
-            embed.set_footer(text=discord.utils.utcnow().strftime(
-                '%Y-%m-%d | %H:%M') + " UTC")
+                embed.add_field(name='**Player Limit**:', value=str(Users), inline=True)
+            embed.add_field(name='**Players Online**:', value=str(User_list), inline=False)
+            embed.set_footer(text=discord.utils.utcnow().strftime('%Y-%m-%d | %H:%M') + " UTC")
             embed_list.append(embed)
 
         return embed_list
@@ -207,8 +175,7 @@ class botEmbeds():
 
         embed_color = 0x71368a
         if db_server.Discord_Role != None:
-            db_server_role = context.guild.get_role(
-                int(db_server.Discord_Role))
+            db_server_role = context.guild.get_role(int(db_server.Discord_Role))
             if db_server_role != None:
                 embed_color = db_server_role.color
 
@@ -216,37 +183,30 @@ class botEmbeds():
         if server.DisplayName != None:
             server_name = db_server.DisplayName
 
-        embed = discord.Embed(title=f"{server_name} - [{server.TargetName}]",
-                              description=f'Instance Server Status: **{instance_status}**', color=embed_color)
+        embed = discord.Embed(title=f"{server_name} - [{server.TargetName}]", description=f'Instance Server Status: **{instance_status}**', color=embed_color)
 
         avatar = await self.uBot.validate_avatar(db_server)
         if avatar != None:
             embed.set_thumbnail(url=avatar)
 
-        embed.add_field(name='**Dedicated Server Status**:',
-                        value=server_status, inline=True)
+        embed.add_field(name='**Dedicated Server Status**:', value=server_status, inline=True)
 
         if db_server.Host != None:
             embed.add_field(name=f'Host: ', value=db_server.Host, inline=True)
 
         # embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False)
-        embed.add_field(name='Donator Only:', value=str(
-            bool(db_server.Donator)), inline=True)
-        embed.add_field(name='Whitelist Open:', value=str(
-            bool(db_server.Whitelist)), inline=True)
+        embed.add_field(name='Donator Only:', value=str(bool(db_server.Donator)), inline=True)
+        embed.add_field(name='Whitelist Open:', value=str(bool(db_server.Whitelist)), inline=True)
         # embed.add_field(name='\u1CBC\u1CBC',value='\u1CBC\u1CBC',inline=False) #This Generates a BLANK Field entirely.
 
         if server.ADS_Running:
             embed.add_field(name='TPS', value=TPS, inline=True)
-            embed.add_field(name='Player Count',
-                            value=f'{Users[0]}/{Users[1]}', inline=True)
-            embed.add_field(name='Memory Usage',
-                            value=f'{Memory[0]}/{Memory[1]}', inline=True)
+            embed.add_field(name='Player Count', value=f'{Users[0]}/{Users[1]}', inline=True)
+            embed.add_field(name='Memory Usage', value=f'{Memory[0]}/{Memory[1]}', inline=True)
             embed.add_field(name='CPU Usage', value=f'{CPU}/100%', inline=True)
             #!UPTIME is disabled until AMP Impliments the feature.
-            # embed.add_field(name='Uptime', value=Uptime, inline=True)
-            embed.add_field(name='Players Online',
-                            value=Users_Online, inline=True)
+            #embed.add_field(name='Uptime', value=Uptime, inline=True)
+            embed.add_field(name='Players Online', value=Users_Online, inline=True)
         embed.set_footer(text=f'InstanceID: {server.InstanceID}')
         return embed
 
@@ -258,8 +218,7 @@ class botEmbeds():
         embed_color = 0x71368a
         if db_server != None:
             if db_server.Discord_Role != None:
-                db_server_role = context.guild.get_role(
-                    int(db_server.Discord_Role))
+                db_server_role = context.guild.get_role(int(db_server.Discord_Role))
                 if db_server_role != None:
                     embed_color = db_server_role.color
 
@@ -271,24 +230,20 @@ class botEmbeds():
             if server.DisplayName != None:
                 server_name = db_server.DisplayName
 
-            embed = discord.Embed(
-                title=f'**=======  {server_name}  =======**', description=db_server.Description, color=embed_color)
+            embed = discord.Embed(title=f'**=======  {server_name}  =======**', description=db_server.Description, color=embed_color)
             avatar = await self.uBot.validate_avatar(db_server)
             if avatar != None:
                 embed.set_thumbnail(url=avatar)
 
-            embed.add_field(name='**Host**:',
-                            value=str(db_server.Host), inline=True)
-            embed.add_field(name='Users Online:',
-                            value=str(User_list), inline=False)
+            embed.add_field(name='**Host**:', value=str(db_server.Host), inline=True)
+            embed.add_field(name='Users Online:', value=str(User_list), inline=False)
             return embed
 
     def bot_settings_embed(self, context: commands.Context) -> discord.Embed:
         """Default Embed Reply for command /bot settings, please pass in a List of Dictionaries eg {'setting_name': 'value'}"""
         embed = discord.Embed(title=f'**Bot Settings**', color=0x71368a)
         embed.set_thumbnail(url=context.guild.icon)
-        embed.add_field(name='\u1CBC\u1CBC',
-                        value='\u1CBC\u1CBC', inline=False)
+        embed.add_field(name='\u1CBC\u1CBC', value='\u1CBC\u1CBC', inline=False)
 
         # This allows me to control which settings display first.
         layout = ["bot_version",
@@ -306,8 +261,7 @@ class botEmbeds():
                   "donator_bypass"]
 
         # Take our list and store it in a seperate list and lowercase the strings.
-        db_config_settingslist = [x.lower()
-                                  for x in self.DBConfig.GetSettingList()]
+        db_config_settingslist = [x.lower() for x in self.DBConfig.GetSettingList()]
         for key in layout:
             # If the key is not in the DB; skip.
             if key not in db_config_settingslist:
@@ -317,113 +271,92 @@ class botEmbeds():
             value = self.DBConfig.GetSetting(key)
             key = key.lower()
             if key == 'auto_whitelist':
-                embed.add_field(name='Auto Whitelisting:',
-                                value=f'{"True" if value == 1 else "False"}')
+                embed.add_field(name='Auto Whitelisting:', value=f'{"True" if value == 1 else "False"}')
 
             elif key == 'whitelist_wait_time':
-                embed.add_field(name='Whitelist Wait Time:',
-                                value=f'{"Instantly" if value == 0 else (str(value) + " Minutes")} ', inline=False)
+                embed.add_field(name='Whitelist Wait Time:', value=f'{"Instantly" if value == 0 else (str(value) + " Minutes")} ', inline=False)
 
             elif key == 'whitelist_request_channel':
                 if value != 'None':
                     value = context.guild.get_channel(value)
 
-                embed.add_field(name='Whitelist Request Channel:',
-                                value=f'{value.name.title() if value != None else "Not Set"}', inline=False)
+                embed.add_field(name='Whitelist Request Channel:', value=f'{value.name.title() if value != None else "Not Set"}', inline=False)
 
             elif key == 'message_timeout':
-                embed.add_field(name='Gatekeeper Reply Timeout',
-                                value=f'{value} Seconds', inline=False)
+                embed.add_field(name='Gatekeeper Reply Timeout', value=f'{value} Seconds', inline=False)
 
             elif key == 'permissions':
                 if value == 0:
                     value = 'Default'
                 elif value == 1:
                     value = 'Custom'
-                embed.add_field(name='Permissions:',
-                                value=f'{value}', inline=True)
+                embed.add_field(name='Permissions:', value=f'{value}', inline=True)
 
             elif key == 'banner_type':
                 if value == 0:
                     value = 'Discord Embeds'
                 elif value == 1:
                     value = 'Custom Banner Images'
-                embed.add_field(name='Banner Type:',
-                                value=f'{value}', inline=False)
+                embed.add_field(name='Banner Type:', value=f'{value}', inline=False)
 
             elif key == 'banner_auto_update':
-                embed.add_field(name='Banner Auto Update:',
-                                value=f'{"True" if value == 1 else "False"}', inline=True)
+                embed.add_field(name='Banner Auto Update:', value=f'{"True" if value == 1 else "False"}', inline=True)
 
             elif key == 'db_version':
-                embed.add_field(name='Database Version:',
-                                value=f'{value}', inline=True)
+                embed.add_field(name='Database Version:', value=f'{value}', inline=True)
 
             elif key == 'bot_version':
-                embed.add_field(name='Gatekeeper Version:',
-                                value=f'{value}', inline=True)
+                embed.add_field(name='Gatekeeper Version:', value=f'{value}', inline=True)
 
             elif key == 'guild_id':
                 if self._client != None and value != 'None':
                     value = self._client.get_guild(value)
 
-                    embed.add_field(
-                        name='Guild ID:', value=f'{value.name.title() if value != None else "Not Set"}', inline=False)
+                    embed.add_field(name='Guild ID:', value=f'{value.name.title() if value != None else "Not Set"}', inline=False)
 
             elif key == 'moderator_role_id':
                 if value != 'None':
                     value = context.guild.get_role(value)
 
-                embed.add_field(
-                    name='Moderator Role:', value=f'{value.name.title() if value != None else "Not Set"}', inline=True)
+                embed.add_field(name='Moderator Role:', value=f'{value.name.title() if value != None else "Not Set"}', inline=True)
 
             elif key == "donator_role_id":
                 if value != 'None':
                     value = context.guild.get_role(value)
 
-                embed.add_field(
-                    name='Donator Role ID:', value=f'{value.name.title() if value != None else "Not Set"}', inline=True)
+                embed.add_field(name='Donator Role ID:', value=f'{value.name.title() if value != None else "Not Set"}', inline=True)
 
             elif key == 'donator_bypass':
-                embed.add_field(
-                    name='Donator Bypass:', value=f'{"True" if value == 1 else "False"}', inline=True)
+                embed.add_field(name='Donator Bypass:', value=f'{"True" if value == 1 else "False"}', inline=True)
 
         # This iterates through the remaining keys of the Settings List and adds them to the Embed.
         for key in db_config_settingslist:
             value = self.DBConfig.GetSetting(key)
-            # Turns `auto_whitelist`` into `Auto Whitelist`
-            key = key.replace("_", " ").title()
+            key = key.replace("_", " ").title()  # Turns `auto_whitelist`` into `Auto Whitelist`
 
             # For our possible bool entries (0, 1) to True and False respectively.
             if type(value) == int:
-                embed.add_field(
-                    name=key, value=f'{"False" if value == 0 else "True"}', inline=False)
+                embed.add_field(name=key, value=f'{"False" if value == 0 else "True"}', inline=False)
             else:
                 embed.add_field(name=key, value=value, inline=False)
 
         return embed
 
     def user_info_embed(self, db_user: DB.DBUser, discord_user: discord.User) -> discord.Embed:
-        embed = discord.Embed(
-            title=f'{discord_user.name}', description=f'**Discord ID**: {discord_user.id}', color=discord_user.color)
+        embed = discord.Embed(title=f'{discord_user.name}', description=f'**Discord ID**: {discord_user.id}', color=discord_user.color)
         embed.set_thumbnail(url=discord_user.avatar.url)
-        embed.add_field(name='In Database:',
-                        value=f'{"True" if db_user != None else "False"}')
+        embed.add_field(name='In Database:', value=f'{"True" if db_user != None else "False"}')
         if db_user != None:
             if db_user.MC_IngameName != None:
-                embed.add_field(name='Minecraft IGN:',
-                                value=f'{db_user.MC_IngameName}', inline=False)
+                embed.add_field(name='Minecraft IGN:', value=f'{db_user.MC_IngameName}', inline=False)
 
             if db_user.MC_UUID != None:
-                embed.add_field(name='Minecraft UUID:',
-                                value=f'{db_user.MC_UUID}', inline=True)
+                embed.add_field(name='Minecraft UUID:', value=f'{db_user.MC_UUID}', inline=True)
 
             if db_user.SteamID != None:
-                embed.add_field(name='Steam ID:',
-                                value=f'{db_user.SteamID}', inline=False)
+                embed.add_field(name='Steam ID:', value=f'{db_user.SteamID}', inline=False)
 
             if db_user.Role != None:
-                embed.add_field(name='Permission Role:',
-                                value=f'{db_user.Role}', inline=False)
+                embed.add_field(name='Permission Role:', value=f'{db_user.Role}', inline=False)
 
         return embed
