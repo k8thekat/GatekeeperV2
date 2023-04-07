@@ -9,6 +9,10 @@ from db import DBHandler, DBServer
 from typing import Union
 
 # FIXME -- Possible query the API Inside this embed instead of passing in the vars. Oof...
+# FIXME --
+# Thanks to sneakysnek we're able to do remote URLs now.
+# You can use the Base URL (assuming the user configured it) under Core/GetConfig using  "node":"ADSModule.Networking.BaseURL" to get the CurrentValue.
+# Then concatenate this URL with /?instance=[Instance ID]
 
 
 async def server_status_embed(context: commands.Context, server: AMPInstance) -> Union[Embed, None]:
