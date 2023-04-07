@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from utils_dev.banner_editor.edited_banner import Edited_DB_Banner
 import AMP_Handler
+from utils_dev.banner_editor.ui.modal import Banner_Modal
 
 if TYPE_CHECKING:
     from AMP_Handler import AMPHandler
@@ -15,7 +16,6 @@ if TYPE_CHECKING:
     from AMP import AMPInstance
     from utils_dev.banner_editor.edited_banner import Edited_DB_Banner
     from utils_dev.banner_editor.ui.view import Banner_Editor_View
-    from utils_dev.banner_editor.ui.modal import Banner_Modal
 
 
 class Copy_To_Select(Select):
