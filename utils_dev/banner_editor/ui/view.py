@@ -3,13 +3,12 @@ from __future__ import annotations
 from discord.ui import View
 from discord import Message, Interaction
 
-from typing import Optional
+
 import logging
 
 from typing import TYPE_CHECKING
 from utils_dev.banner_editor.edited_banner import Edited_DB_Banner
 from utils_dev.banner_editor.ui.select import Banner_Editor_Select
-from utils_dev.banner_editor.ui.select import Copy_To_Select
 from utils_dev.banner_editor.ui.button import Save_Banner_Button, Reset_Banner_Button, Cancel_Banner_Button, Copy_To_All_Banner_Button, Copy_To_Banner_Button
 
 

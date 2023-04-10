@@ -35,7 +35,7 @@ class Banner_Color_Input(TextInput):
 
         # Validate if Hex Color Code.
         if len(self._value) in [3, 4, 6, 8] and re.search(f'([0-9a-f]{{{len(self._value)}}})$', self._value):
-            self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} #{self._value}')
+            self._banner_view._logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} #{self._value}')
             setattr(self._edited_db_banner, self._select_value, '#' + self._value)
             return True
 
@@ -53,7 +53,7 @@ class Banner_Blur_Input(TextInput):
 
     async def callback(self):
         if self.value.isnumeric() and int(self.value) <= 99:
-            self._banner_view.logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} {self.value}')
+            self._banner_view._logger.dev(f'Set attr for {self._edited_db_banner} {self._select_value} {self.value}')
             setattr(self._edited_db_banner, self._select_value, int(self.value[0]))
             return True
         else:

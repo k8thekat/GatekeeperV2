@@ -3,7 +3,7 @@ from discord.ui import View
 from typing import Optional
 
 from utils_dev.banner_editor.edited_banner import Edited_DB_Banner
-from utils_dev.banner_editor.ui.select import Copy_To_Select
+from utils_dev.banner_editor.ui.copy_to_select import Copy_To_Select
 
 
 class Copy_To_View(View):
