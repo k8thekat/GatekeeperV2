@@ -1,5 +1,26 @@
+'''
+   Copyright (C) 2021-2022 Katelynn Cadwallader.
+
+   This file is part of Gatekeeper, the AMP Minecraft Discord Bot.
+
+   Gatekeeper is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
+
+   Gatekeeper is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+   License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Gatekeeper; see the file COPYING.  If not, write to the Free
+   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+   02110-1301, USA. 
+'''
 from __future__ import annotations
-from typing import Union
+from multiprocessing import Value
+from typing import Union, Any, Literal
 import json
 import pathlib
 import traceback
@@ -7,7 +28,6 @@ import traceback
 import aiohttp
 from aiohttp import ClientResponse
 
-import time
 import sys
 import logging
 from dotenv import load_dotenv
@@ -15,23 +35,14 @@ import os
 from argparse import Namespace
 from pyotp import TOTP  # 2Factor Authentication Python Module
 import requests
-
-from amp_handler import AMPHandler
+from requests import Response
 
 
 class AMP_API():
     _logger = logging.getLogger()
-    _AMPHandler: AMPHandler = AMPHandler()
-    _AMPheader: dict = {'Accept': 'text/javascript'}
-    _InstanceName: str = ""
-    _URL: str = ""
-    #_SESSION_IDS: dict[str, str]
     _use_AMP2FA: bool = False
-    _AMP2FACTOR: Union[str, TOTP] = ""
-
-    FAILED_LOGIN: str = ""
-    NO_DATA: str = "Failed to recieve any data from post request."
-    UNAUTHORIZED_ACCESS: str = "Gatekeeper does not have the required permissions to interact with this instance."
+    _first_run: bool = True
+    _cwd = pathlib.Path.cwd()
 
     load_dotenv()
     AMPUSER: str = os.environ["AMPUSER"].strip()
@@ -39,72 +50,53 @@ class AMP_API():
     AMPURL: str = os.environ["AMPURL"].strip()
     AMPAUTH: str = os.environ["AMPAUTH"].strip()
 
-    def __init__(self, instance_name: str, instance_id: str = '0', session_id: Union[str, dict[str, str]] = '0', args: Union[Namespace, None] = None):
+    FAILED_LOGIN: str = ""
+    NO_DATA: str = "Failed to recieve any data from post request."
+    UNAUTHORIZED_ACCESS: str = f"{AMPUSER} does not have the required permissions to interact with this instance."
+
+    def __init__(self, session_id: str = '0', args: Union[Namespace, None] = None) -> None:
         self._session_id = session_id
-        self._InstanceName = instance_name
-        self._InstanceID = instance_id
-        self._cwd = pathlib.Path.cwd()
-        self._URL = self._URL + "/API"  # This will be the default URL; this will change on new instances.
         self._args = args
 
-        if self._InstanceID == '0':
+        if self._first_run:
             self._val_settings()
+            self._first_run = False
 
-    async def _call_api(self, api: str, parameters: dict[str, str]):
-        """This is the API Call function"""
-        # TODO -- Use ValueError()
-        # set vars for typical return errors depending on the issue returned.
-        # see below the bool returns and change to some system of str
-        # example
-        # UNAUTHORIZED_ACCESS:str = "AMP/Gatekeeper does not have the required permissions to interact with this instance."
-        # `ValueError(UNAUTHORIZED_ACCESS) or ValueError(FAILED_STATUS)`
-        self._logger.info(f'Function {api} was called with {parameters}')
+    async def _call_api(self, api: str, parameters: dict[str, str]) -> ConnectionError | ValueError | PermissionError | Any | bool:
+        """Uses `aiohttp.ClientSession` and `.post()` to retrieve information.
+
+        All information is `.json()` serialized."""
+        self._AMPheader: dict = {'Accept': 'text/javascript'}
         _post_req: ClientResponse | None
+        self._URL = self.AMPURL + "/API/"  # This will be the default URL; this will change on new instances.
+
+        self._logger.info(f'Function {api} was called with {parameters}')
+
+        if self._session_id != "0":
+            parameters["SESSIONID"] = self._session_id
         jsonhandler = json.dumps(parameters)
 
-        # while (True):
-        try:
-            async with aiohttp.ClientSession() as session:
-                _post_req = session.post(self._URL + api, headers=self._AMPheader, data=jsonhandler)
-                self._logger.debug(f'Post Request Prints: {_post_req.json()}')
-            # self._logger.error(f'{self._InstanceName}: AMP API recieved no Data; sleeping for 5 seconds...')
-            # time.sleep(5)
-        # FIXME - Need to not catch all Excepts..
-        except Exception as e:
-            print(type(e))  # So I can handle each exception properly.
-            raise ValueError(e)
-            # if self._AMPHandler._SuccessfulConnection == False:
-            #     self._logger.critical('Unable to connect to URL; please check Tokens.py -> AMPURL')
-            #     sys.exit(-1)
+        async with aiohttp.ClientSession() as session:
+            try:
+                _post_req = await session.post(self._URL + api, headers=self._AMPheader, data=jsonhandler)
+                self._logger.debug(f'Post Request Prints: {await _post_req.json()}')
 
-            # self._logger.warning('AMP API was unable to connect; sleeping for 30 seconds...')
-            # time.sleep(30)
+            # FIXME - Need to not catch all Excepts..
+            # So I can handle each exception properly.
+            except Exception as e:
+                print(type(e))
+                raise ValueError(e)
 
-        if _post_req.status != 200:
-            return ConnectionError(self.NO_DATA)
-        # self._AMPHandler._SuccessfulConnection = True
+            if _post_req.status != 200:
+                return ConnectionError(self.NO_DATA)
 
-        # Error catcher for API calls
-        # FIXME Possible issue here..
-        # if type(_post_req.json()) == None:
-        #     self._logger.error(f"AMP_API CallAPI ret is 0: status_code {_post_req.status_code}")
-        #     self._logger.error(_post_req.raw)
+            _post_req_json = await _post_req.json()
 
-        # if _post_req.json() == None:
-        #     self._logger.error('Failed to recieve data from post request.')
-        #     return False
-        _post_req_json = _post_req.json()
-        # Since we are using GetUpdates every second for Console Updates; lets ignore them here so we don't sleep our thread.
-        # FIXME -- This may not need to be here anymore.
-        if api == 'Core/GetUpdates':
-            return _post_req_json
-
-        if len(_post_req.content) > 0:
+        if len(_post_req.content_length) == 0:
             raise ConnectionError(self.NO_DATA)
 
         # FIXME -- This will need to be tracked and see what triggers what.
-        if hasattr(_post_req_json, "result"):
-            # if "result" in _post_req.json():
+        if "result" in _post_req_json:
             if type(_post_req_json["result"]) == bool:
                 if _post_req_json["result"] == True:
                     return _post_req_json
@@ -117,22 +109,23 @@ class AMP_API():
                     self._logger.error(f'The API Call {api} failed because of Status: {_post_req_json}')
                     return False
 
-        elif hasattr(_post_req_json, "Title"):
+        elif "Title" in _post_req_json:
             if (type(_post_req_json["Title"]) == str) and (_post_req_json["Title"] == 'Unauthorized Access'):
                 self._logger.error(f'["Title"]: The API Call {api} failed because of {_post_req_json}')
-                # Resetting the Session ID for the Instance; forcing a new login/SessionID
-                # self._AMPHandler._session_IDs.pop(amp_instance.InstanceID)
-                # self._SessionID = None
                 self._session_id = "0"
-                # FIXME -- May need to raise an exception here;
                 raise PermissionError(self.UNAUTHORIZED_ACCESS)
-                # return False
-        return _post_req_json
 
-    def _val_settings(self):
+        if "result" not in _post_req_json:
+            raise ValueError(self.NO_DATA)
+
+        else:
+            return _post_req_json
+
+    def _val_settings(self) -> None:
         """Validates the .env settings and if we should use 2FA or not."""
         self._logger.info("Validating your .env file...")
         reset = False
+        result: Response
 
         # if not self.args.token:
         if not self._cwd.joinpath(".env").exists():
@@ -140,7 +133,7 @@ class AMP_API():
             reset = True
 
         # if -dev is enabled; lets use our DEV information inside our .env file.
-        if self._args.dev:  # type:ignore
+        if self._args != None and self._args.dev:  # type:ignore
             self.AMPUSER: str = os.environ["DEV_AMPUSER"].strip()
             self.AMPPASSWORD: str = os.environ["DEV_AMPPASSWORD"].strip()
             self.AMPURL: str = os.environ["DEV_AMPURL"].strip()
@@ -157,8 +150,7 @@ class AMP_API():
 
         # lets attempt to connect to the url with request
         # TODO -- Ideally I want to use async here; but unsure how..
-        # async with aiohttp.ClientSession() as session:
-            result = requests.get(url=self.AMPURL)
+        result = requests.get(url=self.AMPURL)
         if not result.status_code == 200:
             self._logger.critical(f"** Please verify your AMPurl, it responded with the response code: {result.status_code}")
 
@@ -176,15 +168,10 @@ class AMP_API():
             input("Press any Key to Exit")
             sys.exit(0)
 
-    def login(self):
+    async def login(self):
+        self._AMP2FACTOR: Union[str, TOTP] = ""
+
         if self._session_id == '0':
-            # if self._session_id in self._SESSION_IDS:
-            #     self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
-            #     return
-
-            self._logger.info(f'AMP API Logging in {self._InstanceName}')
-
-            # We are using 2FA
             # FIXME -- May need to change how we handle a 2FA code.
             if self._use_AMP2FA:
                 try:
@@ -198,17 +185,16 @@ class AMP_API():
             parameters = {
                 'username': self.AMPUSER,
                 'password': self.AMPPASSWORD,
-                'token': self._AMP2FACTOR,  # get current 2Factor Code
+                'token': self._AMP2FACTOR,
                 'rememberMe': True}
 
             try:
-                result = self._call_api('Core/Login', parameters)
+                result = await self._call_api('Core/Login', parameters)
                 if isinstance(result, BaseException):
                     return result
 
-                elif hasattr(result, "sessionID"):
+                elif "sessionID" in result:
                     self._session_id = result['sessionID']
-                    #self._SESSION_IDS[self._InstanceID] = self._session_id
                     self.Running = True
 
                 else:
@@ -217,322 +203,296 @@ class AMP_API():
                     return False
 
             except Exception as e:
-                self._logger.dev(f'Core/Login Exception: {traceback.format_exc()}')
-                self._logger.dev(result)
+                self._logger.warning(f'Core/Login Exception: {traceback.format_exc()}')
+                self._logger.warning()(result)
 
                 self._logger.warning(f'{self._InstanceName} - Instance is Offline')
                 self.Running = False
                 return False
 
-        return True
+        else:
+            return True
 
-    def getInstances(self) -> dict[str, dict[str, str]]:
-        """This gets all Instances on AMP."""
-        self.login()
-        parameters = {}
-        result = self._call_api('ADSModule/GetInstances', parameters)
-        return result
-
-    def consoleUpdate(self) -> dict:
-        """Returns `{'ConsoleEntries':[{'Contents': 'String','Source': 'Server thread/INFO','Timestamp': '/Date(1651703130702)/','Type': 'Console'}]`\n
-        Will post all updates from previous API call of console update"""
-        self.login()
-        parameters = {}
-        result = self._call_api('Core/GetUpdates', parameters)
-        return result
-
-    # def ConsoleMessage_withUpdate(self, msg: str) -> dict:
-    #     """This will call Console Update after sending the Console Message (Use this for Commands that require feedback)"""
-    #     self.login()
-    #     parameters = {'message': msg}
-    #     self._call_api('Core/SendConsoleMessage', parameters)
-    #     time.sleep(.2)
-    #     update = self.ConsoleUpdate()
-    #     return update
-
-    def consoleMessage(self, msg: str):
-        """Basic Console Message"""
-        self.login()
-        parameters = {'message': msg}
-        self._call_api('Core/SendConsoleMessage', parameters)
-        return
-
-    def startInstance(self):
-        """Starts AMP Instance"""
-        self.login()
-        parameters = {}
-        self._call_api('Core/Start', parameters)
-        return
-
-    def stopInstance(self):
-        """Stops AMP Instance"""
-        self.login()
-        parameters = {}
-        self._call_api('Core/Stop', parameters)
-        return
-
-    def restartInstance(self):
-        """Restarts AMP Instance"""
-        self.login()
-        parameters = {}
-        self._call_api('Core/Restart', parameters)
-        return
-
-    def killInstance(self):
-        """Kills AMP Instance"""
-        self.login()
-        parameters = {}
-        self._call_api('Core/Kill', parameters)
-        return
-
-    def getStatus(self) -> Union[bool, dict]:
-        """AMP Instance Status Information"""
-        self.login()
-        parameters: dict = {}
-        result = self._call_api('Core/GetStatus', parameters)
-        # This happens because _call_api returns False when it fails permissions.
-        if result == False:
-            return result
-
-        return result
-
-    def getUserList(self) -> list[str]:
-        """Returns a List of connected users."""
-        self.login()
-        parameters = {}
-        result = self._call_api('Core/GetUserList', parameters)
-        user_list = []
-        for user in result['result']:
-            user_list.append(result['result'][user])
-        return user_list
-
-    def getSchedule(self) -> dict:
-        self.login()
-        parameters = {}
-        result = self._call_api('Core/GetScheduleData', parameters)
-        return result['result']['PopulatedTriggers']
-
-    def setFriendlyName(self, name: str, description: str) -> str:
-        """This is used to change an Instance's Friendly Name and or Description. Retains all previous settings. \n
-        `This requires the instance to be Offline!`"""
-        self.login()
-        parameters = {
-            'InstanceId': self.InstanceID,
-            'FriendlyName': name,
-            'Description': description,
-            'StartOnBoot': self.DaemonAutostart,
-            'Suspended': self.Suspended,
-            'ExcludeFromFirewall': self.ExcludeFromFirewall,
-            'RunInContainer': self.IsContainerInstance,
-            'ContainerMemory': self.ContainerMemoryMB,
-            'MemoryPolicy': self.ContainerMemoryPolicy,
-            'ContainerMaxCPU': self.ContainerCPUs}
-        response = f'{self.FriendlyName} is about to be changed to {name}; this will restart the instance.'
-        self._call_api('ADSModule/UpdateInstanceInfo', parameters)
-        return response
-
-    def getAPItest(self):
+    async def _api_test(self):
         """Test AMP API calls with this function"""
-        self.login()
+        await self.login()
         parameters = {}
-        result = self._call_api('Core/GetModuleInfo', parameters)
+        result = await self._call_api('Core/GetModuleInfo', parameters)
 
         return result
 
-    def copyFile(self, source: str, destination: str):
-        self.login()
+    async def getInstances(self):
+        """This gets all Instances on AMP."""
+        await self.login()
+        parameters = {}
+        result = await self._call_api('ADSModule/GetInstances', parameters)
+        return result
+
+    async def consoleUpdate(self) -> dict:
+        """Requests the recent entries of the console; will acquire all updates from previous API call of consoleUpdate"""
+        await self.login()
+        parameters = {}
+        result = await self._call_api('Core/GetUpdates', parameters)
+        return result
+
+    async def consoleMessage(self, msg: str) -> None:
+        """Sends a Console Message"""
+        await self.login()
+        parameters = {'message': msg}
+        await self._call_api('Core/SendConsoleMessage', parameters)
+        return
+
+    async def startInstance(self) -> None:
+        """Starts AMP Instance"""
+        await self.login()
+        parameters = {}
+        await self._call_api('Core/Start', parameters)
+        return
+
+    async def stopInstance(self) -> None:
+        """Stops AMP Instance"""
+        await self.login()
+        parameters = {}
+        await self._call_api('Core/Stop', parameters)
+        return
+
+    async def restartInstance(self) -> None:
+        """Restarts AMP Instance"""
+        await self.login()
+        parameters = {}
+        await self._call_api('Core/Restart', parameters)
+        return
+
+    async def killInstance(self) -> None:
+        """Kills AMP Instance"""
+        await self.login()
+        parameters = {}
+        await self._call_api('Core/Kill', parameters)
+        return
+
+    async def getStatus(self):
+        """AMP Instance Status Information"""
+        await self.login()
+        parameters = {}
+        result = await self._call_api('Core/GetStatus', parameters)
+        return result
+
+    async def getUserList(self):
+        """Returns a List of connected users."""
+        await self.login()
+        parameters = {}
+        result = await self._call_api('Core/GetUserList', parameters)
+        return result
+
+    async def getSchedule(self):
+        await self.login()
+        parameters = {}
+        result = await self._call_api('Core/GetScheduleData', parameters)
+        return result
+
+    async def copyFile(self, source: str, destination: str) -> None:
+        await self.login()
         parameters = {
             'Origin': source,
             'TargetDirectory': destination
         }
-        self._call_api('FileManagerPlugin/CopyFile', parameters)
+        await self._call_api('FileManagerPlugin/CopyFile', parameters)
         return
 
-    def renameFile(self, original: str, new: str):
-        self.login()
+    async def renameFile(self, original: str, new: str) -> None:
+        await self.login()
         parameters = {
             'Filename': original,
             'NewFilename': new
         }
-        self._call_api('FileManagerPlugin/RenameFile', parameters)
+        await self._call_api('FileManagerPlugin/RenameFile', parameters)
         return
 
-    def getDirectoryListing(self, directory: str) -> list:
-        self.login()
+    async def getDirectoryListing(self, directory: str):
+        await self.login()
         parameters = {
             'Dir': directory
         }
-        result = self._call_api('FileManagerPlugin/GetDirectoryListing', parameters)
+        result = await self._call_api('FileManagerPlugin/GetDirectoryListing', parameters)
         return result
 
-    def getFileChunk(self, name: str, position: int, length: int):
-        self.login()
+    async def getFileChunk(self, name: str, position: int, length: int):
+        await self.login()
         parameters = {
             'Filename': name,
             'Position': position,
             'Length': length
         }
-        result = self._call_api('FileManagerPlugin/GetFileChunk', parameters)
+        result = await self._call_api('FileManagerPlugin/GetFileChunk', parameters)
         return result
 
-    def writeFileChunk(self, filename: str, position: int, data: str):
-        self.login()
+    async def writeFileChunk(self, filename: str, position: int, data: str) -> None:
+        await self.login()
         parameters = {
             'Filename': filename,
             'Position': position,
             'Data': data
         }
-        self._call_api('FileManagerPlugin/WriteFileChunk', parameters)
+        await self._call_api('FileManagerPlugin/WriteFileChunk', parameters)
         return
 
-    def endUserSession(self, sessionID: str):
+    async def endUserSession(self, session_id: str) -> None:
         """Ends specified User Session"""
-        self.login()
+        await self.login()
         parameters = {
-            'Id': sessionID
+            'Id': session_id
         }
-        self._call_api('Core/EndUserSession', parameters)
+        await self._call_api('Core/EndUserSession', parameters)
         return
 
-    def getActiveAMPSessions(self) -> dict:
+    async def getActiveAMPSessions(self):
         """Returns currently active AMP Sessions"""
-        self.login()
+        await self.login()
         parameters = {}
-        result = self._call_api('Core/GetActiveAMPSessions', parameters)
+        result = await self._call_api('Core/GetActiveAMPSessions', parameters)
         return result
 
-    def getInstanceStatus(self) -> dict:
+    async def getInstanceStatus(self):
         """Returns AMP Instance Status"""
-        self.login()
+        await self.login()
         parameters = {}
-        result = self._call_api('ADSModule/GetInstanceStatuses', parameters)
+        result = await self._call_api('ADSModule/GetInstanceStatuses', parameters)
         return result
 
-    def trashDirectory(self, dirname: str):
+    async def trashDirectory(self, dir_name: str) -> None:
         """Moves a directory to trash, files must be trashed before they can be deleted."""
-        self.login()
+        await self.login()
         parameters = {
-            'DirectoryName': dirname
+            'DirectoryName': dir_name
         }
-        self._call_api('FileManagerPlugin/TrashDirectory', parameters)
+        await self._call_api('FileManagerPlugin/TrashDirectory', parameters)
         return
 
-    def trashFile(self, filename: str):
+    async def trashFile(self, filename: str) -> None:
         """Moves a file to trash, files must be trashed before they can be deleted."""
-        self.login()
+        await self.login()
         parameters = {
             'Filename': filename
         }
-        self._call_api('FileManagerPlugin/TrashFile', parameters)
+        await self._call_api('FileManagerPlugin/TrashFile', parameters)
         return
 
-    def emptyTrash(self, trashdir: str):
+    async def emptyTrash(self, trash_dir: str) -> None:
         """Empties a trash bin for the AMP Instance"""
-        self.login()
+        await self.login()
         parameters = {
-            'TrashDirectoryName': trashdir
+            'TrashDirectoryName': trash_dir
         }
-        self._call_api('FileManagerPlugin/EmptyTrash', parameters)
+        await self._call_api('FileManagerPlugin/EmptyTrash', parameters)
         return
 
-    def takeBackup(self, title: str, description: str, sticky: bool = False):
+    async def takeBackup(self, title: str, description: str, sticky: bool = False) -> None:
         """Takes a backup of the AMP Instance; default `sticky` is False!"""
-        self.login()
+        await self.login()
         parameters = {
             "Title": title,
             "Description": description,
             "Sticky": sticky
         }
-        self._call_api('LocalFileBackupPlugin/TakeBackup', parameters)
+        await self._call_api('LocalFileBackupPlugin/TakeBackup', parameters)
         return
 
-    def getAMPUserInfo(self, name: str) -> Union[str, dict]:
-        """Gets AMP user info. if IdOnly is True; returns AMP User ID only!"""
-        self.login()
+    async def getAMPUserInfo(self, name: str):
+        """Gets the AMP User info"""
+        await self.login()
         parameters = {
             'Username': name
         }
-        result = self._call_api('Core/GetAMPUserInfo', parameters)
+        result = await self._call_api('Core/GetAMPUserInfo', parameters)
         return result
 
-    def CurrentSessionHasPermission(self, PermissionNode: str) -> dict:
+    async def currentSessionHasPermission(self, permission_node: str) -> dict:
         """Gets current Sessions permission spec"""
-        self.login()
+        await self.login()
         parameters = {
-            'PermissionNode': PermissionNode
+            'PermissionNode': permission_node
         }
-        result = self._call_api('Core/CurrentSessionHasPermission', parameters)
-
-        if result != False:
-            return result['result']
-
+        result = await self._call_api('Core/CurrentSessionHasPermission', parameters)
         return result
 
-    def getAMPRolePermissions(self, RoleID: str) -> dict:
+    async def getAMPRolePermissions(self, role_id: str) -> dict:
         """Gets full permission spec for Role (returns permission nodes)"""
-        self.login()
+        await self.login()
         parameters = {
-            'RoleId': RoleID
+            'RoleId': role_id
         }
-        result = self._call_api('Core/GetAMPRolePermissions', parameters)
+        result = await self._call_api('Core/GetAMPRolePermissions', parameters)
         return result
 
-    def getPermissions(self) -> dict:
+    async def getPermissions(self) -> dict:
         """Gets full Permission spec for self"""
-        self.login()
+        await self.login()
         parameters = {}
-        result = self._call_api('Core/GetPermissionsSpec', parameters)
+        result = await self._call_api('Core/GetPermissionsSpec', parameters)
         return result
 
-    def getRoleIds(self) -> dict:
-        """Gets a List of all Roles, if set_roleID is true; it checks for `Gatekeeper` and `Super Admins`. Sets them to self.AMP_BotRoleID and self.super_AdminID"""
-        self.login()
+    async def getRoleIds(self) -> dict:
+        """Gets a List of all Roles"""
+        await self.login()
         parameters = {}
-        result = self._call_api('Core/GetRoleIds', parameters)
-        return result['result']
+        result = await self._call_api('Core/GetRoleIds', parameters)
+        return result
 
-    def createRole(self, name: str, AsCommonRole=False):
+    async def createRole(self, name: str, as_common_role=False):
         """Creates a AMP User role"""
-        self.login()
+        await self.login()
         parameters = {
             'Name': name,
-            'AsCommonRole': AsCommonRole
+            'AsCommonRole': as_common_role
         }
-        result = self._call_api('Core/CreateRole', parameters)
+        result = await self._call_api('Core/CreateRole', parameters)
         return result
 
-    def getRole(self, Roleid: str):
+    async def getRole(self, role_id: str):
         """Gets the AMP Role"""
-        self.login()
+        await self.login()
         parameters = {
-            'RoleId': Roleid
+            'RoleId': role_id
         }
-        result = self._call_api('Core/GetRole', parameters)
+        result = await self._call_api('Core/GetRole', parameters)
         return result
 
-    def setAMPUserRoleMembership(self, UserID: str, RoleID: str, isMember: bool):
+    async def setAMPUserRoleMembership(self, user_id: str, role_id: str, is_member: bool):
         """ Sets the AMP Users Role Membership"""
-        self.login()
+        await self.login()
         parameters = {
-            'UserId': UserID,
-            'RoleId': RoleID,
-            'IsMember': isMember
+            'UserId': user_id,
+            'RoleId': role_id,
+            'IsMember': is_member
         }
-        result = self._call_api('Core/SetAMPUserRoleMembership', parameters)
+        result = await self._call_api('Core/SetAMPUserRoleMembership', parameters)
         return result
 
-    def setAMPRolePermissions(self, RoleID: str, PermissionNode: str, Enabled: bool):
+    async def setAMPRolePermissions(self, role_id: str, permission_node: str, enabled: bool):
         """Sets the AMP Role permission Node eg `Core.RoleManagement.DeleteRoles`"""
-        self.login()
+        await self.login()
         parameters = {
-            'RoleId': RoleID,
-            'PermissionNode': PermissionNode,
-            'Enabled': Enabled
+            'RoleId': role_id,
+            'PermissionNode': permission_node,
+            'Enabled': enabled
         }
-        result = self._call_api('Core/SetAMPRolePermission', parameters)
+        result = await self._call_api('Core/SetAMPRolePermission', parameters)
+        return result
 
-        if result['result']['Status'] == False:
-            self.logger.critical(f'Unable to Set Permission Node __{PermissionNode}__ to `{Enabled}` for {RoleID}')
-            return False
+    async def getConfig(self, node: str):
+        """Access the provided config node."""
+        await self.login()
+        parameters = {
+            "node": node
+        }
+        result = await self._call_api("Core/GetConfig", parameters)
+        return result
 
-        return True
+    async def getConfigs(self, node: list[str]):
+        """Access the provided config node list."""
+        await self.login()
+        parameters = {
+            "node": node
+        }
+        result = await self._call_api("Core/GetConfigs", parameters)
+        return result
