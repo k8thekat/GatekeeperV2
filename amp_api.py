@@ -86,13 +86,13 @@ class AMP_API():
                 print(type(e))
                 raise ValueError(e)
 
+            if len(_post_req.content_length) == 0:
+                raise ConnectionError(self.NO_DATA)
+
             if _post_req.status != 200:
                 return ConnectionError(self.NO_DATA)
 
             _post_req_json = await _post_req.json()
-
-        if len(_post_req.content_length) == 0:
-            raise ConnectionError(self.NO_DATA)
 
         # FIXME -- This will need to be tracked and see what triggers what.
         if "result" in _post_req_json:
