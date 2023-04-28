@@ -164,7 +164,7 @@ class AMP_API():
             self._use_AMP2FA = True
 
         if reset:
-            input("Press any Key to Exit")
+            input("Press any key to exit")
             sys.exit(0)
 
     async def login(self):
