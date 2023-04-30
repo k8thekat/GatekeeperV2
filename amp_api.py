@@ -39,9 +39,6 @@ from requests import Response
 
 class AMP_API():
     _logger = logging.getLogger()
-    _use_AMP2FA: bool = False
-    _first_run: bool = True
-    _cwd = pathlib.Path.cwd()
 
     load_dotenv()
     AMPUSER: str = os.environ["AMPUSER"].strip()
@@ -53,28 +50,26 @@ class AMP_API():
     NO_DATA: str = "Failed to recieve any data from post request."
     UNAUTHORIZED_ACCESS: str = f"{AMPUSER} does not have the required permissions to interact with this instance."
 
+    _use_AMP2FA: bool = False
+    _cwd = pathlib.Path.cwd()
+
     def __init__(self, session_id: str = '0', args: Union[Namespace, None] = None) -> None:
         self._session_id = session_id
         self._args = args
+        self._URL: str = self.AMPURL + "/API/"
 
-        if self._first_run:
-            self._val_settings()
-            self._first_run = False
-
-    async def _call_api(self, api: str, parameters: dict[str, str]) -> ConnectionError | ValueError | PermissionError | Any | bool:
+    async def _call_api(self, api: str, parameters: dict[str, str]):
         """Uses `aiohttp.ClientSession` and `.post()` to retrieve information.
 
         All information is `.json()` serialized."""
         self._AMPheader: dict = {'Accept': 'text/javascript'}
         _post_req: ClientResponse | None
-        self._URL = self.AMPURL + "/API/"  # This will be the default URL; this will change on new instances.
-
         self._logger.info(f'Function {api} was called with {parameters}')
 
         if self._session_id != "0":
             parameters["SESSIONID"] = self._session_id
-        jsonhandler = json.dumps(parameters)
 
+        jsonhandler = json.dumps(parameters)
         async with aiohttp.ClientSession() as session:
             try:
                 _post_req = await session.post(self._URL + api, headers=self._AMPheader, data=jsonhandler)
@@ -86,17 +81,18 @@ class AMP_API():
                 print(type(e))
                 raise ValueError(e)
 
-            if len(_post_req.content_length) == 0:
-                raise ConnectionError(self.NO_DATA)
+            if _post_req.content_length == 0:
+                raise ValueError(self.NO_DATA)
 
             if _post_req.status != 200:
-                return ConnectionError(self.NO_DATA)
+                raise ConnectionError(self.NO_DATA)
 
             _post_req_json = await _post_req.json()
 
         # FIXME -- This will need to be tracked and see what triggers what.
         if "result" in _post_req_json:
             if type(_post_req_json["result"]) == bool:
+
                 if _post_req_json["result"] == True:
                     return _post_req_json
 
@@ -114,22 +110,17 @@ class AMP_API():
                 self._session_id = "0"
                 raise PermissionError(self.UNAUTHORIZED_ACCESS)
 
-        if "result" not in _post_req_json:
-            raise ValueError(self.NO_DATA)
-
-        else:
-            return _post_req_json
+        return _post_req_json
 
     def _val_settings(self) -> None:
         """Validates the .env settings and if we should use 2FA or not."""
         self._logger.info("Validating your .env file...")
-        reset = False
         result: Response
 
         # if not self.args.token:
         if not self._cwd.joinpath(".env").exists():
             self._logger.critical("**ERROR** Missing our .env, please rename .envtemplate to .env")
-            reset = True
+            raise ValueError("Missing .env file in Bot directory.")
 
         # if -dev is enabled; lets use our DEV information inside our .env file.
         if self._args != None and self._args.dev:  # type:ignore
@@ -141,7 +132,7 @@ class AMP_API():
         # handles validating the url briefly..
         if not self.AMPURL.startswith("http://") and not self.AMPURL.startswith("https://"):
             self._logger.critical("** Please verify your AMPurl. It either needs 'http://'' or 'https://'' depending on your AMP/Network setup. **")
-            reset = True
+            raise ValueError("Improper URL provided.")
 
         # if for some reason they left a trailing `/` lets just remove it for them and continue.
         if self.AMPURL.endswith("/"):
@@ -149,7 +140,12 @@ class AMP_API():
 
         # lets attempt to connect to the url with request
         # TODO -- Ideally I want to use async here; but unsure how..
-        result = requests.get(url=self.AMPURL)
+        try:
+            result = requests.get(url=self.AMPURL)
+        except ConnectionError as e:
+            self._logger.critical(f"Unable to connect to the provided {self.AMPURL} please verify the URL and try again. | Exception {e}")
+            raise e
+
         if not result.status_code == 200:
             self._logger.critical(f"** Please verify your AMPurl, it responded with the response code: {result.status_code}")
 
@@ -159,13 +155,9 @@ class AMP_API():
         # if our AMPAUTH url is too short; possibly the 6 digit code.
         elif len(self.AMPAUTH) < 7:
             self._logger.critical('**ERROR** Please use your 2 Factor Generator Code (Should be over 25 characters long), not the 6 digit numeric generated code that expires with time.')
-            reset = True
+            raise ValueError("Improper 2 Factor Code provided.")
         else:
             self._use_AMP2FA = True
-
-        if reset:
-            input("Press any key to exit")
-            sys.exit(0)
 
     async def login(self):
         self._AMP2FACTOR: Union[str, TOTP] = ""
@@ -197,15 +189,14 @@ class AMP_API():
                     self.Running = True
 
                 else:
-                    self._logger.warning(f'{self._InstanceName} - Instance is Offline')
+                    # TODO -
+                    self._logger.warning("Failed response from Instance")
                     self.Running = False
                     return False
 
             except Exception as e:
                 self._logger.warning(f'Core/Login Exception: {traceback.format_exc()}')
-                self._logger.warning()(result)
-
-                self._logger.warning(f'{self._InstanceName} - Instance is Offline')
+                self._logger.warning(result)
                 self.Running = False
                 return False
 
@@ -225,6 +216,12 @@ class AMP_API():
         await self.login()
         parameters = {}
         result = await self._call_api('ADSModule/GetInstances', parameters)
+        return result
+
+    async def getInstance(self, instanceID: str):
+        await self.login()
+        parameters = {"InstanceId": instanceID}
+        result = await self._call_api("ADSModule/GetInstance", parameters)
         return result
 
     async def consoleUpdate(self) -> dict:
