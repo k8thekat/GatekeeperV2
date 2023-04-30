@@ -22,187 +22,184 @@
 # by k8thekat // Lightning
 # 11/10/2021
 
+import attr
 import time
 import traceback
-
+from typing import NamedTuple, Union, Any
 import sys
-
 import threading
+from amp_ads import AMP_ADS
 
-from typing import Union
-from amp_handler import AMPHandler
 
-from DB import DBServer, Database, DBHandler, DBConfig
 from amp_api import AMP_API
-from amp_console import AMPConsole
-
-from pprint import pprint
+from DB import DBHandler, Database, DBConfig, DBServer
 
 
-class AMPInstance(AMP_API):
-    # all these vars come from AMP when getting an Instance's information. Their values can change.
-    #AMP2Factor: Union[str, None, TOTP]
-    AppState: str
-    ApplicationEndpoints: str
-    Console: AMPConsole
-    ContainerCPUs: str
-    ContainerMemoryMB: str
-    ContainerMemoryPolicy: str
-    Daemon: str
-    DaemonAutostart: str
-    DisplayImageSource: str
-    ExcludeFromFirewall: str
-    IP: str
-    InstalledVersion: str
-    InstanceID: str
-    FriendlyName: str
-    InstanceName: str
-    IsContainerInstance: str
-    IsHTTPS: str
-    IsTemplateInstance: str
-    ManagementMode: str
-    Metrics: Union[dict, None]
-    Module: str
-    Port: str
-    ReleaseStream: str
-    Running: str
-    _SessionID: Union[str, None] = None
-    Suspended: str
-    TargetID: str
-    url: str
+class Metrics(NamedTuple):
+    raw_value: int = 0
+    percent: int = 0
+    max_value: int = 1
+    units: str = ""
 
-    def __init__(self, instance_name: str = 'AMP', instanceID: str = '0', serverdata: dict[str, str] = {}, target_name: Union[str, None] = None):
-        super().__init__(instance_name=instance_name, instance_id=instanceID)
-        self._AMPHandler: AMPHandler = AMPHandler()
 
+class AMP_Instance(AMP_API):
+    # base Instance vars
+    AppState: int  # 0
+    ApplicationEndpoints: list[dict[str, str]]  # [{'DisplayName': 'Application ' \n 'Address', 'Endpoint': '0.0.0.0:7785', 'Uri': 'steam://connect/0.0.0.0:7785'}, {'DisplayName': 'SFTP '\n'Server','Endpoint': '0.0.0.0:2240','Uri': 'steam://connect/0.0.0.0:2240'}
+    ContainerCPUs: float  # 0.0
+    ContainerMemoryMB: str  # 0
+    ContainerMemoryPolicy: Any  # 0
+    Daemon: bool  # False
+    DaemonAutostart: bool  # True
+    DeploymentArgs: dict[str, str]  # {'FileManagerPlugin.SFTP.SFTPIPBinding': '0.0.0.0','FileManagerPlugin.SFTP.SFTPPortNumber': '2240','GenericModule.App.ApplicationIPBinding': '0.0.0.0','GenericModule.App.ApplicationPort1': '7785','GenericModule.App.ApplicationPort2': '0','GenericModule.App.ApplicationPort3': '0','GenericModule.App.RemoteAdminPort': '0','GenericModule.Meta.Author': 'JasperFirecai2, EnderWolf, '                             'IceOfWraith','GenericModule.Meta.ConfigManifest': 'terrariaconfig.json','GenericModule.Meta.ConfigRoot': 'terraria.kvp','GenericModule.Meta.Description': 'Terraria generic module '\n'with support for '\n'various options.','GenericModule.Meta.DisplayImageSource': 'steam:105600','GenericModule.Meta.DisplayName': 'Terraria','GenericModule.Meta.EndpointURIFormat': 'steam://connect/{0}','GenericModule.Meta.MetaConfigManifest': 'terrariametaconfig.json','GenericModule.Meta.MinAMPVersion': '','GenericModule.Meta.OS': '3','GenericModule.Meta.OriginalSource': 'CubeCoders-AMPTemplates','GenericModule.Meta.URL': 'https://store.steampowered.com/app/105600/Terraria/'},
+    Description: str
+    DiskUsageMB: str  # 0
+    DisplayImageSource: str  # steam:105600
+    ExcludeFromFirewall: bool  # False,
+    FriendlyName: str  # 'VM Terraria',
+    IP: str  # '127.0.0.1',
+    InstalledVersion: dict[str, int]  # {'Build': 2,'Major': 2,'MajorRevision': 0,'Minor': 4,'MinorRevision': 0,'Revision': 0}
+    InstanceID: str  # '89518e00-3c00-4d6d-93d3-f1faa1541788'
+    InstanceName: str  # 'VMTerraria01'
+    IsContainerInstance: bool  # False
+    IsHTTPS: bool  # False,
+    ManagementMode: int  # 10
+    Metrics: dict[dict[str, str]]  # {'Active Users': {'Color': '#7B249E','Color3': '#FFF','MaxValue': 8,'Percent': 0,'RawValue': 0,'Units': ''},'CPU Usage': {'Color': '#A8221A','Color2': '#A8221A','Color3': '#FFF','MaxValue': 100,'Percent': 0,'RawValue': 0,'Units': '%'},'Memory Usage': {'Color': '#246BA0','Color3': '#FFF','MaxValue': 7917,'Percent': 0,'RawValue': 0,'Units': 'MB'}}
+    # Module: str  # 'GenericModule'
+    ModuleDisplayName: str  # 'Terraria'
+    # Port: str  # 8097
+    ReleaseStream: int  # 10
+    Running: bool  # True
+    Suspended: bool  # False
+    Tags: list[Any]
+    TargetID: str  # '47d31130-25ed-47d3-af50-c0ebd947830d'
+
+    # custom attrs
+    _app_running: bool = False
+    _perms: list[str] = []
+    _ignore_list: list[str] = []
+    _super_adminID: str
+    _apiModule: str
+    _bot_roleID: Union[str, None]
+    _targetName: str
+    _initialized: bool = False
+    _last_update_time_lock: threading.Lock
+
+    def __init__(self, serverData: dict[str, str]) -> None:
+        super().__init__()
+        self._URL = self.AMPURL + f"ADSModule/Servers/{self.InstanceID}/API/"
+        # most if not all of these are type hinted above as base instance vars
+        for entry in serverData:
+            setattr(self, entry, serverData[entry])
+
+        # DB setup
         self._DBHandler: DBHandler = DBHandler()
-        self._DB: Database = self._DBHandler.DB
-        self._DBConfig: DBConfig = self._DBHandler.DBConfig
+        self._DB: Database = self._DBHandler._DB
+        self._DBConfig: DBConfig = self._DBHandler._DBConfig
 
-        self._initialized = False
-        self._App_Running: bool = False  # This is for the Application
-        self.InstanceID: str = instanceID  # this should default to 0 on Core AMP
-        self._TargetName = target_name  # typically used in Target/Controller systems.
-        self.Console: AMPConsole = AMPConsole(self)
-        self.APIModule: str
-        self.AMP_BotRoleID: Union[str, None] = None
-        self.super_AdminID: str
-        self._sender_filter_list: list[str] = list()  # Do not send messages from people in this list (case insensitive)
-        self._perms = []
-
-        self._last_update_time_lock: threading.Lock
-        # if this is the default instance lets set some default vars.
-        if self.InstanceID == '0':
-            self._perms = ['Core.*',
-                           'Core.RoleManagement.*',
-                           'Core.UserManagement.*',
-                           'Instances.*',
-                           'ADS.*',
-                           'Settings.*',
-                           'ADS.InstanceManagement.*',
-                           'FileManager.*',
-                           'LocalFileBackup.*',
-                           'Core.AppManagement.*']
-            self.APIModule = 'AMP'
-            self._last_update_time_lock = threading.Lock()
-
-        if self.InstanceID != '0':
-            self._url += f"ADSModule/Servers/{self.InstanceID}/API/"
-            # This gets all the dictionary values tied to AMP and makes them attributes of self.
-            for entry in serverdata:
-                setattr(self, entry, serverdata[entry])
-
-            if not hasattr(self, 'Description'):
-                self.Description: str = ''
-
-            # This gets me the DB_Server object if it's not there; it adds the server.
-            self.DB_Server = self._DB.GetServer(InstanceID=self.InstanceID)
-            if self.DB_Server == None:
-                self._logger.dev(f'Adding Name: {self.InstanceName} to the Database, Instance ID: {self.InstanceID}')
-
-                try:
-                    self.DB_Server: DBServer = self._DB.AddServer(InstanceID=self.InstanceID, InstanceName=self.InstanceName, FriendlyName=self.FriendlyName)
-                except Exception as e:
-                    self._logger.error(f'We failed to add the {self.InstanceName} {self.InstanceID} to the DB. Error: {traceback.format_exc()}')
-                    raise Exception('Failed to Add to Instance to Database')
-
-                self._logger.info(f'*SUCCESS** Added {self.InstanceName} to the Database.')
-            else:
-                self._logger.info(f'**SUCCESS** Found {self.InstanceName} in the Database.')
-
-            self._logger.dev(f"Instance Name: {self.InstanceName} // InstanceID: {self.InstanceID} // Module: {self.Module} // Port: {self.Port} // DisplayImageSource: {self.DisplayImageSource}")
-
-            # This sets all my DB_Server attributes.
-            self._setDBattr()
-            if self.Running:
-                self._ADScheck()
-
-        # Lets see if we are the main AMP or if the Instance is Running
-        # this is going to validate permissions per instance
-        if instanceID == '0' or self.Running:
-            self._AMP_botRole_exists = False
-            self._have_superAdmin = False
-            self._have_AMP_botRole = False
-
-            # Lets see what Roles/Permissions we have if it all possible first.
+        self.DB_Server = self._DB.GetServer(InstanceID=self.InstanceID)
+        if self.DB_Server is None:
             try:
-                permission = self.check_SessionPermissions()  # We either have to have bot Role or Super Admin to get passed this point. So validate.
-
+                self.DB_Server: DBServer = self._DB.AddServer(InstanceID=self.InstanceID, InstanceName=self.InstanceName, FriendlyName=self.FriendlyName)
             except Exception as e:
-                self._logger.critical(f'***ATTENTION*** {e} for {self.APIModule} on {self.FriendlyName}! Please consider giving us `Super Admins` and the bot will set its own permissions and role!')
-                # If the main AMP is missing permissions; lets quit!
-                if instanceID == '0':
-                    sys.exit(1)
+                self._logger.error(f'We failed to add the {self.InstanceName} {self.InstanceID} to the DB. | Error: {traceback.format_exc()}')
+                raise Exception('Failed to Add to Instance to Database')
 
-            if permission:
-                # If we have the -super arg no need to check for Gatekeeper Role/etc. Just return.
-                if self._AMPHandler._args.super:
-                    self._initialized = True
-                    return
+        #     # Lets see what Roles/Permissions we have if it all possible first.
+        #     try:
+        #         permission = self.check_SessionPermissions()  # We either have to have bot Role or Super Admin to get passed this point. So validate.
 
-                role_perms = self.check_GatekeeperRole_Permissions()  # This will fail if we DO NOT have
-                # Main Instance
-                if instanceID == '0':
-                    # Gatekeeper Role doesn't exist we setup our Bot Role Woohoo!
-                    if not self._AMP_botRole_exists:
-                        self._initialized = True
-                        self.setup_AMPbotrole()
-                        return
+        #     except Exception as e:
+        #         self._logger.critical(f'***ATTENTION*** {e} for {self.APIModule} on {self.FriendlyName}! Please consider giving us `Super Admins` and the bot will set its own permissions and role!')
+        #         # If the main AMP is missing permissions; lets quit!
+        #         if instanceID == '0':
+        #             sys.exit(1)
 
-                    # This is an edge case.
-                    # Gatekeeper doesn't have its Gatekeeper Role, give it to myself.
-                    if not self._have_AMP_botRole:
-                        self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
+        #     if permission:
+        #         # If we have the -super arg no need to check for Gatekeeper Role/etc. Just return.
+        #         if self._AMPHandler._args.super:
+        #             self._initialized = True
+        #             return
 
-                if not role_perms:
-                    if not self._have_superAdmin:
-                        self.logger.critical(f'We do not have the Role `Super Admins` and are unable to set our Permissions for {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
-                        sys.exit(1)
+        #         role_perms = self.check_GatekeeperRole_Permissions()  # This will fail if we DO NOT have
+        #         # Main Instance
+        #         if instanceID == '0':
+        #             # Gatekeeper Role doesn't exist we setup our Bot Role Woohoo!
+        #             if not self._AMP_botRole_exists:
+        #                 self._initialized = True
+        #                 self.setup_AMPbotrole()
+        #                 return
 
-                    # If for some reason we do have Gatekeeper Role and the permissions are NOT setup.
-                    if self._AMP_botRole_exists and self._have_AMP_botRole:
-                        self.setup_Gatekeeper_Permissions()
+        #             # This is an edge case.
+        #             # Gatekeeper doesn't have its Gatekeeper Role, give it to myself.
+        #             if not self._have_AMP_botRole:
+        #                 self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
 
-                    # If for some reason Gatekeeper Role doesn't exist and we don't have it.
-                    else:
-                        self.setup_AMPbotrole()
+        #         if not role_perms:
+        #             if not self._have_superAdmin:
+        #                 self.logger.critical(f'We do not have the Role `Super Admins` and are unable to set our Permissions for {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
+        #                 sys.exit(1)
 
-                else:
-                    self._logger.info(f'We have proper permissions on {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
+        #             # If for some reason we do have Gatekeeper Role and the permissions are NOT setup.
+        #             if self._AMP_botRole_exists and self._have_AMP_botRole:
+        #                 self.setup_Gatekeeper_Permissions()
+
+        #             # If for some reason Gatekeeper Role doesn't exist and we don't have it.
+        #             else:
+        #                 self.setup_AMPbotrole()
+
+        #         else:
+        #             self._logger.info(f'We have proper permissions on {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
 
         self._initialized = True
 
-    def setup_AMPbotrole(self):
-        """Creates the `Gatekeeper` role, Adds us to the Membership of that Role and sets its AMP permissions."""
-        self._logger.warning('Creating the AMP role `Gatekeeper`...')
-        self.createRole('Gatekeeper')
-        self.setRoleIDs()
-        self._logger.dev(f'Created `Gatekeeper` role. ID: {self.AMP_BotRoleID}')
-        self.AMP_UserID = self.getAMPUserID(self.AMPHandler.tokens.AMPUser)
-        self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
-        self._logger.warning(f'***ATTENTION*** Adding {self.AMPHandler.tokens.AMPUser} to `Gatekeeper` Role.')
-        self.setup_Gatekeeper_Permissions()
+    def __setattr__(self, attr: str, value: Any):
+        if hasattr(self, "_initilized") and self._initialized:
+            return
 
+        super().__setattr__(attr, value)
+
+    @property
+    def memoryUsage(self) -> Metrics:
+        if "Memory Usage" in self.Metrics:
+            _raw_value: str = self.Metrics["Memory Usage"]["RawValue"]
+            _max_value: str = self.Metrics["Memory Usage"]["MaxValue"]
+            _percent: str = self.Metrics["Memory Usage"]["Percent"]
+            _units: str = self.Metrics["Memory Usage"]["Units"]
+            return Metrics(_raw_value, _max_value, _percent, _units)
+        else:
+            return Metrics()
+
+    @property
+    def cpuUsage(self) -> Metrics:
+        if "CPU Usage" in self.Metrics:
+            _raw_value: str = self.Metrics["CPU Usage"]["RawValue"]
+            _max_value: str = self.Metrics["CPU Usage"]["MaxValue"]
+            _percent: str = self.Metrics["CPU Usage"]["Percent"]
+            _units: str = self.Metrics["CPU Usage"]["Units"]
+            return Metrics(_raw_value, _max_value, _percent, _units)
+        else:
+            return Metrics()
+
+    @property
+    def activeUsers(self) -> Metrics:
+        if "Active Users" in self.Metrics:
+            _raw_value: str = self.Metrics["Active Users"]["RawValue"]
+            _max_value: str = self.Metrics["Active Users"]["MaxValue"]
+            _percent: str = self.Metrics["Active Users"]["Percent"]
+            _units: str = self.Metrics["Active Users"]["Units"]
+            return Metrics(_raw_value, _max_value, _percent, _units)
+        else:
+            return Metrics()
+
+    # def __getattribute__(self, __name: str):
+    #     if __name in ['_initialized', 'InstanceID', 'serverdata']:
+    #         return super().__getattribute__(__name)
+
+    #     if self._initialized and (self.InstanceID != 0) and __name in self.serverdata:
+    #         self.AMPHandler.AMP._updateInstanceAttributes()
+
+    #     return super().__getattribute__(__name)
     def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions Nodes for AMP Gatekeeper Role"""
         self._logger.info('Setting AMP Role Permissions for `Gatekeeper`...')
@@ -214,97 +211,7 @@ class AMPInstance(AMP_API):
                 enabled = False
                 perm = perm[1:]
             if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
-                self.logger.dev(f'Set __{perm}__ for _Gatekeeper_ to `{enabled}` on {self.FriendlyName if self.InstanceID != 0 else "AMP"}')
-
-    def check_GatekeeperRole_Permissions(self) -> bool:
-        """- Will check `Gatekeeper Role` for `Permission Nodes` when we have `Super Admin` and `not InstanceID = 0`.\n
-        - Checks for `Gatekeeper Role`, if we `have the Gatekeeper Role` and `Super Admin Role`
-        Returns `True` if we have permissions. Otherwise `False`"""
-        # If we have Super Admin; lets check for the Bot Role and if we are not on the Main Instance.
-        failed = False
-
-        self.AMP_userinfo = self.getAMPUserInfo(self.AMPHandler.tokens.AMPUser)  # This gets my AMP User Information
-        self.AMP_UserID = self.getAMPUserID(self.AMPHandler.tokens.AMPUser)  # This gets my AMP User ID
-        self.setRoleIDs()
-
-        # `Gatekeeper Role inside of AMP`
-        if self.AMP_BotRoleID != None:
-            #self.logger.dev('Gatekeeper Role Exists..')
-            self._AMP_botRole_exists = True
-
-        # Gatekeeper has `Gatekeeper` Role inside of AMP
-        if self._AMP_botRole_exists and self.AMP_BotRoleID in self.AMP_userinfo['result']['Roles']:
-            #self.logger.dev('Gatekeeper User has Gatekepeer Role.')
-            self._have_AMP_botRole = True
-
-        # `Super_Admin Role inside of AMP`
-        if self.super_AdminID in self.AMP_userinfo['result']['Roles']:
-            #self.logger.dev('Gatekeeper User has Super Admins')
-            self._have_superAdmin = True
-
-        if self._AMP_botRole_exists:
-            self.logger.dev(f'Checking `Gatekeeper Role` permissions on {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
-            for perm in self.perms:
-                # Skip the perm check on ones we "shouldn't have!"
-                if perm.startswith('-'):
-                    continue
-
-                role_perms = self.getAMPRolePermissions(self.AMP_BotRoleID)
-
-                if perm not in role_perms['result']:
-                    if self._have_superAdmin:
-                        self.logger.dev(f'We have `Super Admins` Role and we are missing Permissions, returning to setup Permissions.')
-                        return False
-
-                    else:
-                        end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
-                        self.logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
-                    failed = True
-
-            if not failed:
-                return True
-        else:
-            return False
-
-    def check_SessionPermissions(self) -> bool:
-        """These check AMP for the proper Permission Nodes.\n
-        Returns `True` only if I have ALL the Required Permissions; Otherwise `False`."""
-        self._logger.warning(f'Checking Session: {self._SessionID} for proper permissions...')
-        failed = False
-        for perm in self.perms:
-            # Skip the perm check on ones we "shouldn't have!"
-            if perm.startswith('-'):
-                continue
-
-            check = self.CurrentSessionHasPermission(perm)
-
-            self.logger.dev(f'Session {"has" if check else "is missing" } permisson node: {perm}')
-            if check:
-                continue
-
-            if self.APIModule == 'AMP':  # AKA the main (InstanceID == 0)
-                self.logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please check under Configuration -> User Management for {self.AMPHandler.tokens.AMPUser}.')
-
-            else:
-                end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
-                self.logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
-            failed = True
-
-        if failed:
-            self.logger.critical(f'***ATTENTION*** The Bot is missing permissions, some or all functionality may not work properly!')
-            # Please see this image for the required bot user Permissions **(Github link to AMP Basic Perms image here)**
-            return check
-
-        return True
-
-    def __getattribute__(self, __name: str):
-        if __name in ['_initialized', 'InstanceID', 'serverdata']:
-            return super().__getattribute__(__name)
-
-        if self._initialized and (self.InstanceID != 0) and __name in self.serverdata:
-            self.AMPHandler.AMP._updateInstanceAttributes()
-
-        return super().__getattribute__(__name)
+                self._logger.dev(f'Set __{perm}__ for _Gatekeeper_ to `{enabled}` on {self.FriendlyName if self.InstanceID != 0 else "AMP"}')
 
     def _setDBattr(self):
         """This is used to set/update the DB attributes for the AMP server"""
@@ -339,37 +246,6 @@ class AMPInstance(AMP_API):
         else:
             return False
 
-    def _updateInstanceAttributes(self):
-        """This updates an AMP Server Objects attributes from `getInstances()` API call."""
-        if (not self._initialized) or (time.time() - self.Last_Update_Time < 5):
-            return
-
-        if self._last_update_time_lock.acquire(blocking=False) == False:
-            return
-
-        self.Login()
-        parameters = {}
-        result = self.CallAPI('ADSModule/GetInstances', parameters)
-
-        if type(result) == bool:
-            self.logger.error(f'Failed to update {self.FriendlyName} attributes, API Call returned {result}')
-            return
-
-        if len(result["result"][0]['AvailableInstances']) != 0:
-            for Target in result["result"]:
-                for instance in Target['AvailableInstances']:  # entry = name['result']['AvailableInstances'][0]['InstanceIDs']
-                    # This should be a list of my AMP Servers [{'InstanceID': '<AMP Instance Object>'}]
-                    for amp_instance in self.AMPHandler.AMP_Instances:
-                        # This should be the <AMP Instance Object> comparing to the Instance Objects we got from `getInstances()`
-                        if self.AMPHandler.AMP_Instances[amp_instance].InstanceID == instance['InstanceID']:
-                            # This gets all the dictionary values tied to AMP and makes them attributes of self.
-                            for entry in instance:
-                                setattr(self.AMPHandler.AMP_Instances[amp_instance], entry, instance[entry])
-                            break
-
-        self.Last_Update_Time = time.time()
-        self._last_update_time_lock.release()
-
     def _instance_ThreadManager(self):
         """AMP Instance(s) Thread Manager"""
         self.Login()
@@ -391,20 +267,6 @@ class AMPInstance(AMP_API):
                     self.logger.error(f'{server.FriendlyName}: Shutting down Console Thread, Instance Online: {server.Running}, ADS Online: {server._App_Running}.')
                     server.Console.console_thread_running = False
 
-    def setRoleIDs(self):
-        """Sets `self.AMP_BotRoleID` and `self.super_AdminID` (if they exist)"""
-        roles = self.getRoleIds()
-        for role in roles:
-            if roles[role].lower() == 'gatekeeper':
-                self.AMP_BotRoleID = role
-                if self.InstanceID == 0:
-                    self.logger.dev(f'Found Gatekeeper Role - ID: {self.AMP_BotRoleID}')
-
-            if roles[role].lower() == 'super admins':
-                self.super_AdminID = role
-                if self.InstanceID == 0:
-                    self.logger.dev(f'Found Super Admin Role - ID: {self.super_AdminID}')
-
     def getLiveStatus(self) -> bool:
         """Server is Online and Proper AMP Permissions. \n
         So we check TPS/State to make sure the Dedicated Server is actually 'live'. \n
@@ -421,48 +283,6 @@ class AMPInstance(AMP_API):
             return True
         else:
             return False
-
-    def getMetrics(self) -> tuple[str, tuple[str, str], str, tuple[str, str], str]:
-        """Returns AMP Instance Metrics \n
-        `Uptime str` \n
-        `TPS str`  \n
-        `Users tuple(str,str)` \n
-        `Memory tuple(str, str)` \n
-        `CPU str` \n
-        """
-        Uptime: str = ''
-        TPS: str = ''
-        Users: tuple[str, str] = ('None', 'None')
-        Memory: tuple[str, str] = ('None', 'None')
-        CPU: str = ''
-        self.Metrics = None
-
-        result = self.getStatus()
-        if result == False:
-            return TPS, Users, CPU, Memory, Uptime
-
-        if isinstance(result, dict):
-            Uptime = str(result['Uptime'])
-            TPS = str(result['State'])
-            Users = (str(result['Metrics']['Active Users']['RawValue']), str(result['Metrics']['Active Users']['MaxValue']))
-            Memory = (str(result['Metrics']['Memory Usage']['RawValue']), str(result['Metrics']['Memory Usage']['MaxValue']))
-            CPU = str(result['Metrics']['CPU Usage']['RawValue'])  # This is a percentage
-            self.Metrics = result['Metrics']
-            return TPS, Users, CPU, Memory, Uptime
-        return TPS, Users, CPU, Memory, Uptime
-
-    def getUsersOnline(self) -> tuple[str, str]:
-        """Returns Number of Online Players over Player Limit. \n
-        `eg 2/10`"""
-        result = self.getStatus()
-        if result != False:
-            Users = (str(result['Metrics']['Active Users']['RawValue']), str(result['Metrics']['Active Users']['MaxValue']))
-            return Users
-
-    def getAMPUserID(self, name: str):
-        """Returns AMP Users ID Only."""
-        result = self.getAMPUserInfo(name=name)
-        return result['result']['ID']
 
     # These are GENERIC Methods below this point purely for typehiting and Linter purpose. ---------------------------------------------------------------------------
 
