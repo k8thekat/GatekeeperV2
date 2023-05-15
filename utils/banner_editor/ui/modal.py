@@ -7,7 +7,7 @@ import difflib
 
 from amp_handler import AMPHandler
 from utils.banner_editor.ui.textinput import Copy_To_TextInput
-from utils.banner_editor.ui.view2 import Copy_To_View
+from utils.banner_editor.ui.view_copy_to import Copy_To_View
 from utils.banner_editor.edited_banner import Edited_DB_Banner
 from utils.banner_editor.ui.textinput import Banner_Blur_Input, Banner_Color_Input
 from utils.banner_editor.util import banner_file_handler
@@ -16,7 +16,7 @@ from utils.banner_creator import Banner_Generator
 
 if TYPE_CHECKING:
     from amp_instance import AMPInstance
-    from utils.banner_editor.ui.view import Banner_Editor_View
+    from utils.banner_editor.ui.editor_view import Banner_Editor_View
     from amp_instance import AMPInstance
 
 
