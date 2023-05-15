@@ -22,6 +22,7 @@ import traceback
 from importlib.util import spec_from_file_location, module_from_spec
 from argparse import Namespace
 from typing import Union
+import time
 
 from amp_api import AMP_API
 from amp_instance import AMP_Instance
@@ -32,8 +33,18 @@ class AMP_ADS(AMP_API):
     _ampModules: list = []
     _ampConsoleModules: list = []
     _ampInstances: dict[str, str] = {}
+
     Port: str = ""
     Module: str = "ADS"
+
+    # permission attrs
+    AMPUSER_id: str
+    AMPUSER_info: dict
+    SUPERADMIN_roleID: str
+    _roleID: str
+    _role_exists: bool = False
+    _have_role: bool = False
+    _have_superAdmin: bool = False
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, "_instance"):
@@ -123,115 +134,6 @@ class AMP_ADS(AMP_API):
             self._logger.error(f'**ERROR** Loading AMP Module ** - File Not Found | Exception: {traceback.format_exc()}')
 
     # All Permission related methods ---------------------------------------------------
-    def _setup_AMPbotrole(self):
-        """Creates the `Gatekeeper` role, Adds us to the Membership of that Role and sets its AMP permissions."""
-        self._logger.warning('Creating the AMP role `Gatekeeper`...')
-        self.createRole('Gatekeeper')
-        self.setRoleIDs()
-        self.AMP_UserID = self.getAMPUserID(self.AMPUSER)
-        self.setAMPUserRoleMembership(self.AMP_UserID, self.AMP_BotRoleID, True)
-        self._logger.warning(f'***ATTENTION*** Adding {self.AMPUSER} to `Gatekeeper` Role.')
-        self.setup_Gatekeeper_Permissions()
-
-    def check_GatekeeperRole_Permissions(self) -> bool:
-        """- Will check `Gatekeeper Role` for `Permission Nodes` when we have `Super Admin` and `not InstanceID = 0`.\n
-        - Checks for `Gatekeeper Role`, if we `have the Gatekeeper Role` and `Super Admin Role`
-        Returns `True` if we have permissions. Otherwise `False`"""
-        # If we have Super Admin; lets check for the Bot Role and if we are not on the Main Instance.
-        failed = False
-
-        self.AMP_userInfo = self.getAMPUserInfo(self.AMPUSER)  # This gets my AMP User Information
-        self.AMP_userID = self.getAMPUserID(self.AMPUSER)  # This gets my AMP User ID
-        self.setRoleIDs()
-
-        # `Gatekeeper Role inside of AMP`
-        if self.AMP_BotRoleID != None:
-            # self.logger.dev('Gatekeeper Role Exists..')
-            self._AMP_botRole_exists = True
-
-        # Gatekeeper has `Gatekeeper` Role inside of AMP
-        if self._AMP_botRole_exists and self.AMP_BotRoleID in self.AMP_userinfo['result']['Roles']:
-            # self.logger.dev('Gatekeeper User has Gatekepeer Role.')
-            self._have_AMP_botRole = True
-
-        # `Super_Admin Role inside of AMP`
-        if self.super_AdminID in self.AMP_userinfo['result']['Roles']:
-            # self.logger.dev('Gatekeeper User has Super Admins')
-            self._have_superAdmin = True
-
-        if self._AMP_botRole_exists:
-            self.logger.dev(f'Checking `Gatekeeper Role` permissions on {"AMP" if self.InstanceID == 0 else self.FriendlyName}')
-            for perm in self.perms:
-                # Skip the perm check on ones we "shouldn't have!"
-                if perm.startswith('-'):
-                    continue
-
-                role_perms = self.getAMPRolePermissions(self.AMP_BotRoleID)
-
-                if perm not in role_perms['result']:
-                    if self._have_superAdmin:
-                        self.logger.dev(f'We have `Super Admins` Role and we are missing Permissions, returning to setup Permissions.')
-                        return False
-
-                    else:
-                        end_point = self.AMPHandler.tokens.AMPurl.find(":", 5)
-                        self.logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please visit {self.AMPHandler.tokens.AMPurl[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
-                    failed = True
-
-            if not failed:
-                return True
-        else:
-            return False
-
-    def getAMPUserID(self, name: str):
-        """Returns AMP Users ID Only."""
-        result = self.getAMPUserInfo(name=name)
-        return result['result']['ID']
-
-    def setRoleIDs(self):
-        """Sets `self.AMP_BotRoleID` and `self.super_AdminID` (if they exist)"""
-        roles = self.getRoleIds()
-        for role in roles:
-            if roles[role].lower() == 'gatekeeper':
-                self.AMP_BotRoleID = role
-                if self.InstanceID == 0:
-                    self.logger.dev(f'Found Gatekeeper Role - ID: {self.AMP_BotRoleID}')
-
-            if roles[role].lower() == 'super admins':
-                self.super_AdminID = role
-                if self.InstanceID == 0:
-                    self.logger.dev(f'Found Super Admin Role - ID: {self.super_AdminID}')
-
-    async def check_SessionPermissions(self) -> bool:
-        """These check AMP for the proper Permission Nodes.\n
-        Returns `True` only if I have ALL the Required Permissions; Otherwise `False`."""
-        self._logger.warning(f'Checking Session: {self._session_id} for proper permissions...')
-        failed = False
-        for perm in self._perms:
-            # Skip the perm check on ones we "shouldn't have!"
-            if perm.startswith('-'):
-                continue
-
-            check = await self.currentSessionHasPermission(perm)
-
-            # self._logger.dev(f'Session {"has" if check else "is missing" } permisson node: {perm}')
-            if check:
-                continue
-
-            if self.Module == 'AMP':  # AKA the main (InstanceID == 0)
-                self._logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please check under Configuration -> User Management for {self.AMPUSER}.')
-
-            else:
-                end_point = self.AMPURL.find(":", 5)
-                self._logger.warning(f'Gatekeeper is missing the permission __{perm}__ Please visit {self.AMPURL[:end_point]}:{self.Port} under Configuration -> Role Management -> Gatekeeper')
-            failed = True
-
-        if failed:
-            self._logger.critical(f'***ATTENTION*** The Bot is missing permissions, some or all functionality may not work properly!')
-            # Please see this image for the required bot user Permissions **(Github link to AMP Basic Perms image here)**
-            return check
-
-        return True
 
     def _updateInstanceAttributes(self):
         """This updates an AMP Server Objects attributes from `getInstances()` API call."""

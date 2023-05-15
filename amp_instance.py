@@ -28,11 +28,10 @@ import traceback
 from typing import NamedTuple, Union, Any
 import sys
 import threading
-from amp_ads import AMP_ADS
 
-
-from amp_api import AMP_API
 from DB import DBHandler, Database, DBConfig, DBServer
+from amp_api import AMP_API
+from amp_permissions import check_SessionPermissions, check_GatekeeperRole_Permissions
 
 
 class Metrics(NamedTuple):
@@ -80,10 +79,19 @@ class AMP_Instance(AMP_API):
     _ignore_list: list[str] = []
     _super_adminID: str
     _apiModule: str
-    _bot_roleID: Union[str, None]
+    _roleID: Union[str, None]
     _targetName: str
     _initialized: bool = False
     _last_update_time_lock: threading.Lock
+
+    # permission attrs
+    AMPUSER_id: str
+    AMPUSER_info: dict
+    SUPERADMIN_roleID: str
+    _roleID: str
+    _role_exists: bool = False
+    _have_role: bool = False
+    _have_superAdmin: bool = False
 
     def __init__(self, serverData: dict[str, str]) -> None:
         super().__init__()
@@ -192,6 +200,15 @@ class AMP_Instance(AMP_API):
         else:
             return Metrics()
 
+    @property
+    def manageURL(self) -> str | None:
+        ret: Union[str, None] = None
+        results = self.getConfig(node="ADSModule.Networking.BaseURL")
+        if "CurrentValue" in results:
+            value = results["CurrentValue"]
+            ret = value + f"/?instance={self.InstanceID}"
+            return ret
+
     # def __getattribute__(self, __name: str):
     #     if __name in ['_initialized', 'InstanceID', 'serverdata']:
     #         return super().__getattribute__(__name)
@@ -200,18 +217,6 @@ class AMP_Instance(AMP_API):
     #         self.AMPHandler.AMP._updateInstanceAttributes()
 
     #     return super().__getattribute__(__name)
-    def setup_Gatekeeper_Permissions(self):
-        """Sets the Permissions Nodes for AMP Gatekeeper Role"""
-        self._logger.info('Setting AMP Role Permissions for `Gatekeeper`...')
-        import amp_permissions as AMPPerms
-        core = AMPPerms.perms_super()
-        for perm in core:
-            enabled = True
-            if perm.startswith('-'):
-                enabled = False
-                perm = perm[1:]
-            if self.setAMPRolePermissions(self.AMP_BotRoleID, perm, enabled):
-                self._logger.dev(f'Set __{perm}__ for _Gatekeeper_ to `{enabled}` on {self.FriendlyName if self.InstanceID != 0 else "AMP"}')
 
     def _setDBattr(self):
         """This is used to set/update the DB attributes for the AMP server"""
