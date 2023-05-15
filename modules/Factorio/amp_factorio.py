@@ -19,8 +19,8 @@
    02110-1301, USA. 
 
 '''
-import amp
-import amp_console
+from amp_instance import AMP_Instance
+from AMP_Console import AMPConsole
 
 
 # Resources
@@ -29,7 +29,7 @@ import amp_console
 DisplayImageSources = ['steam:427520']
 
 
-class AMPFactorio(amp.AMPInstance):
+class AMPFactorio(AMP_Instance):
     def __init__(self, instanceID: int = 0, serverdata: dict = {}, default_console: bool = False, Handler=None, _TargetName: str = None):
         self.APIModule = 'Factorio'
 
@@ -58,6 +58,6 @@ class AMPFactorio(amp.AMPInstance):
         self.ConsoleMessage(f'[color=blue]"[Discord]"[/color] [color=default]<{author}>: {message}[/color]')
 
 
-class AMPFactorioConsole(amp_console.AMPConsole):
+class AMPFactorioConsole(AMPConsole):
     def __init__(self, AMPInstance=AMPFactorio):
         super().__init__(AMPInstance)

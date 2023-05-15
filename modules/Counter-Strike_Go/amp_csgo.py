@@ -19,20 +19,20 @@
    02110-1301, USA. 
 
 '''
-from amp_instance import AMPInstance
-import amp_console
+from amp_instance import AMP_Instance
+from AMP_Console import AMPConsole
 
 
 DisplayImageSources = ['steam:730']
 
 
-class AMPCsgo(AMPInstance):
+class AMP_CSGO(AMP_Instance):
     def __init__(self, instanceID: int = 0, serverdata: dict = {}, default_console: bool = False, Handler=None, _TargetName: str = None):
         self.perms = []
         self.APIModule = 'Counterstrike_GO'
 
         super().__init__(instanceID, serverdata, Handler=Handler, _TargetName=_TargetName)
-        self.Console = AMPCsgoConsole(AMPInstance=self)
+        self.Console = AMP_CSGO_Console(AMPInstance=self)
 
         self.default_background_banner_path = 'resources/banners/CS_Go_Banner_3.png'
 
@@ -40,6 +40,6 @@ class AMPCsgo(AMPInstance):
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/csgo_avatar.png?raw=true'
 
 
-class AMPCsgoConsole(amp_console.AMPConsole):
-    def __init__(self, AMPInstance=AMPCsgo):
+class AMP_CSGO_Console(AMPConsole):
+    def __init__(self, AMPInstance=AMP_CSGO):
         super().__init__(AMPInstance)

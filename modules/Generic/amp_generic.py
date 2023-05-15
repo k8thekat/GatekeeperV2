@@ -19,20 +19,20 @@
    02110-1301, USA. 
 
 '''
-import amp
-import amp_console
+from amp_instance import AMP_Instance
+from AMP_Console import AMPConsole
 
 
 DisplayImageSources = ['Generic']
 
 
-class AMPGeneric(amp.AMPInstance):
+class AMP_Generic(AMP_Instance):
     def __init__(self, instanceID: int = 0, serverdata: dict = {}, default_console: bool = False, Handler=None, _TargetName: str = None):
         self.perms = []
         self.APIModule = 'Generic'
 
         super().__init__(instanceID, serverdata, Handler=Handler, _TargetName=_TargetName)
-        self.Console = AMPGenericConsole(AMPInstance=self)
+        self.Console = AMP_Generic_Console(AMPInstance=self)
 
         self.default_background_banner_path = 'resources/banners/AMP_Banner.jpg'
 
@@ -40,6 +40,6 @@ class AMPGeneric(amp.AMPInstance):
             self.DB_Server.Avatar_url = 'https://github.com/k8thekat/GatekeeperV2/blob/main/resources/avatars/amp_avatar.jpg?raw=true'
 
 
-class AMPGenericConsole(amp_console.AMPConsole):
-    def __init__(self, AMPInstance=AMPGeneric):
+class AMP_Generic_Console(AMPConsole):
+    def __init__(self, AMPInstance=AMP_Generic):
         super().__init__(AMPInstance)
