@@ -12,7 +12,7 @@ from amp_handler import AMPHandler
 if TYPE_CHECKING:
     from DB import DBServer
     from amp_instance import AMPInstance
-    from utils.banner_editor.ui.editor_view import Banner_Editor_View
+    from utils.banner_editor.ui.view_editor import Banner_Editor_View
 
 
 class Copy_To_Select(Select):

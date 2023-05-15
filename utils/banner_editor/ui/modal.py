@@ -16,7 +16,7 @@ from utils.banner_creator import Banner_Generator
 
 if TYPE_CHECKING:
     from amp_instance import AMPInstance
-    from utils.banner_editor.ui.editor_view import Banner_Editor_View
+    from utils.banner_editor.ui.view_editor import Banner_Editor_View
     from amp_instance import AMPInstance
 
 
