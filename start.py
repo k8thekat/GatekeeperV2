@@ -43,17 +43,17 @@ class Setup:
         parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required=False, action="store_true")
         self.args = parser.parse_args()
 
-        self.pip_install()
-
-        # Renaming Main Thread to "Gatekeeper"
-        Gatekeeper = current_thread()
-        Gatekeeper.name = 'Gatekeeper'
-
         # Custom Logger functionality.
         import logging
         import logger
         logger.init(self.args)
         self.logger = logging.getLogger()
+
+        self.pip_install()
+
+        # Renaming Main Thread to "Gatekeeper"
+        Gatekeeper = current_thread()
+        Gatekeeper.name = 'Gatekeeper'
 
         self.logger.dev(f'Current Startup Args:{self.args}')
 
