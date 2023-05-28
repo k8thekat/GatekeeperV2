@@ -43,13 +43,13 @@ class Setup:
         parser.add_argument('-debug', help='Enables DEBUGGING level for logging', required=False, action="store_true")
         self.args = parser.parse_args()
 
+        self.pip_install()
+
         # Custom Logger functionality.
         import logging
         import logger
         logger.init(self.args)
         self.logger = logging.getLogger()
-
-        self.pip_install()
 
         # Renaming Main Thread to "Gatekeeper"
         Gatekeeper = current_thread()
@@ -99,7 +99,7 @@ class Setup:
         if pip_v_major > 22 or (pip_v_major == 22 and pip_v_minor >= 1):
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
         else:
-            self.logger.critical(f'Unable to Start Gatekeeper, PIP Version is {pip.__version__}, we require PIP Version >= 22.1')
+            print(f'Unable to Start Gatekeeper, PIP Version is {pip.__version__}, we require PIP Version >= 22.1')
 
 
 Start = Setup()
