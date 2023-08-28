@@ -177,7 +177,7 @@ class Banner(commands.Cog):
 
                 except discord.errors.Forbidden:
                     self.logger.error(f'{self._client.user.name} lacks permissions to edit messages in {discord_channel.name}, removing the Channel from {banner_name}.')
-                    #self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
+                    # self.DB.DelServerDisplayBanner(discord_guild.id, discord_channel.id)
                     self.DB.Remove_Channel_from_BannerGroup(channelid=discord_channel, guildid=discord_guild)
 
                 except discord.errors.NotFound:
@@ -489,7 +489,7 @@ class Banner(commands.Cog):
     @utils.role_check()
     @app_commands.choices(flag=[Choice(name='True', value=1), Choice(name='False', value=0)])
     async def banner_autoupdate(self, context: commands.Context, flag: Choice[int] = 1):
-        """Toggles Auto Updating of Banners On or Off. (Only for `/server Display`)"""
+        """Toggles Auto Updating of Banners On or Off."""
         self.logger.command(f'{context.author.name} used Bot Display Banners Auto Update...')
 
         if flag.value == 1:

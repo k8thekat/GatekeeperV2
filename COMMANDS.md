@@ -38,9 +38,8 @@ ___
 - `/bot cog reload` - Reloads all currently loaded Cogs.
 
 ### <u>Bot Banner_Settings Commands</u>: 
-- `/bot banner_settings auto_update (flag)` - Allows the bot to automatically update the `/server display` Banner messages.
-    - **TIP**: Use the `/server display` command inplace of your "Server Info" or similar! 
-- `/bot banner_settings type (type)` - Select which type of Banner to display via `/server display`
+- `/bot banner_settings auto_update (flag)` - Allows the bot to automatically update the Banner Group messages.
+- `/bot banner_settings type (type)` - Select which type of Banner to display via Banner Group messages.
 
 ### <u>Bot BannerGroup Commands</u>: 
 - `/bot bannergroup create_group (group_name)` - Creates a new Banner Group
@@ -100,8 +99,6 @@ ___
 - `/dbserver change_instance_id (from_server, to_server)` - Use this to switch an AMP instance with another AMP Instance in the Database.
 
 ### <u>AMP Server Commands</u>: 
-- `/server display` - Lists all AMP Servers in banners with current information.
-    - **TIP**: Those banners get updated every minute! So use the command as a "Status" style channel and pin them!
 - `/server update` - Updates the current list of AMP servers. *(This is also done every 30 seconds)*
     - **TIP**: This is used when creating a new Instance and needing to update the bots listings.
 - `/server start (server)` - Starts the specified dedicated server.
@@ -125,7 +122,7 @@ ___
 
 ### <u>AMP Server Settings Commands</u>:
 - `/server settings info (server)` - Displays information such as IP, Donator Only, Whitelist Open, Discord Role, Discord Chat/Console/Event Channels and Nicknames.
-- `/server settings hidden (server, flag)` - Hides or Shows the Servers Banners when using `/server display`
+- `/server settings hidden (server, flag)` - Hides or Shows the Server from Autocomplete lists when *NON-Moderators* are using slash commands.
 - `/server settings host (server, host)` - Sets the Host of the AMP Dedicated server in the Database.
     - **ATTENTION**: This is only used and displayed when commands such as `/server status` and `/server list`.
     - **TIP**: `Host` is what you want your players to use to connect to the server!

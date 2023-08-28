@@ -382,7 +382,7 @@ class AMP_Server(commands.Cog):
     @app_commands.autocomplete(server=utils.autocomplete_servers)
     @app_commands.choices(flag=[Choice(name='True', value=1), Choice(name='False', value=0)])
     async def amp_server_hidden(self, context: commands.Context, server, flag: Choice[int]):
-        """Hides the server from Banner Display via `/server display`"""
+        """Hides or Shows the Server from Autocomplete lists when *NON-Moderators* are using slash commands."""
         self.logger.command(f'{context.author.name} used Database Server Hidden')
 
         amp_server = await self.uBot._serverCheck(context, server, False)

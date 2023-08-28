@@ -55,3 +55,18 @@ Most of the settings will be handles via [Server Setting Commands](/COMMANDS.md#
 - Here is what `Whitelist Open Font Color`, `Whitelist Closed Font Color` and `Donator Font Color` will affect.
 
 ![whitelist_donator](/resources/wiki/banner/whitelist_donator_example.png)
+
+
+## **How to Display your Banners**
+___
+Cool you have probably figured out how to edit your banners and make them look how you want; but you still cant see them anywhere yet. Let's start!
+
+Full list of commands -> [Banner Group commands](/COMMANDS.md#bot-bannergroup-commands)
+
+1. First we need to create a `Banner Group` use `/bot bannergroup create_group` and enter a group name *(eg. Minecraft)*
+    - The name you enter is for identifcation purposes only. Autocomplete will prompt all group names.
+2. Next we need to do is use `/bot bannergroup add` and select the group you recently made in step 1, then select the `server` parameter and choose a server from the auto complete to add it to the group.
+3. Next we use the same command `/bot bannergroup add` and select the group you recently made. Now this time we select `channel` and pick a channel from the autocomplete. This is where the banner will show up.
+    - **TIP** - You can add a `server` and a `channel` at the same time.
+    - The bot must be able to **send, edit and delete messages** in this channel. *Failure to have permissions will cause unexpected results.*
+4. Tada; give it a moment to populate. Shortly you should see a Banner Image or Embed be displayed in the channel you selected with the server you added to group you made in step 1.
