@@ -23,8 +23,15 @@ from importlib.util import spec_from_file_location, module_from_spec
 from argparse import Namespace
 from typing import Union
 import time
+import requests
+from requests import Response, session
+import os
+import sys
+from pyotp import TOTP
 
-from amp_api import AMP_API
+from dotenv import load_dotenv
+
+from amp_api import AMP_API, API_Params
 from amp_instance import AMP_Instance
 
 
@@ -46,15 +53,33 @@ class AMP_ADS(AMP_API):
     _have_role: bool = False
     _have_superAdmin: bool = False
 
+    # .env handling - login deets
+    load_dotenv()
+    AMPUSER: str = os.environ["AMPUSER"].strip()
+    AMPPASSWORD: str = os.environ["AMPPASSWORD"].strip()
+    AMPURL: str = os.environ["AMPURL"].strip()
+    AMPAUTH: str = os.environ["AMPAUTH"].strip()
+    _use_AMP2FA: bool = False
+
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, "_instance"):
             cls._instance = super(AMP_ADS, cls).__new__(
                 cls, *args, **kwargs)
         return cls._instance
 
-    def __init__(self, session_id: str = '0', args: Namespace | None = None) -> None:
+    def __init__(self, session_id: str = '0') -> None:
+        self._val_settings()  # This must be called first.
+        args: API_Params = {
+            "url": self.AMPURL,
+            "user": self.AMPUSER,
+            "password": self.AMPPASSWORD,
+            "auth": self.AMPAUTH,
+            "use_auth": self._use_AMP2FA,
+            "session_id": session_id
+        }
         super().__init__(session_id, args)
-        self._moduleHandler()
+        print("ADS init finished")
+        # TODO - re-enable func -> self._moduleHandler()
 
         self._perms = ['Core.*',
                        'Core.RoleManagement.*',
@@ -66,6 +91,53 @@ class AMP_ADS(AMP_API):
                        'FileManager.*',
                        'LocalFileBackup.*',
                        'Core.AppManagement.*']
+
+    def _val_settings(self) -> None:
+        """Validates the .env settings and if we should use 2FA or not."""
+        self._logger.info("Validating your .env file...")
+        result: Response
+
+        # if not self.args.token:
+        if not self._cwd.joinpath(".env").exists():
+            self._logger.critical("**ERROR** Missing our .env, please rename .envtemplate to .env")
+            raise ValueError("Missing .env file in Bot directory.")
+
+        # if -dev is enabled; lets use our DEV information inside our .env file.
+        if self._args != None and self._args.dev:  # type:ignore
+            self.AMPUSER: str = os.environ["DEV_AMPUSER"].strip()
+            self.AMPPASSWORD: str = os.environ["DEV_AMPPASSWORD"].strip()
+            self.AMPURL: str = os.environ["DEV_AMPURL"].strip()
+            self.AMPAUTH: str = os.environ["DEV_AMPAUTH"].strip()
+
+        # handles validating the url briefly..
+        if not self.AMPURL.startswith("http://") and not self.AMPURL.startswith("https://"):
+            self._logger.critical("** Please verify your AMPurl. It either needs 'http://'' or 'https://'' depending on your AMP/Network setup. **")
+            raise ValueError("Improper URL provided.")
+
+        # if for some reason they left a trailing `/` lets just remove it for them and continue.
+        if self.AMPURL.endswith("/"):
+            self.AMPURL = self.AMPURL[:-1]
+
+        # lets attempt to connect to the url with request
+        # TODO -- Ideally I want to use async here; but unsure how..
+        try:
+            result = requests.get(url=self.AMPURL)
+        except ConnectionError as e:
+            self._logger.critical(f"Unable to connect to the provided {self.AMPURL} please verify the URL and try again. | Exception {e}")
+            raise e
+
+        if not result.status_code == 200:
+            self._logger.critical(f"** Please verify your AMPurl, it responded with the response code: {result.status_code}")
+
+        # if our AMPAUTH has a len of 0; 2FA disabled.
+        if len(self.AMPAUTH) == 0:
+            self._use_AMP2FA = False
+        # if our AMPAUTH url is too short; possibly the 6 digit code.
+        elif len(self.AMPAUTH) < 7:
+            self._logger.critical('**ERROR** Please use your 2 Factor Generator Code (Should be over 25 characters long), not the 6 digit numeric generated code that expires with time.')
+            raise ValueError("Improper 2 Factor Code provided.")
+        else:
+            self._use_AMP2FA = True
 
     async def getInstances(self):
         results = await super().getInstances()
