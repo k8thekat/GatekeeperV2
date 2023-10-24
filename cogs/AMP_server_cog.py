@@ -99,7 +99,7 @@ class AMP_Server(commands.Cog):
     async def amp_server_update(self, context: commands.Context):
         """Updates the bot with any freshly created AMP Instances"""
         self.logger.command(f'{context.author.name} used AMP Server Update')
-        new_server = self.AMPHandler.AMP._instanceValidation()
+        new_server = self.AMPHandler._instanceValidation()
         if new_server:
             await context.send(f'Found a new Server: {new_server}', ephemeral=True, delete_after=self._client.Message_Timeout)
         else:
