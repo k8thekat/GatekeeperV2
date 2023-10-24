@@ -93,9 +93,11 @@ class AMP_Instance(AMP_API):
     _have_role: bool = False
     _have_superAdmin: bool = False
 
-    def __init__(self, serverData: dict[str, str]) -> None:
-        super().__init__()
-        self._URL = self.AMPURL + f"ADSModule/Servers/{self.InstanceID}/API/"
+    def __init__(self, serverData: dict[str, str], args: dict) -> None:
+        # We update our AMP URL per instance for API calls.
+        args["url"] = args["url"] + f"ADSModule/Servers/{self.InstanceID}/API/"
+        super().__init__(args=args)
+        # self._URL = self._URL + f"ADSModule/Servers/{self.InstanceID}/API/"
         # most if not all of these are type hinted above as base instance vars
         for entry in serverData:
             setattr(self, entry, serverData[entry])

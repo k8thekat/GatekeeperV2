@@ -13,3 +13,4 @@ discordBot.db*
 .env
 sqlite3.exe
 .env
+test.py

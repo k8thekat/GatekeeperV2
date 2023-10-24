@@ -20,19 +20,18 @@
 '''
 import traceback
 from importlib.util import spec_from_file_location, module_from_spec
-from argparse import Namespace
-from typing import Union
 import time
 import requests
 from requests import Response, session
 import os
-import sys
-from pyotp import TOTP
 
 from dotenv import load_dotenv
 
 from amp_api import AMP_API, API_Params
 from amp_instance import AMP_Instance
+
+# TODO - We cannot call _connect inside of our __init__()
+# So we should make a function to call _connect on each of our AMP_Instance class objects.
 
 
 class AMP_ADS(AMP_API):
@@ -54,6 +53,7 @@ class AMP_ADS(AMP_API):
     _have_superAdmin: bool = False
 
     # .env handling - login deets
+    # TODO - Switch to .ini to prevent conflict of bot `.env`
     load_dotenv()
     AMPUSER: str = os.environ["AMPUSER"].strip()
     AMPPASSWORD: str = os.environ["AMPPASSWORD"].strip()
@@ -69,7 +69,7 @@ class AMP_ADS(AMP_API):
 
     def __init__(self, session_id: str = '0') -> None:
         self._val_settings()  # This must be called first.
-        args: API_Params = {
+        self.args: API_Params = {
             "url": self.AMPURL,
             "user": self.AMPUSER,
             "password": self.AMPPASSWORD,
@@ -77,7 +77,7 @@ class AMP_ADS(AMP_API):
             "use_auth": self._use_AMP2FA,
             "session_id": session_id
         }
-        super().__init__(session_id, args)
+        super().__init__(session_id, self.args)
         print("ADS init finished")
         # TODO - re-enable func -> self._moduleHandler()
 
@@ -163,7 +163,7 @@ class AMP_ADS(AMP_API):
                 if server_type not in self._ampModules:
                     server_type = "Generic"
 
-                server: AMP_Instance = self._ampModules[server_type](serverdata=amp_instance)
+                server: AMP_Instance = self._ampModules[server_type](serverdata=amp_instance, args=self.args)
                 self._ampInstances[server.InstanceID] = server
 
         # # AMPHandler AMP Instances will be empty on first startup; we need to NOT compare for any missing instances.

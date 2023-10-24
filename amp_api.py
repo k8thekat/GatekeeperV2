@@ -23,19 +23,14 @@ from typing import Union, Any
 import json
 import pathlib
 import traceback
+import sys
+import logging
+from typing import TypedDict
 
 import aiohttp
 from aiohttp import ClientResponse
 
-import sys
-import logging
-from dotenv import load_dotenv
-import os
-from argparse import Namespace
 from pyotp import TOTP  # 2Factor Authentication Python Module
-import requests
-from requests import Response
-from typing import TypedDict
 
 
 class API_Params(TypedDict):
@@ -52,7 +47,7 @@ class AMP_API():
     _cwd = pathlib.Path.cwd()
 
     def __init__(self, args: Union[API_Params, None] = None) -> None:
-        self._args = args
+        # self._args = args
         self._URL: str = args['url'] + "/API/"
         self._AMPUSER: str = args['user']
         self._AMPPASSWORD: str = args['password']
