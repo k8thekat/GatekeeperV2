@@ -25,6 +25,7 @@ import argparse
 import pip
 from threading import current_thread
 import logging
+import pathlib
 
 import Gatekeeper
 import logger
@@ -80,7 +81,10 @@ class Setup:
         pip_v_minor: int = int(pip_version[1])
 
         if pip_v_major > 22 or (pip_v_major == 22 and pip_v_minor >= 1):
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
+            # Thanks Greelan~ for the help with this!
+            _current_path = pathlib.Path(__file__).parent.absolute()
+            _requirements_path = _current_path.joinpath('requirements.txt')
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', f'{_requirements_path}'])
         else:
             self._logger.critical(f'Unable to Start Gatekeeper, PIP Version is {pip.__version__}, we require PIP Version >= 22.1')
 
