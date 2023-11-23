@@ -19,13 +19,10 @@
    02110-1301, USA. 
 '''
 from __future__ import annotations
-from typing import Union, Any
+from typing import Union
 import json
-import pathlib
 import traceback
-import sys
 import logging
-from typing import TypedDict
 
 import aiohttp
 from aiohttp import ClientResponse
@@ -33,135 +30,152 @@ from aiohttp import ClientResponse
 from pyotp import TOTP  # 2Factor Authentication Python Module
 
 
-class API_Params(TypedDict):
-    url: str
-    user: str
-    password: str
-    auth: str
-    use_auth: bool
-    session_id: str
-
-
 class AMP_API():
     _logger = logging.getLogger()
-    _cwd = pathlib.Path.cwd()
+    _logger.setLevel(logging.INFO)
 
-    def __init__(self, args: Union[API_Params, None] = None) -> None:
-        # self._args = args
-        self._URL: str = args['url'] + "/API/"
-        self._AMPUSER: str = args['user']
-        self._AMPPASSWORD: str = args['password']
-        self._AMPAUTH: str = args['auth']
-        self._use_2FA: bool = args['use_auth']
-        self._session_id = args['session_id']
+    def __init__(self, url: str, amp_user: str, amp_password: str, amp_2fa: bool = False, amp_2fa_token: str = "", session_id: str = "0") -> None:
+        self._url: str = url + "/API/"
+        self._amp_user: str = amp_user
+        self._amp_password: str = amp_password
+        self._amp_2fa: bool = amp_2fa
+        self._amp_2fa_token: str = amp_2fa_token
+        self._session_id = session_id
 
-        self.FAILED_LOGIN: str = ""
+        if self._amp_2fa == True:
+            if self._amp_2fa_token == "":
+                raise ValueError("You must provide a 2FA Token if you are using 2FA.")
+            if self._amp_2fa_token.startswith(("'", '"')) == False or self._amp_2fa_token.endswith(("'", '"')) == False:
+                raise ValueError("2FA Token must be enclosed in quotes.")
+
+        # self.FAILED_LOGIN: str = ""
         self.NO_DATA: str = "Failed to recieve any data from post request."
-        self.UNAUTHORIZED_ACCESS: str = f"{self._AMPUSER} does not have the required permissions to interact with this instance."
+        self.UNAUTHORIZED_ACCESS: str = f"{self._amp_user} user does not have the required permissions to interact with this instance."
 
-    async def _call_api(self, api: str, parameters: dict[str, str]):
-        """Uses `aiohttp.ClientSession` and `.post()` to retrieve information.
+    async def _call_api(self, api: str, parameters: dict[str, str]) -> str | bool | dict:
+        """
+        Uses aiohttp.ClientSession() post request to access the AMP API endpoints. \n
+        Will automatically populate the `SESSIONID` parameter if it is not provided.
 
-        All information is `.json()` serialized."""
-        self._AMPheader: dict = {'Accept': 'text/javascript'}
-        _post_req: ClientResponse | None
-        self._logger.info(f'Function {api} was called with {parameters}')
+        Args:
+            api (str): The API endpoint to call. eg `Core/GetModuleInfo`
+            parameters (dict[str, str]): The parameters to pass to the API endpoint.
+
+        Raises:
+            ValueError: When the API call returns no data or raises any exception.
+            ConnectionError: When the API call returns a status code other than 200.
+            PermissionError: When the API call returns a `Unauthorized Access` error or permission related error.
+
+        Returns:
+            Any: Returns unmodified JSON response from the API call. Typically a string or dict.
+        """
+        header: dict = {'Accept': 'text/javascript'}
+        post_req: ClientResponse | None
+        self._logger.debug(f'_call_api -> {api} was called with {parameters}')
 
         if self._session_id != "0":
             parameters["SESSIONID"] = self._session_id
 
-        jsonhandler = json.dumps(parameters)
+        json_data = json.dumps(parameters)
         async with aiohttp.ClientSession() as session:
             try:
-                _post_req = await session.post(self._URL + api, headers=self._AMPheader, data=jsonhandler)
-                self._logger.debug(f'Post Request Prints: {await _post_req.json()}')
-
-            # FIXME - Need to not catch all Excepts..
-            # So I can handle each exception properly.
+                post_req = await session.post(self._url + api, headers=header, data=json_data)
+                self._logger.debug(f'post req-> {await post_req.json()}')
+            # TODO - Need to not catch all Excepts..
             except Exception as e:
-                print(type(e))
+                # So I can handle each exception properly.
+                print("_call_api exception type:", type(e))
                 raise ValueError(e)
 
-            if _post_req.content_length == 0:
+            if post_req.content_length == 0:
                 raise ValueError(self.NO_DATA)
 
-            if _post_req.status != 200:
+            if post_req.status != 200:
                 raise ConnectionError(self.NO_DATA)
 
-            _post_req_json = await _post_req.json()
+            post_req_json = await post_req.json()
 
-        # FIXME -- This will need to be tracked and see what triggers what.
-        if "result" in _post_req_json:
-            if type(_post_req_json["result"]) == bool:
+        # TODO -- This will need to be tracked and see what triggers what.
+        if "result" in post_req_json:
+            if type(post_req_json["result"]) == bool:
 
-                if _post_req_json["result"] == True:
-                    return _post_req_json
+                if post_req_json["result"] == True:
+                    return post_req_json
 
-                if _post_req_json["result"] != True:
-                    self._logger.error(f'The API Call {api} failed because of {_post_req_json}')
-                    return _post_req_json
+                if post_req_json["result"] != True:
+                    self._logger.error(f'{api} failed because of {post_req_json}')
+                    return post_req_json
 
-                if ("Status" in _post_req_json["result"]) and (_post_req_json["result"]["Status"] == False):
-                    self._logger.error(f'The API Call {api} failed because of Status: {_post_req_json}')
+                if ("Status" in post_req_json["result"]) and (post_req_json["result"]["Status"] == False):
+                    self._logger.error(f'{api} failed because of Status: {post_req_json}')
                     return False
 
-        elif "Title" in _post_req_json:
-            if (type(_post_req_json["Title"]) == str) and (_post_req_json["Title"] == 'Unauthorized Access'):
-                self._logger.error(f'["Title"]: The API Call {api} failed because of {_post_req_json}')
+        elif "Title" in post_req_json:
+            if (type(post_req_json["Title"]) == str) and (post_req_json["Title"] == 'Unauthorized Access'):
+                self._logger.error(f'{api} failed because of {post_req_json}')
                 self._session_id = "0"
                 raise PermissionError(self.UNAUTHORIZED_ACCESS)
 
-        return _post_req_json
+        return post_req_json
 
-    async def _connect(self) -> BaseException | bool | None:
-        self._AMP2FACTOR: Union[str, TOTP] = ""
+    async def _connect(self) -> bool | None:
+        # TODO - Possibly move this to our Instance class?
+        """
+        Handles your 2FA code and logging into AMP while also handling the session ID. \n
 
+        Raises:
+            ValueError: If session ID is not a string or 2FA code is not a formatted properly.
+
+        Returns:
+            bool | None: Returns False if an exception is thrown or the login attempt fails to provide a sessionID value. \n
+            Otherwise returns true and sets the class's sessionID value.
+        """
+        amp_2fa_code: Union[str, TOTP] = ""
+        if isinstance(self._session_id, str) == False:
+            raise ValueError("You must provide a session id as a string.")
         if self._session_id == '0':
             # FIXME -- May need to change how we handle a 2FA code.
-            if self._use_2FA:
+            if self._amp_2fa:
                 try:
-                    self._AMP2FACTOR = TOTP(self._AMPAUTH)  # Handles time based 2Factory Auth Key/Code
-                    self._AMP2FACTOR.now()
+                    amp_2fa_code = TOTP(self._amp_2fa_token)  # Handles time based 2Factory Auth Key/Code
+                    amp_2fa_code.now()
 
                 except AttributeError:
-                    self._logger.critical("**ERROR** Please check your 2 Factor Set-up Code in .env, should not contain spaces, escape characters and enclosed in quotes!")
-                    sys.exit(1)
+                    raise ValueError("Please check your 2 Factor Code, should not contain spaces, escape characters and it must be enclosed in quotes!")
+            else:
+                try:
 
-            try:
-                result = await self.login(amp_user=self._AMPUSER, amp_password=self._AMPPASSWORD, token=self._AMP2FACTOR, rememberME=True)
-                if isinstance(result, BaseException):
-                    return result
+                    result = await self.login(amp_user=self._amp_user, amp_password=self._amp_password, token=amp_2fa_code, rememberME=True)
+                    # if isinstance(result, BaseException):
+                    #     return result
 
-                elif "sessionID" in result:
-                    self._session_id = result['sessionID']
-                    self.Running = True
+                    if "sessionID" in result:
+                        self._session_id = result['sessionID']
 
-                else:
-                    self._logger.warning("Failed response from Instance")
-                    self.Running = False
+                    else:
+                        self._logger.warning("Failed response from Instance")
+                        return False
+
+                except Exception as e:
+                    self._logger.warning(f'Core/Login Exception: {traceback.format_exc()}')
+                    # self._logger.warning(result)
                     return False
-
-            except Exception as e:
-                self._logger.warning(f'Core/Login Exception: {traceback.format_exc()}')
-                self._logger.warning(result)
-                self.Running = False
-                return False
 
         else:
             return True
 
-    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False):
+    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> str | bool | dict:
         """
-        login _summary_
+        AMP API login function. \n
 
         Args:
             amp_user (str): The username for logging into the AMP Panel
             amp_password (str): The password for logging into the AMP Panel
-            token (str, optional): Used for 2FA Auth. Leave blank if you do not use 2FA. Defaults to "".
-            rememberME (bool, optional): _description_. Defaults to False.
+            token (str, optional): AMP 2 Factor auth code; typically using `TOTP.now()`. Defaults to "".
+            rememberME (bool, optional): Remember me token.. Defaults to False.
 
         Returns:
-            _type_: _description_
+            str | bool | dict: Returns the JSON response from the API call.
         """
         parameters = {
             'username': amp_user,
@@ -171,21 +185,20 @@ class AMP_API():
         result = await self._call_api('Core/Login', parameters)
         return result
 
-    async def _api_test(self):
+    async def _api_test(self, api: str, parameters: dict[str, str]) -> str | bool | dict:
         """Test AMP API calls with this function"""
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetModuleInfo', parameters)
+        result = await self._call_api(api, parameters)
         return result
 
     async def getInstances(self):
         """This gets all Instances on AMP."""
         await self._connect()
         parameters = {}
-        result = await self._call_api('ADSModule/GetInstances', parameters)
+        result = await self._call_api("ADSModule/GetInstances", parameters)
         return result
 
-    async def getInstance(self, instanceID: str):
+    async def getInstance(self, instanceID: str) -> str | bool | dict:
         await self._connect()
         parameters = {"InstanceId": instanceID}
         result = await self._call_api("ADSModule/GetInstance", parameters)
