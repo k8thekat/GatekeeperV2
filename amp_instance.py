@@ -22,16 +22,14 @@
 # by k8thekat // Lightning
 # 11/10/2021
 
-import attr
-import time
 import traceback
 from typing import NamedTuple, Union, Any
-import sys
+from pyotp import TOTP
+
 import threading
 
 from DB import DBHandler, Database, DBConfig, DBServer
 from amp_api import AMP_API
-from amp_permissions import check_SessionPermissions, check_GatekeeperRole_Permissions
 
 
 class Metrics(NamedTuple):
@@ -42,7 +40,7 @@ class Metrics(NamedTuple):
 
 
 class AMP_Instance(AMP_API):
-    # base Instance vars
+    # Common AMP Instance Attributes
     AppState: int  # 0
     ApplicationEndpoints: list[dict[str, str]]  # [{'DisplayName': 'Application ' \n 'Address', 'Endpoint': '0.0.0.0:7785', 'Uri': 'steam://connect/0.0.0.0:7785'}, {'DisplayName': 'SFTP '\n'Server','Endpoint': '0.0.0.0:2240','Uri': 'steam://connect/0.0.0.0:2240'}
     ContainerCPUs: float  # 0.0
@@ -74,6 +72,7 @@ class AMP_Instance(AMP_API):
     TargetID: str  # '47d31130-25ed-47d3-af50-c0ebd947830d'
 
     # custom attrs
+    # TODO - Most of this may go away.
     _app_running: bool = False
     _perms: list[str] = []
     _ignore_list: list[str] = []
@@ -85,6 +84,7 @@ class AMP_Instance(AMP_API):
     _last_update_time_lock: threading.Lock
 
     # permission attrs
+    # TODO - Most of this may go away.
     AMPUSER_id: str
     AMPUSER_info: dict
     SUPERADMIN_roleID: str
@@ -93,15 +93,16 @@ class AMP_Instance(AMP_API):
     _have_role: bool = False
     _have_superAdmin: bool = False
 
-    def __init__(self, serverData: dict[str, str], args: dict) -> None:
+    def __init__(self, data: dict[str, str]) -> None:
+        super().__init__()
         # We update our AMP URL per instance for API calls.
-        args["url"] = args["url"] + f"ADSModule/Servers/{self.InstanceID}/API/"
-        super().__init__(args=args)
+        super()._url = super()._url + f"ADSModule/Servers/{self.InstanceID}/API/"
         # self._URL = self._URL + f"ADSModule/Servers/{self.InstanceID}/API/"
         # most if not all of these are type hinted above as base instance vars
-        for entry in serverData:
-            setattr(self, entry, serverData[entry])
+        for entry in data:
+            setattr(self, entry, data[entry])
 
+    def database_setup(self):
         # DB setup
         self._DBHandler: DBHandler = DBHandler()
         self._DB: Database = self._DBHandler._DB
@@ -193,6 +194,12 @@ class AMP_Instance(AMP_API):
 
     @property
     def activeUsers(self) -> Metrics:
+        """
+        activeUsers _summary_
+
+        Returns:
+            Metrics: _description_
+        """
         if "Active Users" in self.Metrics:
             _raw_value: str = self.Metrics["Active Users"]["RawValue"]
             _max_value: str = self.Metrics["Active Users"]["MaxValue"]
@@ -204,12 +211,18 @@ class AMP_Instance(AMP_API):
 
     @property
     def manageURL(self) -> str | None:
+        """
+        Network URL to manage the AMP Instance
+
+        Returns:
+            str | None: str if the URL exists, None if not.
+        """
         ret: Union[str, None] = None
         results = self.getConfig(node="ADSModule.Networking.BaseURL")
         if "CurrentValue" in results:
             value = results["CurrentValue"]
             ret = value + f"/?instance={self.InstanceID}"
-            return ret
+        return ret
 
     # def __getattribute__(self, __name: str):
     #     if __name in ['_initialized', 'InstanceID', 'serverdata']:
