@@ -696,16 +696,16 @@ class AMP_API():
     async def getSettingsSpec(self) -> str | bool | dict:
         """
         Retrieves a Server/Instance nodes list.
+        See `util.getNodespec` for a list of possible nodes.
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing all of the Server/Instance nodes.
+            str | bool | dict: On success returns a dictionary containing all of the Server/Instance nodes and there information.
         """
         await self._connect()
         parameters = {}
-        result = await self._call_api('Core/GetSettingSpec', parameters)
+        result = await self._call_api('Core/GetSettingsSpec', parameters)
         return result
 
-    # TODO - Figure out a way to access Instance nodes
     async def getConfig(self, node: str) -> str | bool | dict:
         """
         Returns the config settings for a specific node.
@@ -714,7 +714,8 @@ class AMP_API():
             node (str): The AMP node to inspect eg `ADSModule.Networking.BaseURL`
 
         Returns:
-            str | bool | dict: _description_
+            str | bool | dict: On success returns a dictionary containing the following. \n
+            `{'ReadOnly': bool, 'Name': str, 'Description': str , 'Category': str, 'CurrentValue': str, 'ValType': str, 'EnumValuesAreDeferred': bool, 'Node': str, 'InputType': str, 'IsProvisionSpec': bool, 'ReadOnlyProvision': bool, 'Actions': list, 'Keywords': str, 'AlwaysAllowRead': bool, 'Tag': str, 'MaxLength': int, 'Placeholder': str, 'Suffix': str, 'Meta': str, 'RequiresRestart': bool, 'Required': bool}`
         """
         await self._connect()
         parameters = {
@@ -723,7 +724,6 @@ class AMP_API():
         result = await self._call_api("Core/GetConfig", parameters)
         return result
 
-    # TODO - Figure out a way to access Instance nodes, update doctstrings.
     async def getConfigs(self, nodes: list[str]) -> str | bool | dict:
         """
         Returns the config settings for each node in the list.
@@ -732,7 +732,7 @@ class AMP_API():
             node (list[str]): List of nodes to look at.
 
         Returns:
-            str | bool | dict: _description_
+            str | bool | dict: On success returns a list of dictionarys containing the same information as `getConfig`
         """
         await self._connect()
         parameters = {
