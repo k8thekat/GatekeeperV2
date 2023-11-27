@@ -8,13 +8,14 @@ DB_FILENAME: str = "discordBot.db"
 
 
 class Database():
-    def __init__(self) -> None:
-        """
-        Gatekeeper's DATABASE
+    """
+    Gatekeeper's DATABASE
 
-        **Most tables are running STRICT**\n
-        Will raise `sqlite3.IntegrityError` if value does not match column type.
-        """
+    **Most tables are running STRICT**\n
+    Will raise `sqlite3.IntegrityError` if value does not match column type.
+    """
+
+    def __init__(self) -> None:
         _dir: Path = Path(__file__).parent
         self._db_file_path: str = _dir.joinpath(DB_FILENAME).as_posix()
         self._logger = logging.getLogger()
@@ -35,6 +36,20 @@ class Database():
             async with asqlite.connect(self._db_file_path) as db:
                 await db.execute(schema)
                 await db.commit()
+
+    @property
+    async def version(self) -> str | None:
+        """
+        Returns the DATABASE version if it exists.
+
+        Returns:
+            str | None: DATABASE version (Major.Minor.Revision) eg `1.0.2`
+        """
+        res = await self._select_column(table="version", column="value")
+        if isinstance(res, str):
+            return res
+        else:
+            return None
 
     async def _set_version(self):
         """
@@ -62,21 +77,7 @@ class Database():
                 await db.commit()
                 await cur.close()
 
-    @property
-    async def version(self) -> str | None:
-        """
-        Returns the DATABASE version if it exists.
-
-        Returns:
-            str | None: DATABASE version (Major.Minor.Revision) eg `1.0.2`
-        """
-        res = await self._select_column(table="version", column="value")
-        if isinstance(res, str):
-            return res
-        else:
-            return None
-
-    async def _insert_column(self, table: str, column: str, value: str | int | bool) -> None:
+    async def _insert_row(self, table: str, column: str, value: str | int | bool) -> None:
         """
         A generic SQL insert method.
 
@@ -84,10 +85,31 @@ class Database():
             table (str): The TABLE to be used.
             column (str): The COLUMN to insert into.
             value (str | int | bool): The VALUE to be inserted into the SQL table column specified.
+        Raises:
+            sqlite3.OperationalError: If the `column` or `table` does not exists.
         """
         async with asqlite.connect(self._db_file_path) as db:
             async with db.cursor() as cur:
                 await cur.execute(f"""INSERT INTO {table}({column}) VALUES(?) ON CONFLICT({column}) DO NOTHING RETURNING *""", value)
+                await db.commit()
+                await cur.close()
+
+    async def _update_row(self, table: str, column: str, where: str, value: str | int | bool) -> None:
+        """
+        A generic SQL update method with a WHERE clause.
+
+        Args:
+            table (str): The TABLE to be used.
+            column (str): The COLUMN to be updated.
+            where (str | int | bool): The VALUE to match in the COLUMN. `WHERE {where} = ?`
+            value (str | int | bool): The VALUE to be updated in the SQL table column specified.
+
+        Raises:
+            sqlite3.OperationalError: If `column`or `table` does not exist.
+        """
+        async with asqlite.connect(self._db_file_path) as db:
+            async with db.cursor() as cur:
+                await cur.execute(f"""UPDATE {table} SET {column} = ? WHERE {where} = ?""", value)
                 await db.commit()
                 await cur.close()
 
@@ -99,6 +121,9 @@ class Database():
             table (str): The TABLE to be used.
             column (str): The COLUMN to be updated.
             value (str | int | bool): The VALUE to be updated in the SQL table column specified.
+
+        Raises:
+            sqlite3.OperationalError: If `column`or `table` does not exist.
         """
         async with asqlite.connect(self._db_file_path) as db:
             async with db.cursor() as cur:
@@ -114,6 +139,9 @@ class Database():
             table (str): The TABLE to be used.
             column (str): The COLUMN to be selected.
 
+        Raises:
+            sqlite3.OperationalError: If `column`or `table` does not exist.
+
         Returns:
             str | int | bool | None: Returns the value of the column provided.
         """
@@ -123,3 +151,29 @@ class Database():
                 res = await cur.fetchone()
                 await cur.close()
                 return res[f"{column}"] if not None else None
+
+    async def _select_row(self, table: str, column: str, where: str, value: str | int | bool):
+        """
+        A generic SQL select method with a WHERE clause. 
+
+        Args:
+            table (str): The TABLE to be used.
+            column (str): The COLUMN to be selected. Supports wildcard.
+            where (str): The VALUE to match in the COLUMN. `WHERE {where} = ?`
+            value (str | int | bool): The VALUE to search for.
+
+        Raises:
+            sqlite3.OperationalError: If `column`or `table` does not exist.
+
+        Returns:
+            str | int | bool | None: Returns the value of the column provided.
+        """
+        async with asqlite.connect(self._db_file_path) as db:
+            async with db.cursor() as cur:
+                await cur.execute(f"""SELECT {column} FROM {table} WHERE {where} = ?""", value)
+                res = await cur.fetchone()
+                await cur.close()
+                if column == "*":
+                    return res if not None else None
+                else:
+                    return res[f"{column}"] if not None else None

@@ -22,14 +22,15 @@ CREATE TABLE IF NOT EXISTS prefix (
 )STRICT"""
 
 
-class DB_Settings(Database):
+class DBsettings(Database):
     """
         Gatekeepers Database/Bot Settings class.
 
         Has access to `SETTINGS, OWNERS, PREFIX` tables.
     """
-
-    async def _initlize_tables(self) -> None:
+    # TODO - Add a `set` guild id and `set` role id method.
+    # TODO - Add checks to verify the values already in the table.
+    async def _initialize_tables(self) -> None:
         tables = [SETTINGS_SETUP_SQL, OWNERS_SETUP_SQL, PREFIX_SETUP_SQL]
         await self.create_tables(schema=tables)
 
@@ -144,7 +145,7 @@ class DB_Settings(Database):
         Args:
             user_id (int): Discord User ID.
         """
-        await self._insert_column(table="owners", column="id", value=user_id)
+        await self._insert_row(table="owners", column="user_id", value=user_id)
 
     async def remove_owner(self, user_id: int) -> None:
         """
@@ -155,7 +156,7 @@ class DB_Settings(Database):
         """
         async with asqlite.connect(self._db_file_path) as db:
             async with db.cursor() as cur:
-                await cur.execute("""DELETE FROM owners WHERE id = ?""", user_id)
+                await cur.execute("""DELETE FROM owners WHERE user_id = ?""", user_id)
                 await db.commit()
 
     async def add_prefix(self, prefix: str) -> None:
@@ -165,7 +166,7 @@ class DB_Settings(Database):
         Args:
             prefix (str): A phrase or single character. eg `?` or `gatekeeper`
         """
-        await self._insert_column(table="prefix", column="prefix", value=prefix)
+        await self._insert_row(table="prefix", column="prefix", value=prefix)
 
     async def remove_prefix(self, prefix: str) -> None:
         """
