@@ -32,7 +32,7 @@ import traceback
 import AMP
 import DB
 
-#import utils
+# import utils
 Handler = None
 AMP_setup = False
 
@@ -76,7 +76,7 @@ class AMPHandler():
         self.AMP_Console_Threads = {}
 
         self.SuccessfulConnection = False
-        #self.InstancesFound = False
+        # self.InstancesFound = False
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB  # Main Database object
@@ -115,7 +115,7 @@ class AMPHandler():
 
             if hasattr(server, 'TargetName') and server.TargetName != None:
                 server_name = f'({server.TargetName}) | ' + server_name
-                #TargetName = f'({server.TargetName}) | '
+                # TargetName = f'({server.TargetName}) | '
 
             AMP_Instances_Names[instanceID] = server_name
 
@@ -145,7 +145,7 @@ class AMPHandler():
             reset = True
 
         if tokens.AMPurl.endswith('/'):
-            #self.logger.warning(f'** Please remove the forward slash at the end of {tokens.AMPurl} **, we temporarily did it for you. This may break things...')
+            # self.logger.warning(f'** Please remove the forward slash at the end of {tokens.AMPurl} **, we temporarily did it for you. This may break things...')
             tokens.AMPurl = tokens.AMPurl[:-1]
 
         tokens.AMPAuth = tokens.AMPAuth.strip()

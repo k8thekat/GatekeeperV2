@@ -37,7 +37,7 @@ import AMP_Handler
 import DB
 from typing import Union
 
-Version = 'beta-4.6.0'
+Version = 'beta-4.6.1'
 
 
 class Gatekeeper(commands.Bot):
@@ -102,7 +102,7 @@ class Gatekeeper(commands.Bot):
         if self.guild_id != None:
             self.tree.copy_global_to(guild=self.get_guild(self.guild_id))
             await self.tree.sync(guild=self.get_guild(self.guild_id))
-            self.logger.warn(f'Syncing Commands via update_loop to guild: {self.get_guild(self.guild_id).name} {await self.tree.sync(guild= self.get_guild(self.guild_id))}')
+            self.logger.warn(f'Syncing Commands via update_loop to guild: {self.get_guild(self.guild_id).name} {await self.tree.sync(guild=self.get_guild(self.guild_id))}')
         else:
             self.logger.error(f'It appears I cannot Sync your commands for you, please run {self.prefix}bot utils sync or `/bot utils sync` to update your command tree. Please see the readme if you encounter issues.')
         self.update_loop.stop()

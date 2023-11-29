@@ -61,7 +61,7 @@ class AMP_Server(commands.Cog):
         self.eBot = utils_embeds.botEmbeds(client)
         self.BC = BC
 
-        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp", "AMP")}')
 
     async def autocomplete_regex(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """Autocomplete for Regex Pattern Names"""
@@ -99,7 +99,7 @@ class AMP_Server(commands.Cog):
     async def amp_server_update(self, context: commands.Context):
         """Updates the bot with any freshly created AMP Instances"""
         self.logger.command(f'{context.author.name} used AMP Server Update')
-        new_server = self.AMPHandler._instanceValidation()
+        new_server = self.AMPHandler._instanceValidation(AMP=self.AMPHandler.AMP)
         if new_server:
             await context.send(f'Found a new Server: {new_server}', ephemeral=True, delete_after=self._client.Message_Timeout)
         else:
@@ -122,6 +122,7 @@ class AMP_Server(commands.Cog):
 
 
 # This section is AMP Server Commands ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
     @server.command(name='start')
     @utils.role_check()
@@ -206,7 +207,7 @@ class AMP_Server(commands.Cog):
             title = f"Backup by {context.author.display_name}"
             time = str(datetime.now(tz=timezone.utc))
             description = f"Created at {time} by {context.author.display_name}"
-            display_description = f'Created at **{str(datetime.now(tz= timezone.utc).strftime("%Y-%m-%d %H:%M"))}**(utc) by **{context.author.display_name}**'
+            display_description = f'Created at **{str(datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M"))}**(utc) by **{context.author.display_name}**'
             await context.send(f'Creating a backup of **{server.InstanceName}**  // **Description**: {display_description}', ephemeral=True, delete_after=self._client.Message_Timeout)
             amp_server.takeBackup(title, description)
 
