@@ -48,7 +48,7 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
     DBConfig = DBHandler.DBConfig
     _mod_role = DBConfig.GetSetting('Moderator_role_id')
     logger = logging.getLogger(__name__)
-    logger.dev(f'Permission Context command node {perm_node if perm_node != None else str(context.command).replace(" ",".")}')
+    logger.dev(f'Permission Context command node {perm_node if perm_node != None else str(context.command).replace(" ", ".")}')
 
     author = context
     if type(context) != discord.Member:
@@ -151,15 +151,15 @@ async def autocomplete_servers(interaction: discord.Interaction, current: str) -
     """Autocomplete for AMP Instance Names"""
     choice_list = __AMP_Handler.get_AMP_instance_names()
     if await async_rolecheck(interaction, perm_node='Staff') == True:
-        return [app_commands.Choice(name=f"{value} | ID: {key}", value=key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
+        return [app_commands.Choice(name=f"{value} | ID: {key}", value=key)for key, value in choice_list.items() if current.lower().lstrip() in value.lower()][:25]
     else:
-        return [app_commands.Choice(name=f"{value}", value=key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
+        return [app_commands.Choice(name=f"{value}", value=key)for key, value in choice_list.items() if current.lower().lstrip() in value.lower()][:25]
 
 
 async def autocomplete_servers_public(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
     """Autocomplete for AMP Instance Names"""
     choice_list = __AMP_Handler.get_AMP_instance_names(public=True)
-    return [app_commands.Choice(name=f"{value}", value=key)for key, value in choice_list.items() if current.lower() in value.lower()][:25]
+    return [app_commands.Choice(name=f"{value}", value=key)for key, value in choice_list.items() if current.lower().lstrip() in value.lower()][:25]
 
 
 class discordBot():

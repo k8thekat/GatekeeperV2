@@ -28,7 +28,7 @@ ___
 - `/bot utils channelid (channel)` - Returns the Channel ID for the selected Discord Channel
 - `/bot utils userid (user)` - Returns the User ID for the selected Discord User.
 - `/bot utils uuid (mc_ign)` - This will convert a Minecraft IGN to a UUID if it exists.
-- `/bot utils clear (channel, amountm, all)` - Delete(s) the Specified amount of Messages Sent by the Bot.
+- `/bot utils clear (channel, amountm, all)` - Delete(s) the specified amount of Messages Sent by the Bot.
     - If `all` is set to `True` this will clear ALL messages regardless of sender.
 - `/bot utils message_timeout (time)` - Sets the Delete After time in seconds for ephemeral messages sent from Gatekeeperv2.
 
@@ -102,7 +102,7 @@ ___
 - `/server update` - Updates the current list of AMP servers. *(This is also done every 30 seconds)*
     - **TIP**: This is used when creating a new Instance and needing to update the bots listings.
 - `/server start (server)` - Starts the specified dedicated server.
-    - **TIP**: `server` supports server nicknames that are set via `/server nickname add` command.
+    - **TIP**: `server` supports server nicknames that are set via `/server displayname` command.
 - `/server stop (server)` - Stops the specified AMP Dedicated server.
 - `/server restart (server)` - Restarts the specified AMP Dedicated server.
 - `/server kill (server)` - Kills the specified AMP Dedicated server. 
