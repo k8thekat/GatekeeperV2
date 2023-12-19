@@ -29,6 +29,7 @@ import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 from discord.app_commands import Choice
+from numpy import isin
 
 import AMP_Handler
 import DB
@@ -402,15 +403,19 @@ class AMP_Server(commands.Cog):
     @amp_server_console_settings.command(name='channel')
     @utils.role_check()
     @app_commands.autocomplete(server=utils.autocomplete_servers)
-    async def amp_server_console_channel(self, context: commands.Context, server, channel: discord.abc.GuildChannel):
+    async def amp_server_console_channel(self, context: commands.Context, server, channel: discord.abc.GuildChannel | None):
         """Sets the Console Channel for the provided Server"""
         self.logger.command(f'{context.author.name} used Database Server Console Channel')
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(InstanceID=amp_server.InstanceID).Discord_Console_Channel = channel.id
+            if isinstance(channel, discord.abc.GuildChannel):
+                self.DB.GetServer(InstanceID=amp_server.InstanceID).Discord_Console_Channel = channel.id
+            else:
+                self.DB.GetServer(InstanceID=amp_server.InstanceID).Discord_Console_Channel = channel
+
             amp_server._setDBattr()  # This will update the AMPConsole Attribute
-            await context.send(f'Set **{amp_server.InstanceName}** Console channel to {channel.mention}', ephemeral=True, delete_after=self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Console channel to {channel.mention if channel is not None else "None"}', ephemeral=True, delete_after=self._client.Message_Timeout)
 
     @amp_server_console_settings.command(name='filter')
     @utils.role_check()
@@ -445,9 +450,13 @@ class AMP_Server(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(amp_server.InstanceID).Discord_Chat_Channel = channel.id
+            if isinstance(channel, discord.abc.GuildChannel):
+                self.DB.GetServer(amp_server.InstanceID).Discord_Chat_Channel = channel.id
+            else:
+                self.DB.GetServer(amp_server.InstanceID).Discord_Chat_Channel = channel
+
             amp_server._setDBattr()  # This will update the AMPInstance Attributes
-            await context.send(f'Set **{amp_server.InstanceName}** Chat channel to {channel.mention}', ephemeral=True, delete_after=self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Chat channel to {channel.mention if channel is not None else "None"}', ephemeral=True, delete_after=self._client.Message_Timeout)
 
 # This section is AMP Server Event Specific Settings -------------------------------------------------------------------------------------------------------------------------------------------------
     @server.group(name='event')
@@ -465,9 +474,13 @@ class AMP_Server(commands.Cog):
 
         amp_server = await self.uBot._serverCheck(context, server, False)
         if amp_server:
-            self.DB.GetServer(amp_server.InstanceID).Discord_Event_Channel = channel.id
+            if isinstance(channel, discord.abc.GuildChannel):
+                self.DB.GetServer(amp_server.InstanceID).Discord_Event_Channel = channel.id
+            else:
+                self.DB.GetServer(amp_server.InstanceID).Discord_Event_Channel = channel
+
             amp_server._setDBattr()  # This will update the AMPInstance Attributes
-            await context.send(f'Set **{amp_server.InstanceName}** Event channel to {channel.mention}', ephemeral=True, delete_after=self._client.Message_Timeout)
+            await context.send(f'Set **{amp_server.InstanceName}** Event channel to {channel.mention if channel is not None else "None"}', ephemeral=True, delete_after=self._client.Message_Timeout)
 
 # This section is AMP Server Regex Specific Settings ------------------------------------------------------------------------------------------------------------------------------
     @server.group(name='regex')
