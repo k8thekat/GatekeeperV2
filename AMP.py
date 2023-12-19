@@ -27,7 +27,6 @@ import requests.sessions
 import pyotp  # 2Factor Authentication Python Module
 import json
 import time
-import base64
 import traceback
 
 import sys
@@ -105,7 +104,7 @@ class AMPInstance():
         self.DBConfig = self.DB.DBConfig
 
         self.SessionID = 0
-        #self.Index = Index
+        # self.Index = Index
         self.serverdata = serverdata
         self.serverlist = {}
 
@@ -246,7 +245,7 @@ class AMPInstance():
     def setup_Gatekeeper_Permissions(self):
         """Sets the Permissions Nodes for AMP Gatekeeper Role"""
         self.logger.info('Setting AMP Role Permissions for `Gatekeeper`...')
-        #import AMP_Permissions as AMPPerms
+        # import AMP_Permissions as AMPPerms
         import amp_permissions as AMPPerms
         core = AMPPerms.perms_super()
         for perm in core:
@@ -270,17 +269,19 @@ class AMPInstance():
 
         # `Gatekeeper Role inside of AMP`
         if self.AMP_BotRoleID != None:
-            #self.logger.dev('Gatekeeper Role Exists..')
+            # self.logger.dev('Gatekeeper Role Exists..')
             self._AMP_botRole_exists = True
 
         # Gatekeeper has `Gatekeeper` Role inside of AMP
-        if self._AMP_botRole_exists and self.AMP_BotRoleID in self.AMP_userinfo['result']['Roles']:
-            #self.logger.dev('Gatekeeper User has Gatekepeer Role.')
+        if self._AMP_botRole_exists and self.AMP_BotRoleID in self.AMP_userinfo['Roles']:
+            # if self._AMP_botRole_exists and self.AMP_BotRoleID in self.AMP_userinfo['result']['Roles']:
+            # self.logger.dev('Gatekeeper User has Gatekepeer Role.')
             self._have_AMP_botRole = True
 
         # `Super_Admin Role inside of AMP`
-        if self.super_AdminID in self.AMP_userinfo['result']['Roles']:
-            #self.logger.dev('Gatekeeper User has Super Admins')
+        # if self.super_AdminID in self.AMP_userinfo['result']['Roles']:
+        if self.super_AdminID in self.AMP_userinfo['Roles']:
+            # self.logger.dev('Gatekeeper User has Super Admins')
             self._have_superAdmin = True
 
         if self._AMP_botRole_exists:
@@ -292,7 +293,8 @@ class AMPInstance():
 
                 role_perms = self.getAMPRolePermissions(self.AMP_BotRoleID)
 
-                if perm not in role_perms['result']:
+                if perm not in role_perms:
+                    # if perm not in role_perms['result']:
                     if self._have_superAdmin:
                         self.logger.dev(f'We have `Super Admins` Role and we are missing Permissions, returning to setup Permissions.')
                         return False
@@ -319,7 +321,7 @@ class AMPInstance():
 
             check = self.CurrentSessionHasPermission(perm)
 
-            self.logger.dev(f'Session {"has" if check else "is missing" } permisson node: {perm}')
+            self.logger.dev(f'Session {"has" if check else "is missing"} permisson node: {perm}')
             if check:
                 continue
 
@@ -452,19 +454,33 @@ class AMPInstance():
             return
 
         # Permission errors will trigger this, unsure what else.
-        if "result" in post_req.json():
+        # if "result" in post_req.json():
 
-            if type(post_req.json()['result']) == bool:
+        if "result" in post_req.json():
+            # This was one of the API calls that failed.
+            # if APICall == "Core/GetAMPUserInfo":
+            #     print(post_req.json()["result"])
+
+            # This one was to deal with "Core/Login" as it has a dict key value called "result" that has a int value. (near the end of the post_req.json())
+            if type(post_req.json()["result"]) == int:
+                return post_req.json()
+
+            elif type(post_req.json()['result']) == bool:
                 if post_req.json()['result'] == True:
                     return post_req.json()
 
-                if post_req.json()['result'] != True:
+                elif post_req.json()['result'] != True:
                     self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
                     return post_req.json()
 
-                if ("Status" in post_req.json()['result']) and (post_req.json()['result']['Status'] == False):
+                elif ("Status" in post_req.json()['result']) and (post_req.json()['result']['Status'] == False):
                     self.logger.error(f'The API Call {APICall} failed because of Status: {post_req.json()}')
                     return False
+
+            # This should handle the new API by auto defaulting to returning entries without the result key.
+            else:
+                # print(f"Found result in post_req, returning keyed ['result'] {APICall}")
+                return post_req.json()["result"]
 
         elif "Title" in post_req.json():
             if (type(post_req.json()['Title']) == str) and (post_req.json()['Title'] == 'Unauthorized Access'):
@@ -503,8 +519,10 @@ class AMPInstance():
             self.logger.error(f'Failed to update {self.FriendlyName} attributes, API Call returned {result}')
             return
 
-        if len(result["result"][0]['AvailableInstances']) != 0:
-            for Target in result["result"]:
+        if len(result[0]['AvailableInstances']) != 0:
+            # if len(result["result"][0]['AvailableInstances']) != 0:
+            # for Target in result["result"]:
+            for Target in result:
                 for instance in Target['AvailableInstances']:  # entry = name['result']['AvailableInstances'][0]['InstanceIDs']
                     # This should be a list of my AMP Servers [{'InstanceID': '<AMP Instance Object>'}]
                     for amp_instance in self.AMPHandler.AMP_Instances:
@@ -667,15 +685,18 @@ class AMPInstance():
         parameters = {}
         result = self.CallAPI('Core/GetUserList', parameters)
         user_list = []
-        for user in result['result']:
-            user_list.append(result['result'][user])
+        for user in result:
+            # for user in result['result']:
+            # user_list.append(result['result'][user])
+            user_list.append(result[user])
         return user_list
 
     def getSchedule(self) -> dict:
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetScheduleData', parameters)
-        return result['result']['PopulatedTriggers']
+        # return result['result']['PopulatedTriggers']
+        return result['PopulatedTriggers']
 
     def setFriendlyName(self, name: str, description: str) -> str:
         """This is used to change an Instance's Friendly Name and or Description. Retains all previous settings. \n
@@ -823,7 +844,8 @@ class AMPInstance():
     def getAMPUserID(self, name: str):
         """Returns AMP Users ID Only."""
         result = self.getAMPUserInfo(name=name)
-        return result['result']['ID']
+        # return result['result']['ID']
+        return result['ID']
 
     def CurrentSessionHasPermission(self, PermissionNode: str) -> dict:
         """Gets current Sessions permission spec"""
@@ -834,7 +856,8 @@ class AMPInstance():
         result = self.CallAPI('Core/CurrentSessionHasPermission', parameters)
 
         if result != False:
-            return result['result']
+            # return result['result']
+            return result
 
         return result
 
@@ -859,7 +882,8 @@ class AMPInstance():
         self.Login()
         parameters = {}
         result = self.CallAPI('Core/GetRoleIds', parameters)
-        return result['result']
+        # return result['result']
+        return result
 
     def setRoleIDs(self):
         """Sets `self.AMP_BotRoleID` and `self.super_AdminID` (if they exist)"""
@@ -915,7 +939,8 @@ class AMPInstance():
         }
         result = self.CallAPI('Core/SetAMPRolePermission', parameters)
 
-        if result['result']['Status'] == False:
+        # if result['result']['Status'] == False:
+        if result['Status'] == False:
             self.logger.critical(f'Unable to Set Permission Node __{PermissionNode}__ to `{Enabled}` for {RoleID}')
             return False
 

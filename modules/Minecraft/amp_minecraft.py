@@ -96,10 +96,12 @@ class AMPMinecraft(AMP.AMPInstance):
     def getWhitelist(self) -> dict[str, str]:
         """Checks the Whitelist File for Minecraft Users"""
         file_directory = self.getDirectoryListing('')
-        for entry in file_directory['result']:
+        # for entry in file_directory['result']:
+        for entry in file_directory:
             if entry['Filename'] == 'whitelist.json':
                 whitelist = self.getFileChunk("whitelist.json", 0, 33554432)
-                whitelist_data = base64.b64decode(whitelist["result"]["Base64Data"])
+                # whitelist_data = base64.b64decode(whitelist["result"]["Base64Data"])
+                whitelist_data = base64.b64decode(whitelist["Base64Data"])
                 whitelist_json = json.loads(whitelist_data.decode("utf-8"))
                 return whitelist_json
 

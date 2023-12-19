@@ -196,12 +196,14 @@ class AMPHandler():
         result = AMP.getInstances()
         amp_instance_keys = list(self.AMP_Instances.keys())  # This could be empty on startup;
         available_instances = []
-        if len(result["result"][0]['AvailableInstances']) == 0:
+        # if len(result["result"][0]['AvailableInstances']) == 0:
+        if len(result[0]['AvailableInstances']) == 0:
             self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
             time.sleep(30)
             return
 
-        for Target in result["result"]:
+        for Target in result:
+            # for Target in result["result"]:
             for amp_instance in Target['AvailableInstances']:  # entry = name['result']['AvailableInstances'][0]['InstanceIDs']
 
                 # This exempts the AMPTemplate Gatekeeper *hopefully* by looking at the url for the banner image; which should contain the word Gatekeeper in it.
