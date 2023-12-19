@@ -27,6 +27,9 @@ import logging
 import aiohttp
 from aiohttp import ClientResponse
 
+from .types import *
+from dataclass_wizard import fromdict
+
 from pyotp import TOTP  # 2Factor Authentication Python Module
 
 
@@ -53,7 +56,7 @@ class AMP_API():
         self.ADS_ONLY: str = "This API call is only available on ADS instances."
         self.UNAUTHORIZED_ACCESS: str = f"{self._amp_user} user does not have the required permissions to interact with this instance."
 
-    async def _call_api(self, api: str, parameters: dict[str, Any]) -> str | bool | dict:
+    async def _call_api(self, api: str, parameters: None | dict[str, Any] = None) -> str | bool | dict:
         """
         Uses aiohttp.ClientSession() post request to access the AMP API endpoints. \n
         Will automatically populate the `SESSIONID` parameter if it is not provided.
@@ -73,6 +76,10 @@ class AMP_API():
         header: dict = {'Accept': 'text/javascript'}
         post_req: ClientResponse | None
         self._logger.debug(f'_call_api -> {api} was called with {parameters}')
+
+        # This should save us some boiler plate code throughout our API calls.
+        if parameters == None:
+            parameters = {}
 
         if self._session_id != "0":
             parameters["SESSIONID"] = self._session_id
@@ -96,8 +103,13 @@ class AMP_API():
 
             post_req_json = await post_req.json()
 
+        # I should force return Data classes with this to help better handle the API change
+        # They removed "result" from all replies thus breaking most if not all future code.
+        # Core/Login can trigger this because it has a key "result" near the end.
         # TODO -- This will need to be tracked and see what triggers what.
-        if "result" in post_req_json:
+        if "result" in post_req_json and api != "Core/Login":
+            return post_req_json["result"]
+
             if type(post_req_json["result"]) == bool:
 
                 if post_req_json["result"] == True:
@@ -117,7 +129,12 @@ class AMP_API():
                 self._session_id = "0"
                 raise PermissionError(self.UNAUTHORIZED_ACCESS)
 
-        return post_req_json
+        # TODO - this happens occasionally on failed login creds or using the same object over and over (I think?)
+        elif post_req_json == None:
+            raise ConnectionError(self.NO_DATA)
+
+        else:
+            return post_req_json
 
     async def _connect(self) -> bool | None:
         """
@@ -147,8 +164,10 @@ class AMP_API():
 
                     result = await self.login(amp_user=self._amp_user, amp_password=self._amp_password, token=amp_2fa_code, rememberME=True)
 
-                    if type(result) == dict and "sessionID" in result:
-                        self._session_id = result['sessionID']
+                    if isinstance(result, LoginResults):
+                        self._session_id = result.sessionID
+                    # if type(result) == dict and "sessionID" in result:
+                    #     self._session_id = result['sessionID']
 
                     else:
                         self._logger.warning("Failed response from Instance")
@@ -161,7 +180,7 @@ class AMP_API():
         else:
             return True
 
-    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> str | bool | dict:
+    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> bool | LoginResults:
         """
         AMP API login function. \n
 
@@ -180,15 +199,15 @@ class AMP_API():
             'token': token,
             'rememberMe': rememberME}
         result = await self._call_api('Core/Login', parameters)
-        return result
+        return fromdict(LoginResults, result)
 
-    async def callEndPoint(self, api: str, parameters: dict[str, Any]) -> str | bool | dict:
+    async def callEndPoint(self, api: str, parameters: None | dict[str, Any] = None) -> str | bool | dict:
         """
         Universal API method for calling any API endpoint. Some API endpoints require ADS and some may require an Instance ID. \n
 
         Args:
-            api (str): API endpoint to call. `eg Core/GetModuleInfo` (Assume this starts with www.yourAMPURL.com/API/)
-            parameters (dict[str, str]): Parameters to pass to the API endpoint. Session ID is already handled for you.
+            api (str): API endpoint to call. `eg "Core/GetModuleInfo"` (Assume this starts with www.yourAMPURL.com/API/)
+            parameters (None | dict[str, str]): Parameters to pass to the API endpoint. Session ID is already handled for you. Defaults to None
 
         Returns:
             str | bool | dict: Returns the JSON response from the API call.
@@ -240,8 +259,7 @@ class AMP_API():
             str | bool | dict: Returns the JSON response from the API call.
         """
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetUpdates', parameters)
+        result = await self._call_api('Core/GetUpdates')
         return result
 
     async def consoleMessage(self, msg: str) -> None:
@@ -258,8 +276,7 @@ class AMP_API():
         Starts the AMP Server/Instance
         """
         await self._connect()
-        parameters = {}
-        await self._call_api('Core/Start', parameters)
+        await self._call_api('Core/Start')
         return
 
     async def stopInstance(self) -> None:
@@ -267,8 +284,7 @@ class AMP_API():
         Stops the AMP Server/Instance
         """
         await self._connect()
-        parameters = {}
-        await self._call_api('Core/Stop', parameters)
+        await self._call_api('Core/Stop')
         return
 
     async def restartInstance(self) -> None:
@@ -276,8 +292,7 @@ class AMP_API():
         Restarts the AMP Server/Instance
         """
         await self._connect()
-        parameters = {}
-        await self._call_api('Core/Restart', parameters)
+        await self._call_api('Core/Restart')
         return
 
     async def killInstance(self) -> None:
@@ -285,8 +300,7 @@ class AMP_API():
         Kills the AMP Server/Instance
         """
         await self._connect()
-        parameters = {}
-        await self._call_api('Core/Kill', parameters)
+        await self._call_api('Core/Kill')
         return
 
     async def getStatus(self) -> str | bool | dict:
@@ -298,8 +312,7 @@ class AMP_API():
             `{'State': int, 'Uptime': 'str', 'Metrics': {'CPU Usage': {'RawValue': int, 'MaxValue': int, 'Percent': int, 'Units': '%', 'Color': 'hex', 'Color2': 'hex', 'Color3': 'hex'}, 'Memory Usage': {'RawValue': int, 'MaxValue': int, 'Percent': int, 'Units': 'MB', 'Color': 'hex', 'Color3': 'hex'}, 'Active Users': {'RawValue': int, 'MaxValue': int, 'Percent': int, 'Units': '', 'Color': 'hex', 'Color3': 'hex'}}}`
         """
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetStatus', parameters)
+        result = await self._call_api('Core/GetStatus')
         return result
 
     async def getUserList(self) -> str | bool | dict:
@@ -310,8 +323,7 @@ class AMP_API():
             str | bool | dict: On success a dictionary with a key value of "Users" followed by a list of each user name.
         """
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetUserList', parameters)
+        result = await self._call_api('Core/GetUserList')
         return result
 
     async def getSchedule(self) -> str | bool | dict:
@@ -322,8 +334,7 @@ class AMP_API():
             str | bool | dict: On success a dictionary with the schedules broken up by Events and Triggers.
         """
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetScheduleData', parameters)
+        result = await self._call_api('Core/GetScheduleData')
         return result
 
     async def copyFile(self, source: str, destination: str) -> None:
@@ -447,8 +458,7 @@ class AMP_API():
             return self.ADS_ONLY
 
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetActiveAMPSessions', parameters)
+        result = await self._call_api('Core/GetActiveAMPSessions')
         return result
 
     async def getInstanceStatus(self) -> str | bool | dict:
@@ -464,8 +474,7 @@ class AMP_API():
             return self.ADS_ONLY
 
         await self._connect()
-        parameters = {}
-        result = await self._call_api('ADSModule/GetInstanceStatuses', parameters)
+        result = await self._call_api('ADSModule/GetInstanceStatuses')
         return result
 
     async def trashDirectory(self, dir_name: str) -> None:
@@ -584,10 +593,10 @@ class AMP_API():
         parameters = {
             'RoleId': role_id
         }
-        result = await self._call_api('Core/GetAMPRolePermissions', parameters)
+        result = await self._call_api("Core/GetAMPRolePermissions", parameters)
         return result
 
-    async def getPermissionSpec(self) -> str | bool | dict:
+    async def getPermissionsSpec(self) -> str | bool | dict:
         """
         Retrieves the AMP Permissions node tree.
 
@@ -595,8 +604,7 @@ class AMP_API():
             str | bool | dict: On success returns a dictionary containing all the permission nodes, descriptions and other attributes.
         """
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetPermissionsSpec', parameters)
+        result = await self._call_api("Core/GetPermissionsSpec")
         return result
 
     async def getRoleIds(self) -> str | bool | dict:
@@ -609,8 +617,7 @@ class AMP_API():
             '9d390d0e-79a0-48c1-8eeb-c803876cd8e1': 'Super Admins'}`
         """
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetRoleIds', parameters)
+        result = await self._call_api('Core/GetRoleIds')
         return result
 
     async def createRole(self, name: str, as_common_role: bool = False) -> str | bool | dict:
@@ -702,8 +709,7 @@ class AMP_API():
             str | bool | dict: On success returns a dictionary containing all of the Server/Instance nodes and there information.
         """
         await self._connect()
-        parameters = {}
-        result = await self._call_api('Core/GetSettingsSpec', parameters)
+        result = await self._call_api('Core/GetSettingsSpec')
         return result
 
     async def getConfig(self, node: str) -> str | bool | dict:
@@ -740,3 +746,14 @@ class AMP_API():
         }
         result = await self._call_api("Core/GetConfigs", parameters)
         return result
+
+    async def getUpdateInfo(self) -> UpdateInfo:
+        """
+        Returns a data class `UpdateInfo` and `UpdateInfo.Build = AMP_Version` to access Version information for AMP.
+
+        Returns:
+            UpdateInfo: data class `UpdateInfo` see `types.py`
+        """
+        await self._connect()
+        result = await self._call_api("Core/GetUpdateInfo")
+        return UpdateInfo(**result)
