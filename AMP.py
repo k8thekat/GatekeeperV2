@@ -318,9 +318,7 @@ class AMPInstance():
             # Skip the perm check on ones we "shouldn't have!"
             if perm.startswith('-'):
                 continue
-
             check = self.CurrentSessionHasPermission(perm)
-
             self.logger.dev(f'Session {"has" if check else "is missing"} permisson node: {perm}')
             if check:
                 continue
@@ -443,54 +441,59 @@ class AMPInstance():
 
         self.AMPHandler.SuccessfulConnection = True
 
+        res = post_req.json()
+
         # Error catcher for API calls
-        if type(post_req.json()) == None:
+        if res is None:
             self.logger.error(f"AMP_API CallAPI ret is 0: status_code {post_req.status_code}")
             self.logger.error(post_req.raw)
-
-        self.logger.debug(f'Post Request Prints: {post_req.json()}')
-
-        if post_req.json() == None:
             return
 
-        # Permission errors will trigger this, unsure what else.
-        # if "result" in post_req.json():
+        # {"result": Int or Bool} or dict[str, int] -> Int or Bool
 
-        if "result" in post_req.json():
+        self.logger.debug(f'Post Request Prints: {res}')
+        # Permission errors will trigger this, unsure what else.
+        # print("API CALL---->", APICall, type(res), res)
+        if isinstance(res, dict) and "result" in res:
+            # if "result" in res:
             # This was one of the API calls that failed.
             # if APICall == "Core/GetAMPUserInfo":
-            #     print(post_req.json()["result"])
+            #     print(res["result"])
 
-            # This one was to deal with "Core/Login" as it has a dict key value called "result" that has a int value. (near the end of the post_req.json())
-            if type(post_req.json()["result"]) == int:
-                return post_req.json()
+            # This one was to deal with "Core/Login" as it has a dict key value called "result" that has a int value. (near the end of the res)
+            if type(res["result"]) == int:
+                # print("Found an int in keyed ['result']")
+                return res
 
-            elif type(post_req.json()['result']) == bool:
-                if post_req.json()['result'] == True:
-                    return post_req.json()
+            elif type(res['result']) == bool:
+                # print("Found a bool in keyed ['result']")
+                if res['result'] == True:
+                    return res
 
-                elif post_req.json()['result'] != True:
-                    self.logger.error(f'The API Call {APICall} failed because of {post_req.json()}')
-                    return post_req.json()
+                elif res['result'] != True:
+                    self.logger.error(f'The API Call {APICall} failed because of {res}')
+                    return res
 
-                elif ("Status" in post_req.json()['result']) and (post_req.json()['result']['Status'] == False):
-                    self.logger.error(f'The API Call {APICall} failed because of Status: {post_req.json()}')
+                elif ("Status" in res['result']) and (res['result']['Status'] == False):
+                    self.logger.error(f'The API Call {APICall} failed because of Status: {res}')
                     return False
 
             # This should handle the new API by auto defaulting to returning entries without the result key.
             else:
                 # print(f"Found result in post_req, returning keyed ['result'] {APICall}")
-                return post_req.json()["result"]
+                return res["result"]
 
-        elif "Title" in post_req.json():
-            if (type(post_req.json()['Title']) == str) and (post_req.json()['Title'] == 'Unauthorized Access'):
-                self.logger.error(f'["Title"]: The API Call {APICall} failed because of {post_req.json()}')
+        elif isinstance(res, dict) and "Title" in res:
+            if (type(res['Title']) == str) and (res['Title'] == 'Unauthorized Access'):
+                self.logger.error(f'["Title"]: The API Call {APICall} failed because of {res}')
                 # Resetting the Session ID for the Instance; forcing a new login/SessionID
                 self.AMPHandler.SessionIDlist.pop(self.InstanceID)
                 self.SessionID = 0
                 return False
 
-        return post_req.json()
+        else:
+            # print("Trigger Else in API call", res)
+            return res
 
     def _ADScheck(self) -> bool:
         """Use this to check if the AMP Dedicated Server(ADS) is running, NOT THE AMP INSTANCE!
@@ -854,7 +857,6 @@ class AMPInstance():
             'PermissionNode': PermissionNode
         }
         result = self.CallAPI('Core/CurrentSessionHasPermission', parameters)
-
         if result != False:
             # return result['result']
             return result
@@ -946,7 +948,14 @@ class AMPInstance():
 
         return True
 
+    def getUpdateInfo(self):
+        self.Login()
+        parameters = {}
+        result = self.CallAPI("Core/GetUpdateInfo", parameters)
+        return result
+
     # These are GENERIC Methods below this point purely for typehiting and Linter purpose. ---------------------------------------------------------------------------
+
     def addWhitelist(self, db_user, in_gamename: str = None):
         """Base Function for AMP.addWhitelist"""
         # Use the DB_User object and get the required IGN depending on the server type.
