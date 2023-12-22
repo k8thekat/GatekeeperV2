@@ -23,6 +23,7 @@ from typing import Union, Any
 import json
 import traceback
 import logging
+from pprint import pprint
 
 import aiohttp
 from aiohttp import ClientResponse
@@ -73,9 +74,9 @@ class AMP_API():
         Returns:
             Any: Returns unmodified JSON response from the API call. Typically a string or dict.
         """
-        header: dict = {'Accept': 'text/javascript'}
+        header: dict = {"Accept": "text/javascript"}
         post_req: ClientResponse | None
-        self._logger.debug(f'_call_api -> {api} was called with {parameters}')
+        self._logger.debug(f"_call_api -> {api} was called with {parameters}")
 
         # This should save us some boiler plate code throughout our API calls.
         if parameters == None:
@@ -88,10 +89,11 @@ class AMP_API():
         async with aiohttp.ClientSession() as session:
             try:
                 post_req = await session.post(self._url + api, headers=header, data=json_data)
-                self._logger.debug(f'post req-> {await post_req.json()}')
+                self._logger.debug(f"post req-> {await post_req.json()}")
             # TODO - Need to not catch all Excepts..
             except Exception as e:
                 # So I can handle each exception properly.
+                traceback.print_exc()
                 print("_call_api exception type:", type(e))
                 raise ValueError(e)
 
@@ -103,37 +105,45 @@ class AMP_API():
 
             post_req_json = await post_req.json()
 
-        # I should force return Data classes with this to help better handle the API change
+        if post_req_json == None:
+            raise ConnectionError(self.NO_DATA)
+        # I should force return Data classes with this to help better handle the API change. See types.py
         # They removed "result" from all replies thus breaking most if not all future code.
         # Core/Login can trigger this because it has a key "result" near the end.
         # TODO -- This will need to be tracked and see what triggers what.
-        if "result" in post_req_json and api != "Core/Login":
-            return post_req_json["result"]
+        # print("API CALL---->", api, type(post_req_json))
+        # pprint(post_req_json)
 
-            if type(post_req_json["result"]) == bool:
+        if isinstance(post_req_json, dict):
+            if "result" in post_req_json:
+                data = post_req_json["result"]
 
-                if post_req_json["result"] == True:
+                if isinstance(data, bool) and data == False:
+                    self._logger.error(f"{api} failed because of {post_req_json}")
+                    return data
+
+                elif isinstance(data, dict) and "Status" in data and data["Status"] == False:
+                    self._logger.error(f"{api} failed because of Status: {post_req_json}")
+                    return data["Status"]
+
+                # This is to handle the new API Core/Login
+                elif api == "Core/Login":
                     return post_req_json
 
-                if post_req_json["result"] != True:
+                else:
+                    # Return our dict keyed data.
+                    return data
+
+            elif "Title" in post_req_json:
+                data = post_req_json["Title"]
+                if isinstance(data, str) and data == "Unauthorized Access":
                     self._logger.error(f'{api} failed because of {post_req_json}')
-                    return post_req_json
-
-                if ("Status" in post_req_json["result"]) and (post_req_json["result"]["Status"] == False):
-                    self._logger.error(f'{api} failed because of Status: {post_req_json}')
-                    return False
-
-        elif "Title" in post_req_json:
-            if (type(post_req_json["Title"]) == str) and (post_req_json["Title"] == 'Unauthorized Access'):
-                self._logger.error(f'{api} failed because of {post_req_json}')
-                self._session_id = "0"
-                raise PermissionError(self.UNAUTHORIZED_ACCESS)
-
-        # TODO - this happens occasionally on failed login creds or using the same object over and over (I think?)
-        elif post_req_json == None:
-            raise ConnectionError(self.NO_DATA)
-
+                    self._session_id = "0"
+                    raise PermissionError(self.UNAUTHORIZED_ACCESS)
+            else:
+                return post_req_json
         else:
+            print("Else return post_req_json")
             return post_req_json
 
     async def _connect(self) -> bool | None:
@@ -180,7 +190,7 @@ class AMP_API():
         else:
             return True
 
-    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> bool | LoginResults:
+    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> LoginResults:
         """
         AMP API login function. \n
 
@@ -229,8 +239,12 @@ class AMP_API():
 
         await self._connect()
         parameters = {}
+        _controllers: list[AMP_Controller] = []
         result = await self._call_api("ADSModule/GetInstances", parameters)
-        return result
+        if isinstance(result, list):
+            for controller in result:
+                _controllers.append(fromdict(AMP_Controller, controller))
+        return _controllers
 
     async def getInstance(self, instanceID: str) -> str | bool | dict:
         """
@@ -249,20 +263,20 @@ class AMP_API():
         await self._connect()
         parameters = {"InstanceId": instanceID}
         result = await self._call_api("ADSModule/GetInstance", parameters)
-        return result
+        return fromdict(AMP_Instance, result)
 
-    async def consoleUpdate(self) -> str | bool | dict:
+    async def getUpdates(self) -> Updates:
         """
-        Requests the recent entries of the console; will acquire all updates from previous API call of consoleUpdate
+        Requests the recent entries of the Instance Updates; will acquire all updates from previous API call of `getUpdate()`
 
         Returns:
             str | bool | dict: Returns the JSON response from the API call.
         """
         await self._connect()
         result = await self._call_api('Core/GetUpdates')
-        return result
+        return fromdict(Updates, result)
 
-    async def consoleMessage(self, msg: str) -> None:
+    async def sendConsoleMessage(self, msg: str) -> None:
         """
         Sends a string to the Console. (eg `/list`)
         """
@@ -303,7 +317,7 @@ class AMP_API():
         await self._call_api('Core/Kill')
         return
 
-    async def getStatus(self) -> str | bool | dict:
+    async def getStatus(self) -> Status:
         """
         Gets the AMP Server/Instance Status information.
 
@@ -313,7 +327,7 @@ class AMP_API():
         """
         await self._connect()
         result = await self._call_api('Core/GetStatus')
-        return result
+        return fromdict(Status, result)
 
     async def getUserList(self) -> str | bool | dict:
         """
@@ -326,7 +340,7 @@ class AMP_API():
         result = await self._call_api('Core/GetUserList')
         return result
 
-    async def getSchedule(self) -> str | bool | dict:
+    async def getScheduleData(self) -> str | bool | dict:
         """
         Returns a dictionary of the Server/Instance Schedule events and triggers.
 
@@ -461,7 +475,7 @@ class AMP_API():
         result = await self._call_api('Core/GetActiveAMPSessions')
         return result
 
-    async def getInstanceStatus(self) -> str | bool | dict:
+    async def getInstanceStatuses(self) -> str | bool | dict:
         """
         Returns a dictionary of the Server/Instance Status. \n
         **Requires ADS**
@@ -679,7 +693,7 @@ class AMP_API():
         result = await self._call_api('Core/SetAMPUserRoleMembership', parameters)
         return result
 
-    async def setAMPRolePermissions(self, role_id: str, permission_node: str, enabled: Union[None, bool]) -> str | bool | dict:
+    async def SetAMPRolePermission(self, role_id: str, permission_node: str, enabled: Union[None, bool]) -> str | bool | dict:
         """
         Set a permission node to `True` or `False` for the provided AMP role.
 
