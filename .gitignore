@@ -15,3 +15,4 @@ sqlite3.exe
 .env
 test.py
 local.py
+json_dump.txt
