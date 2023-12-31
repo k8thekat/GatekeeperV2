@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS usermetrics (
 )STRICT"""
 
 
-@dataclass(slots=True)
+@dataclass()
 class IGN(Database):
     id: int  # id column from ign table.
     name: str  # name from ign table.
