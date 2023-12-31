@@ -1,5 +1,5 @@
 # API class types
-from typing import Any, Union
+from typing import Any, Union, NamedTuple
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -249,14 +249,14 @@ class Updates():
     ConsoleEntries: list[Console_Entries]
     Status: Status
     Messages: list[Messages]  # No ideal usage at this time.
-    Ports: list[Ports]  # No ideal usage at this time.
-    Tasks: list[Tasks]  # No ideal usage at this time.
+    Ports: list[Ports] | None = None  # No ideal usage at this time.
+    Tasks: list[Tasks] | None = None  # No ideal usage at this time.
 
 
 @dataclass()
-class AMP_Instance():
+class Instance():
     """
-    Represents the data from AMP API call `getInstance` or `getInstances`
+    Represents the data from the AMP API call `getInstance` or a list of these from `getInstances`
     """
     AppState: State_enum
     ApplicationEndpoints: list[dict[str, str]]  # [{'DisplayName': 'Application ' \n 'Address', 'Endpoint': '0.0.0.0:7785', 'Uri': 'steam://connect/0.0.0.0:7785'}, {'DisplayName': 'SFTP '\n'Server','Endpoint': '0.0.0.0:2240','Uri': 'steam://connect/0.0.0.0:2240'}
@@ -292,8 +292,8 @@ class AMP_Instance():
 
 
 @dataclass()
-class AMP_Controller():
-    AvailableInstances: list[AMP_Instance]
+class Controller():
+    AvailableInstances: list[Instance]
     State: State_enum
     AvailableIPs: list[str]
     CanCreate: bool
@@ -323,3 +323,70 @@ class AMP_Controller():
     @LastUpdated.setter
     def LastUpdated(self, value: str) -> None:
         self._LastUpdated = value
+
+
+@dataclass()
+class TriggerTasks():
+    Id: str
+    TaskMethodName: str
+    ParameterMapping: dict[str, str]
+    EnabledState: int
+    Locked: bool
+    CreatedBy: str
+    Order: int
+
+
+@dataclass()
+class Methods():
+    """
+    Tied to `ScheduleData().AvailableMethods`.
+
+    Hold's information regarding Methods/Events that are available to the Instance. Varies depending on instance type.
+    """
+    Id: str = ""
+    Name: str = ""
+    Description: str = ""
+    Consumes: list[dict[str, str]] = field(default_factory=list[dict[str, str]])
+
+
+@dataclass()
+class Triggers():
+    """
+    Tied to `ScheduleData().AvailableTriggers` and `ScheduleData().PopulatedTriggers`
+    """
+    EnabledState: int
+    Tasks: list[TriggerTasks] = field(default_factory=list[dict[str, str]])
+    Id: str = ""
+    Type: str = ""
+    Description: str = ""
+    TriggerType: str = ""
+    Emits: list[str] = field(default_factory=list[str])
+
+
+@dataclass()
+class ScheduleData():
+    """
+    Represents the Data returned from the AMP API call `getScheduleData()`
+    """
+    AvailableMethods: list[Methods] | None = None
+    # AvailableTriggers: list[str] | None = None
+    AvailableTriggers: list[Triggers] | None = None
+    # PopulatedTriggers: list[str] | None = None
+    PopulatedTriggers: list[Triggers] | None = None
+
+
+@dataclass(init=True)
+class Players():
+    """
+    Represents the Data returned from the AMP API call `getUserlist()`
+    The attributes are not 100% accurate. Used Minecraft Module as a test.
+    `{'6eb7be5e-3d33-4b40-8aab-7889c243cc1a': 'Anth0kage', 'ac2d31c0-1ae6-400e-9748-df40a4d9c7b2': 'Razgro'}`
+
+    """
+    id: str = ""
+    name: str = ""
+
+    def __init__(self, data: dict[str, str]):
+        for key, value in data.items():
+            setattr(self, "id", key)
+            setattr(self, "name", value)

@@ -38,13 +38,13 @@ class AMP_API():
     _logger = logging.getLogger()
     _logger.setLevel(logging.INFO)
 
-    def __init__(self, url: str, amp_user: str, amp_password: str, amp_2fa: bool = False, amp_2fa_token: str = "", session_id: str = "0") -> None:
+    def __init__(self, url: str, amp_user: str, amp_password: str, amp_2fa: bool = False, amp_2fa_token: str = "", instance_url: str = None) -> None:
         self._url: str = url + "/API/"
         self._amp_user: str = amp_user
         self._amp_password: str = amp_password
         self._amp_2fa: bool = amp_2fa
         self._amp_2fa_token: str = amp_2fa_token
-        self._session_id = session_id
+        self._session_id: str = "0"
 
         if self._amp_2fa == True:
             if self._amp_2fa_token == "":
@@ -86,14 +86,15 @@ class AMP_API():
             parameters["SESSIONID"] = self._session_id
 
         json_data = json.dumps(parameters)
+
+        # _url = self._url + "/API/" + api
+        print(api, self._url + api)
         async with aiohttp.ClientSession() as session:
             try:
                 post_req = await session.post(self._url + api, headers=header, data=json_data)
-                self._logger.debug(f"post req-> {await post_req.json()}")
             # TODO - Need to not catch all Excepts..
             except Exception as e:
                 # So I can handle each exception properly.
-                traceback.print_exc()
                 print("_call_api exception type:", type(e))
                 raise ValueError(e)
 
@@ -111,8 +112,11 @@ class AMP_API():
         # They removed "result" from all replies thus breaking most if not all future code.
         # Core/Login can trigger this because it has a key "result" near the end.
         # TODO -- This will need to be tracked and see what triggers what.
+        # Possibly catch failed login's sooner; check `Core/Login` after the dict check.
+        # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
+        # See about returning None or similar and use `if not None` checks on each API return.
         # print("API CALL---->", api, type(post_req_json))
-        # pprint(post_req_json)
+        print(post_req_json)
 
         if isinstance(post_req_json, dict):
             if "result" in post_req_json:
@@ -160,7 +164,7 @@ class AMP_API():
         amp_2fa_code: Union[str, TOTP] = ""
         if isinstance(self._session_id, str) == False:
             raise ValueError("You must provide a session id as a string.")
-        if self._session_id == '0':
+        if self._session_id == "0":
             if self._amp_2fa == True:
                 try:
                     # Handles time based 2Factory Auth Key/Code
@@ -181,14 +185,9 @@ class AMP_API():
 
                     else:
                         self._logger.warning("Failed response from Instance")
-                        return False
 
                 except Exception as e:
                     self._logger.warning(f'Core/Login Exception: {traceback.format_exc()}')
-                    return False
-
-        else:
-            return True
 
     async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> LoginResults:
         """
@@ -226,7 +225,7 @@ class AMP_API():
         result = await self._call_api(api, parameters)
         return result
 
-    async def getInstances(self) -> str | bool | dict:
+    async def getInstances(self) -> list[Controller]:
         """
         Returns a list of all Instances on the AMP Panel.\n
         **Requires ADS**
@@ -239,14 +238,14 @@ class AMP_API():
 
         await self._connect()
         parameters = {}
-        _controllers: list[AMP_Controller] = []
+        _controllers: list[Controller] = []
         result = await self._call_api("ADSModule/GetInstances", parameters)
         if isinstance(result, list):
             for controller in result:
-                _controllers.append(fromdict(AMP_Controller, controller))
+                _controllers.append(fromdict(Controller, controller))
         return _controllers
 
-    async def getInstance(self, instanceID: str) -> str | bool | dict:
+    async def getInstance(self, instanceID: str) -> Instance:
         """
         Returns the Instance information for the provided Instance ID.\n
         **Requires ADS**
@@ -263,7 +262,7 @@ class AMP_API():
         await self._connect()
         parameters = {"InstanceId": instanceID}
         result = await self._call_api("ADSModule/GetInstance", parameters)
-        return fromdict(AMP_Instance, result)
+        return fromdict(Instance, result)
 
     async def getUpdates(self) -> Updates:
         """
@@ -331,14 +330,15 @@ class AMP_API():
 
     async def getUserList(self) -> str | bool | dict:
         """
-        Returns a dictionary of the connected Users to the Server/Instance.
+        Returns a dictionary of the connected Users to the Server.
 
         Returns:
             str | bool | dict: On success a dictionary with a key value of "Users" followed by a list of each user name.
         """
         await self._connect()
         result = await self._call_api('Core/GetUserList')
-        return result
+        # TODO- Needs to be validated.
+        return Players(data=result)
 
     async def getScheduleData(self) -> str | bool | dict:
         """
@@ -349,7 +349,7 @@ class AMP_API():
         """
         await self._connect()
         result = await self._call_api('Core/GetScheduleData')
-        return result
+        return fromdict(ScheduleData, result)
 
     async def copyFile(self, source: str, destination: str) -> None:
         """
@@ -388,7 +388,7 @@ class AMP_API():
         Returns a dictionary of the directory's properties and the files contained in the directory and their properties.
 
         Args:
-            directory (str): Relative to the Server/Instance root. eg `/config` - If a file has a similar name it may return the file instead of the directory.
+            directory (str): Relative to the Server root directory . eg `Minecraft/` - If a file has a similar name it may return the file instead of the directory.
 
         Returns:
             str | bool | dict: On success returns a dictionary containing the following. \n
@@ -644,7 +644,8 @@ class AMP_API():
 
         Returns:
             str | bool | dict: On success returns a dictionary containing the role ID and Status. \n 
-            `{'Result': '41f46907-43ac-40dc-95dc-4db17cf51a9c', 'Status': True}`
+            `{'Result': '41f46907-43ac-40dc-95dc-4db17cf51a9c', 'Status': True}`\n
+            Failure-> `{'result': {'Result': '00000000-0000-0000-0000-000000000000', 'Status': False, 'Reason': 'You do not have permission to create common roles.'}}`
         """
         await self._connect()
         parameters = {
