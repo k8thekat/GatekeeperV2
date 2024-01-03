@@ -5,7 +5,7 @@ from discord import Interaction, Message
 from typing import Optional
 import difflib
 
-from git import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import AMP_Handler
 from utils_dev.banner_editor.ui.textinput import Copy_To_TextInput, Banner_Color_Input, Banner_Blur_Input
