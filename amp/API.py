@@ -57,7 +57,7 @@ class AMP_API():
         self.ADS_ONLY: str = "This API call is only available on ADS instances."
         self.UNAUTHORIZED_ACCESS: str = f"{self._amp_user} user does not have the required permissions to interact with this instance."
 
-    async def _call_api(self, api: str, parameters: None | dict[str, Any] = None) -> str | bool | dict:
+    async def _call_api(self, api: str, parameters: None | dict[str, Any] = None) -> str | bool | dict | list[Any]:
         """
         Uses aiohttp.ClientSession() post request to access the AMP API endpoints. \n
         Will automatically populate the `SESSIONID` parameter if it is not provided.
@@ -115,8 +115,7 @@ class AMP_API():
         # Possibly catch failed login's sooner; check `Core/Login` after the dict check.
         # `{'resultReason': 'Internal Auth - No reason given', 'success': False, 'result': 0}`
         # See about returning None or similar and use `if not None` checks on each API return.
-        # print("API CALL---->", api, type(post_req_json))
-        print(post_req_json)
+        print("API CALL---->", api, type(post_req_json))
 
         if isinstance(post_req_json, dict):
             if "result" in post_req_json:
@@ -208,6 +207,8 @@ class AMP_API():
             'token': token,
             'rememberMe': rememberME}
         result = await self._call_api('Core/Login', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         return fromdict(LoginResults, result)
 
     async def callEndPoint(self, api: str, parameters: None | dict[str, Any] = None) -> str | bool | dict:
@@ -238,12 +239,15 @@ class AMP_API():
 
         await self._connect()
         parameters = {}
-        _controllers: list[Controller] = []
+        # _controllers: list[Controller] = []
         result = await self._call_api("ADSModule/GetInstances", parameters)
-        if isinstance(result, list):
-            for controller in result:
-                _controllers.append(fromdict(Controller, controller))
-        return _controllers
+        # if isinstance(result, list):
+        #     for controller in result:
+        #         _controllers.append(fromdict(Controller, controller))
+        # return _controllers
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return list(fromdict(Controller, controller) for controller in result)
 
     async def getInstance(self, instanceID: str) -> Instance:
         """
@@ -262,6 +266,8 @@ class AMP_API():
         await self._connect()
         parameters = {"InstanceId": instanceID}
         result = await self._call_api("ADSModule/GetInstance", parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         return fromdict(Instance, result)
 
     async def getUpdates(self) -> Updates:
@@ -273,6 +279,8 @@ class AMP_API():
         """
         await self._connect()
         result = await self._call_api('Core/GetUpdates')
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         return fromdict(Updates, result)
 
     async def sendConsoleMessage(self, msg: str) -> None:
@@ -326,6 +334,8 @@ class AMP_API():
         """
         await self._connect()
         result = await self._call_api('Core/GetStatus')
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         return fromdict(Status, result)
 
     async def getUserList(self) -> str | bool | dict:
@@ -337,6 +347,8 @@ class AMP_API():
         """
         await self._connect()
         result = await self._call_api('Core/GetUserList')
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         # TODO- Needs to be validated.
         return Players(data=result)
 
@@ -349,6 +361,8 @@ class AMP_API():
         """
         await self._connect()
         result = await self._call_api('Core/GetScheduleData')
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         return fromdict(ScheduleData, result)
 
     async def copyFile(self, source: str, destination: str) -> None:
@@ -399,7 +413,9 @@ class AMP_API():
             'Dir': directory
         }
         result = await self._call_api('FileManagerPlugin/GetDirectoryListing', parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return list(Directory(**directory) for directory in result)
 
     async def getFileChunk(self, name: str, position: int, length: int) -> str | bool | dict:
         """
@@ -421,7 +437,9 @@ class AMP_API():
             'Length': length
         }
         result = await self._call_api('FileManagerPlugin/GetFileChunk', parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return FileChunk(**result)
 
     async def writeFileChunk(self, filename: str, position: int, data: str) -> None:
         """
@@ -473,7 +491,9 @@ class AMP_API():
 
         await self._connect()
         result = await self._call_api('Core/GetActiveAMPSessions')
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return Session(**result)
 
     async def getInstanceStatuses(self) -> str | bool | dict:
         """
@@ -572,7 +592,9 @@ class AMP_API():
             'Username': name
         }
         result = await self._call_api('Core/GetAMPUserInfo', parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return User(**result)
 
     async def currentSessionHasPermission(self, permission_node: str) -> str | bool | dict:
         """
@@ -671,7 +693,9 @@ class AMP_API():
             'RoleId': role_id
         }
         result = await self._call_api('Core/GetRole', parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return Role(**result)
 
     async def setAMPUserRoleMembership(self, user_id: str, role_id: str, is_member: bool) -> str | bool | dict:
         """
@@ -728,6 +752,7 @@ class AMP_API():
         return result
 
     async def getConfig(self, node: str) -> str | bool | dict:
+        # TODO - Need to figure out how this command works entirely. Possible need a new node list
         """
         Returns the config settings for a specific node.
 
@@ -743,9 +768,12 @@ class AMP_API():
             "node": node
         }
         result = await self._call_api("Core/GetConfig", parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return Node(**result)
 
-    async def getConfigs(self, nodes: list[str]) -> str | bool | dict:
+    async def getConfigs(self, nodes: list[str]) -> list[Node]:
+        # TODO - Need to figure out how this command works entirely. Possible need a new node list
         """
         Returns the config settings for each node in the list.
 
@@ -757,10 +785,12 @@ class AMP_API():
         """
         await self._connect()
         parameters = {
-            "node": nodes
+            "nodes": nodes
         }
         result = await self._call_api("Core/GetConfigs", parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return list(Node(**node) for node in result)
 
     async def getUpdateInfo(self) -> UpdateInfo:
         """
@@ -771,4 +801,17 @@ class AMP_API():
         """
         await self._connect()
         result = await self._call_api("Core/GetUpdateInfo")
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         return UpdateInfo(**result)
+
+    async def getAllAMPUserInfo(self) -> list[User]:
+        """
+        Represents all the AMP User info.
+
+        Returns:
+            list[User]: list of `User` data class.
+        """
+        await self._connect()
+        result = await self._call_api("Core/GetAllAMPUserInfo")
+        return list(User(**user) for user in result)

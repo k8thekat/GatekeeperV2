@@ -32,9 +32,9 @@ class State_enum(Enum):
 
 
 @dataclass()
-class UserInfo():
+class Login_UserInfo():
     """
-    Represents an AMP users information.
+    Represents an AMP users information, tied to `LoginResults()`
 
     """
     ID: str
@@ -73,7 +73,7 @@ class LoginResults():
     resultReason: str = ""
     sessionID: str = ""
     rememberMeToken: str = ""
-    userInfo: UserInfo | None = None  # second data class
+    userInfo: Login_UserInfo | None = None  # second data class
 
 
 @dataclass(init=True)
@@ -144,6 +144,9 @@ class UpdateInfo():
 
 @dataclass()
 class Metrics_Data():
+    """
+    Represents the data from `Metrics()`
+    """
     RawValue: int
     MaxValue: int
     Percent: int
@@ -165,6 +168,9 @@ class Metrics():
 
 @dataclass()
 class Status():
+    """
+    Tied to `Updates()`, represents the Instance stats
+    """
     State: State_enum
     Uptime: str
     Metrics: Metrics
@@ -199,6 +205,7 @@ class Console_Entries():
 @dataclass()
 class Ports():
     """
+
     Current Ports of the related AMP Instance. Tied to `Updates().Ports`
     """
     Listening: bool
@@ -212,6 +219,7 @@ class Messages():
     """
     Represents a Message from the dataclass `Updates().Messages`\n
     *Not sure what generates these inside AMP or where to find them.*
+
     """
     AgeMinutes: int
     Expired: bool
@@ -224,6 +232,7 @@ class Messages():
 class Tasks():
     """
     Represents a Task that is being run on an Instance. Tied to dataclass `Updates().Tasks`
+
     """
     IsPrimaryTask: bool
     StartTime: str
@@ -244,7 +253,7 @@ class Tasks():
 @dataclass()
 class Updates():
     """
-    Represents AMP API call `getUpdates` \n
+    Represents the data from AMP API call `getUpdates` \n
     """
     ConsoleEntries: list[Console_Entries]
     Status: Status
@@ -256,7 +265,8 @@ class Updates():
 @dataclass()
 class Instance():
     """
-    Represents the data from the AMP API call `getInstance` or a list of these from `getInstances`
+    Represents the data from the AMP API call `getInstance()` or a list of these from `getInstances()`
+
     """
     AppState: State_enum
     ApplicationEndpoints: list[dict[str, str]]  # [{'DisplayName': 'Application ' \n 'Address', 'Endpoint': '0.0.0.0:7785', 'Uri': 'steam://connect/0.0.0.0:7785'}, {'DisplayName': 'SFTP '\n'Server','Endpoint': '0.0.0.0:2240','Uri': 'steam://connect/0.0.0.0:2240'}
@@ -293,6 +303,10 @@ class Instance():
 
 @dataclass()
 class Controller():
+    """
+    Represents an AMP Controller (aka Target manager) that manages the Instances it has access to.
+
+    """
     AvailableInstances: list[Instance]
     State: State_enum
     AvailableIPs: list[str]
@@ -327,6 +341,12 @@ class Controller():
 
 @dataclass()
 class TriggerTasks():
+    """
+    Tied to `Triggers()`.
+
+    Hold's information regarding AMP Tasks and their status.
+
+    """
     Id: str
     TaskMethodName: str
     ParameterMapping: dict[str, str]
@@ -390,3 +410,179 @@ class Players():
         for key, value in data.items():
             setattr(self, "id", key)
             setattr(self, "name", value)
+
+
+@dataclass()
+class User():
+    """
+    Represents the Data returned from the AMP API call `getAllAMPUserInfo()`
+
+    """
+    CannotChangePassword: bool
+    Disabled: bool
+    GravatarHash: str
+    ID: str
+    IsLDAPUser: bool
+    IsSuperUser: bool
+    IsTwoFactorEnabled: bool
+    MustChangePassword: bool
+    Name: str
+    PasswordExpires: bool
+    Permissions: list[str]
+    Roles: list[str]
+    LastLogin: str
+
+    @property
+    def LastLogin(self) -> datetime:
+        """
+        Converts our LastLogin attribute into a Datetime Object.
+
+        Returns:
+            datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
+        """
+        return datetime.fromtimestamp(int(self._LastLogin[6:-2]) / 1000)
+
+    @LastLogin.setter
+    def LastLogin(self, value: str) -> None:
+        self._LastLogin = value
+
+
+@dataclass()
+class Node():
+    """
+    Represents the data returns from the AMP API call `getConfig()` or `getConfigs()`
+
+    """
+    Actions: list[str]
+    AlwaysAllowRead: bool
+    Category: str
+    CurrentValue: str
+    Description: str
+    EnumValuesAreDeferred: bool
+    InputType: str
+    IsProvisionSpec: bool
+    Keywords: str
+    MaxLength: int
+    Name: str
+    Node: str
+    Placeholder: str
+    ReadOnly: bool
+    ReadOnlyProvision: bool
+    RequiresRestart: bool
+    Suffix: str
+    Tag: str
+    ValType: str
+
+
+@dataclass()
+class Role():
+    """
+    Represents the data returns from the AMP API call `getRole()`
+
+    """
+    ID: str
+    IsDefault: bool
+    Name: str
+    Description: str
+    Hidden: bool
+    Permissions: list[str]
+    Members: list[str]
+    IsInstanceSpecific: bool
+    IsCommonRole: bool
+    DisableEdits: bool
+
+
+@dataclass()
+class FileChunk():
+    """
+    Repesents the data returns from AMP API call `getFileChunk()`
+    """
+    Base64Data: str
+    BytesLength: int
+
+
+@dataclass()
+class Directory():
+    """
+    Repesents the data returns from AMP API call `getDirectoryListing()`
+    """
+    IsDirectory: bool
+    IsVirtualDirectory: bool
+    Filename: str
+    SizeBytes: int
+    IsDownloadable: bool
+    IsEditable: bool
+    IsArchive: bool
+    IsExcludedFromBackups: bool
+    Created: str
+    Modified: str
+
+    @property
+    def Created(self) -> datetime:
+        """
+        Converts our Created attribute into a Datetime Object.
+
+        Returns:
+            datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
+        """
+        return datetime.fromtimestamp(int(self._Created[6:-2]) / 1000)
+
+    @Created.setter
+    def Created(self, value: str) -> None:
+        self._Created = value
+
+    @property
+    def Modified(self) -> datetime:
+        """
+        Converts our Modified attribute into a Datetime Object.
+
+        Returns:
+            datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
+        """
+        return datetime.fromtimestamp(int(self._Modified[6:-2]) / 1000)
+
+    @Modified.setter
+    def Modified(self, value: str) -> None:
+        self._Modified = value
+
+
+@dataclass()
+class Session():
+    """
+    Represents the data returns from the AMP API call `getActiveAMPSessions()`
+
+    """
+    Source: str
+    SessionID: str
+    Username: str
+    SessionType: str
+    StartTime: str
+    LastActivity: str
+
+    @property
+    def StartTime(self) -> datetime:
+        """
+        Converts our StartTime attribute into a Datetime Object.
+
+        Returns:
+            datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
+        """
+        return datetime.fromtimestamp(int(self._StartTime[6:-2]) / 1000)
+
+    @StartTime.setter
+    def StartTime(self, value: str) -> None:
+        self._StartTime = value
+
+    @property
+    def LastActivity(self) -> datetime:
+        """
+        Converts our LastActivity attribute into a Datetime Object.
+
+        Returns:
+            datetime: Returns a `Non-Timezone` aware object. Will use OS/machines timezone information.
+        """
+        return datetime.fromtimestamp(int(self._LastActivity[6:-2]) / 1000)
+
+    @LastActivity.setter
+    def LastActivity(self, value: str) -> None:
+        self._LastActivity = value

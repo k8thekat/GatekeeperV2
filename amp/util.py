@@ -16,7 +16,7 @@ async def getNodespec(amp: AMP_API) -> list[str]:
 
     """
     res = await amp.getSettingsSpec()
-    dir = Path(__file__).parent.joinpath("setting_nodes.txt")
+    dir = Path(__file__).parent.joinpath("setting_nodes.md")
     mode = "x"
     if dir.exists():
         mode = "w"
@@ -53,7 +53,7 @@ def node_scrape(text: list[dict], file=None) -> None:
         text (list): The list of dictionary's
         file (_type_, optional): The file object to dump text to. Defaults to None. `**LEAVE NONE**`
     """
-    dir = Path(__file__).parent.joinpath("permission_nodes.txt")
+    dir = Path(__file__).parent.joinpath("permission_nodes.md")
     mode = "x"
     if dir.exists():
         mode = "w"

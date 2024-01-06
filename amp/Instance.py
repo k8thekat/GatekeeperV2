@@ -155,46 +155,8 @@ class AMPInstance(AMP_API):
     #     super().__setattr__(attr, value)
 
     @property
-    def memoryUsage(self) -> Metrics_Tuple:
-        if "Memory Usage" in self.Metrics:
-            _raw_value: int = int(self.Metrics["Memory Usage"]["RawValue"])
-            _max_value: int = int(self.Metrics["Memory Usage"]["MaxValue"])
-            _percent: int = int(self.Metrics["Memory Usage"]["Percent"])
-            _units: str = self.Metrics["Memory Usage"]["Units"]
-            return Metrics_Tuple(_raw_value, _max_value, _percent, _units)
-        else:
-            return Metrics_Tuple()
-
-    @property
-    def cpuUsage(self) -> Metrics_Tuple:
-        if "CPU Usage" in self.Metrics:
-            _raw_value: int = int(self.Metrics["CPU Usage"]["RawValue"])
-            _max_value: int = int(self.Metrics["CPU Usage"]["MaxValue"])
-            _percent: int = int(self.Metrics["CPU Usage"]["Percent"])
-            _units: str = self.Metrics["CPU Usage"]["Units"]
-            return Metrics_Tuple(_raw_value, _max_value, _percent, _units)
-        else:
-            return Metrics_Tuple()
-
-    @property
-    def activeUsers(self) -> Metrics_Tuple:
-        """
-        activeUsers _summary_
-
-        Returns:
-            Metrics: _description_
-        """
-        if "Active Users" in self.Metrics:
-            _raw_value: int = int(self.Metrics["Active Users"]["RawValue"])
-            _max_value: int = int(self.Metrics["Active Users"]["MaxValue"])
-            _percent: int = int(self.Metrics["Active Users"]["Percent"])
-            _units: str = self.Metrics["Active Users"]["Units"]
-            return Metrics_Tuple(_raw_value, _max_value, _percent, _units)
-        else:
-            return Metrics_Tuple()
-
-    @property
     def manageURL(self) -> str | None:
+        # TODO - Need to figure a way to
         """
         Network URL to manage the AMP Instance
 
