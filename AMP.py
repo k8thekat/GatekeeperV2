@@ -626,7 +626,7 @@ class AMPInstance():
         result = self.CallAPI('Core/GetStatus', parameters)
 
         # This happens because CallAPI returns False when it fails permissions.
-        if result == False:
+        if result == False or None:
             return False
         return result
 
@@ -666,7 +666,7 @@ class AMPInstance():
             return result
 
         # This usually happens if the service is offline.
-        if 'State' in result:
+        if isinstance(result, dict) and 'State' in result:
             status = str(result['State'])
             if status == '0':
                 return False

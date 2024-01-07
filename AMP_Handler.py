@@ -134,7 +134,7 @@ class AMPHandler():
 
         if self.args.dev and pathlib.Path('tokens_dev.py').exists():
             self.logger.dev('Using Dev Tokens File --')
-            import tokens_dev as tokens
+            import tokens_dev as tokens  # type:ignore
 
         else:
             import tokens

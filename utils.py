@@ -222,7 +222,7 @@ class discordBot():
 
     async def messageAddReaction(self, message: discord.Message, reaction_id: str):
         """The name and ID of a custom emoji can be found with the client by prefixing ':custom_emoji:' with a backslash. \n
-            For example, sending the message '\:python3:' with the client will result in '<:python3:232720527448342530>'.
+            For example, sending the message ':python3:' with the client will result in '<:python3:232720527448342530>'.
             `NOTE` Can only use Emoji's the bot has access too"""
 
         self.botLogger.dev('Message Add Reaction Called...')
