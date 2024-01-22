@@ -31,6 +31,19 @@ class State_enum(Enum):
     Indeterminate = 999  # The state is unknown, or doesn't apply (for modules that don't start an external process)
 
 
+class PostCreate(Enum):
+    """
+    Represents the state of the API call `ADSModule/DeployTemplate`
+
+    """
+    Do_Nothing = 0
+    Update_Once = 1
+    Update_Always = 2
+    Update_and_Start_Once = 3
+    Update_and_Start_Always = 4
+    Start_Always = 5
+
+
 @dataclass()
 class Login_UserInfo():
     """
