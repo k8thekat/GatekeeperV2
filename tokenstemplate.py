@@ -1,4 +1,4 @@
-#Discord Server Connection OAuth Token aka 'Client Secret'
+#Discord Server Connection Bot Token (Under Bot request token)
 token = 'IGNORE THIS FIELD IF TESTING AMP/DB'
 
 #2Factor AUTH Code for AMP Console Login
