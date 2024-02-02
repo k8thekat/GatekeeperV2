@@ -444,9 +444,14 @@ class AMPInstance():
         res = post_req.json()
 
         # Error catcher for API calls
-        if res is None or 199 >= post_req.status_code > 299:
-            self.logger.error(f"AMP_API CallAPI ret is 0: status_code {post_req.status_code}")
+        if (post_req.status_code < 200 or post_req.status_code >= 300):
+            self.logger.error(f"AMP_API `{APICall}` status_code:  {post_req.status_code}")
             self.logger.error(post_req.raw)
+            return
+
+        if res == None:
+            self.logger.debug(f"AMP_API {APICall} json() is `None`")
+            self.logger.debug(post_req.raw)
             return
 
         # {"result": Int or Bool} or dict[str, int] -> Int or Bool
