@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS usermetrics (
     serverid INTEGER,
     lastlogin TEXT NO CASE,
     playtime INTEGER,
+    created TEXT NO CASE,
     FOREIGN KEY (serverid) REFERENCES servers(id)
     FOREIGN KEY (ignid) REFERENCES ign(id)
     UNIQUE(serverid, ignid)
