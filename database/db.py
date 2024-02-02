@@ -150,7 +150,8 @@ class Database():
                 await cur.execute(f"""SELECT {column} FROM {table}""")
                 res = await cur.fetchone()
                 await cur.close()
-                return res[f"{column}"] if not None else None
+                # return res[f"{column}"] if not None else None
+                return res[column] if not None else None
 
     async def _select_row(self, table: str, column: str, where: str, value: str | int | bool):
         """
@@ -173,7 +174,11 @@ class Database():
                 await cur.execute(f"""SELECT {column} FROM {table} WHERE {where} = ?""", value)
                 res = await cur.fetchone()
                 await cur.close()
+                # if res == None:
+                #     return res
+
                 if column == "*":
                     return res if not None else None
                 else:
-                    return res[f"{column}"] if not None else None
+                    # return None if res is None else res[f"{column}"]
+                    return None if res is None else res[column]
