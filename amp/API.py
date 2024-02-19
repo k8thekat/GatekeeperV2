@@ -38,7 +38,7 @@ class AMP_API():
     _logger = logging.getLogger()
     _logger.setLevel(logging.INFO)
 
-    def __init__(self, url: str, amp_user: str, amp_password: str, amp_2fa: bool = False, amp_2fa_token: str = "", instance_url: str = None) -> None:
+    def __init__(self, url: str, amp_user: str, amp_password: str, amp_2fa: bool = False, amp_2fa_token: str = "", instance_url: None | str = None) -> None:
         self._url: str = url + "/API/"
         self._amp_user: str = amp_user
         self._amp_password: str = amp_password
@@ -57,7 +57,7 @@ class AMP_API():
         self.ADS_ONLY: str = "This API call is only available on ADS instances."
         self.UNAUTHORIZED_ACCESS: str = f"{self._amp_user} user does not have the required permissions to interact with this instance."
 
-    async def _call_api(self, api: str, parameters: None | dict[str, Any] = None) -> str | bool | dict | list[Any]:
+    async def _call_api(self, api: str, parameters: None | dict[str, Any] = None) -> None | str | bool | dict | list[Any]:
         """
         Uses aiohttp.ClientSession() post request to access the AMP API endpoints. \n
         Will automatically populate the `SESSIONID` parameter if it is not provided.
@@ -72,7 +72,7 @@ class AMP_API():
             PermissionError: When the API call returns a `Unauthorized Access` error or permission related error.
 
         Returns:
-            Any: Returns unmodified JSON response from the API call. Typically a string or dict.
+            None | str | bool | dict | list[Any]: Returns unmodified JSON response from the API call. Typically a string or dict.
         """
         header: dict = {"Accept": "text/javascript"}
         post_req: ClientResponse | None
@@ -146,7 +146,7 @@ class AMP_API():
             else:
                 return post_req_json
         else:
-            print("Else return post_req_json")
+            print("_call_api -> else `return post_req_json`")
             return post_req_json
 
     async def _connect(self) -> bool | None:
@@ -188,7 +188,7 @@ class AMP_API():
                 except Exception as e:
                     self._logger.warning(f'Core/Login Exception: {traceback.format_exc()}')
 
-    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> LoginResults:
+    async def login(self, amp_user: str, amp_password: str, token: str = "", rememberME: bool = False) -> LoginResults | None | bool | int | str:
         """
         AMP API login function. \n
 
@@ -199,7 +199,8 @@ class AMP_API():
             rememberME (bool, optional): Remember me token.. Defaults to False.
 
         Returns:
-            str | bool | dict: Returns the JSON response from the API call.
+            LoginResults | None | bool | int | str: On success returns a LoginResult dataclass.
+                See `types.py -> LoginResult`
         """
         parameters = {
             'username': amp_user,
@@ -209,9 +210,9 @@ class AMP_API():
         result = await self._call_api('Core/Login', parameters)
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return fromdict(LoginResults, result)
+        return fromdict(LoginResults, result)  # type:ignore
 
-    async def callEndPoint(self, api: str, parameters: None | dict[str, Any] = None) -> str | bool | dict:
+    async def callEndPoint(self, api: str, parameters: None | dict[str, Any] = None) -> list | dict | str | bool | int | None:
         """
         Universal API method for calling any API endpoint. Some API endpoints require ADS and some may require an Instance ID. \n
 
@@ -220,19 +221,20 @@ class AMP_API():
             parameters (None | dict[str, str]): Parameters to pass to the API endpoint. Session ID is already handled for you. Defaults to None
 
         Returns:
-            str | bool | dict: Returns the JSON response from the API call.
+            list | dict | str | bool | int | None: Returns the JSON response from the API call.
         """
         await self._connect()
         result = await self._call_api(api, parameters)
         return result
 
-    async def getInstances(self) -> list[Controller]:
+    async def getInstances(self) -> list[Controller] | str | bool | int | None:
         """
         Returns a list of all Instances on the AMP Panel.\n
         **Requires ADS**
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing Server/Instance specific information. \n
+            list[Controller] | str | bool | int | None: On success returns a list of Controller dataclasses. 
+                See `types.py -> Controller`\n
         """
         if type(self) != AMP_API:
             return self.ADS_ONLY
@@ -249,7 +251,7 @@ class AMP_API():
             return result
         return list(fromdict(Controller, controller) for controller in result)
 
-    async def getInstance(self, instanceID: str) -> Instance:
+    async def getInstance(self, instanceID: str) -> Instance | str | bool | int | None:
         """
         Returns the Instance information for the provided Instance ID.\n
         **Requires ADS**
@@ -258,7 +260,8 @@ class AMP_API():
             instanceID (str): The Instance ID to get information for.
 
         Returns:
-            str | bool | dict: Returns the JSON response from the API call.
+            Instance | str | bool | int | None: On success returns a Instance dataclass. 
+                See `types.py -> Instance`
         """
         if type(self) != AMP_API:
             return self.ADS_ONLY
@@ -268,136 +271,194 @@ class AMP_API():
         result = await self._call_api("ADSModule/GetInstance", parameters)
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return fromdict(Instance, result)
+        return fromdict(Instance, result)  # type:ignore
 
-    async def getUpdates(self) -> Updates:
+    async def getUpdates(self) -> Updates | str | bool | int | None:
         """
         Requests the recent entries of the Instance Updates; will acquire all updates from previous API call of `getUpdate()`
 
         Returns:
-            str | bool | dict: Returns the JSON response from the API call.
+            Updates | str | bool | int | None: On success returns a Updates dataclass.
+                See `types.py -> Updates`
         """
         await self._connect()
         result = await self._call_api('Core/GetUpdates')
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return fromdict(Updates, result)
+        return fromdict(Updates, result)  # type:ignore
 
     async def sendConsoleMessage(self, msg: str) -> None:
         """
         Sends a string to the Console. (eg `/list`)
+
+        Returns:
+            None: ""
         """
         await self._connect()
         parameters = {'message': msg}
         await self._call_api('Core/SendConsoleMessage', parameters)
         return
 
-    async def startInstance(self) -> None:
+    async def startInstance(self) -> str | dict | list | bool | int | None:
         """
         Starts the AMP Server/Instance
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call.
+                See `types.py -> ActionResult`
         """
         await self._connect()
-        await self._call_api('Core/Start')
-        return
+        result = await self._call_api('Core/Start')
+        return ActionResult(**result)  # type:ignore
 
     async def stopInstance(self) -> None:
         """
         Stops the AMP Server/Instance
+
+        Returns:
+            None: ""
         """
         await self._connect()
         await self._call_api('Core/Stop')
         return
 
-    async def restartInstance(self) -> None:
+    async def restartInstance(self) -> str | dict | list | bool | int | None:
         """
         Restarts the AMP Server/Instance
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call.
+                See `types.py -> ActionResult`
         """
         await self._connect()
-        await self._call_api('Core/Restart')
-        return
+        result = await self._call_api('Core/Restart')
+        return ActionResult(**result)  # type:ignore
 
     async def killInstance(self) -> None:
         """
         Kills the AMP Server/Instance
+
+        Returns:
+            None: ""
         """
         await self._connect()
         await self._call_api('Core/Kill')
         return
 
-    async def getStatus(self) -> Status:
+    async def getStatus(self) -> Status | str | bool | int | None:
         """
         Gets the AMP Server/Instance Status information.
 
         Returns:
-            str | bool | dict: On success returns a dict containing various key/value combos below. \n
-            `{'State': int, 'Uptime': 'str', 'Metrics': {'CPU Usage': {'RawValue': int, 'MaxValue': int, 'Percent': int, 'Units': '%', 'Color': 'hex', 'Color2': 'hex', 'Color3': 'hex'}, 'Memory Usage': {'RawValue': int, 'MaxValue': int, 'Percent': int, 'Units': 'MB', 'Color': 'hex', 'Color3': 'hex'}, 'Active Users': {'RawValue': int, 'MaxValue': int, 'Percent': int, 'Units': '', 'Color': 'hex', 'Color3': 'hex'}}}`
+            Status | str | bool | int | None: On success returns a Status dataclass.
+                See `types.py -> Status`
         """
         await self._connect()
         result = await self._call_api('Core/GetStatus')
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return fromdict(Status, result)
+        return fromdict(Status, result)  # type:ignore
 
-    async def getUserList(self) -> str | bool | dict:
+    async def getUserList(self) -> Players | str | bool | int | None:
         """
         Returns a dictionary of the connected Users to the Server.
 
         Returns:
-            str | bool | dict: On success a dictionary with a key value of "Users" followed by a list of each user name.
+            Players | str | bool | int | None: on success returns a Player dataclass.
+                See `types.py -> Players`
         """
         await self._connect()
         result = await self._call_api('Core/GetUserList')
         if isinstance(result, Union[None, bool, int, str]):
             return result
         # TODO- Needs to be validated.
-        return Players(data=result)
+        return Players(data=result)  # type:ignore
 
-    async def getScheduleData(self) -> str | bool | dict:
+    async def getScheduleData(self) -> ScheduleData | str | bool | int | None:
         """
         Returns a dictionary of the Server/Instance Schedule events and triggers.
 
         Returns:
-            str | bool | dict: On success a dictionary with the schedules broken up by Events and Triggers.
+            ScheduleData | str | bool | int | None: On success returns a ScheduleData dataclass.
+                See `types.py -> ScheduleData`
         """
         await self._connect()
         result = await self._call_api('Core/GetScheduleData')
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return fromdict(ScheduleData, result)
+        return fromdict(ScheduleData, result)  # type:ignore
 
-    async def copyFile(self, source: str, destination: str) -> None:
+    async def copyFile(self, source: str, destination: str) -> ActionResult | str | bool | int | None:
         """
-        Moves a file from the source directory to the destination. The path is relative to the Server/Instance root.
+        Moves a file from the source directory to the destination. The path is relative to the Server/Instance home directory.\n
+            Example `await Instance.copyFile("eula.txt", "test")` would move `/eula.txt` to `/test/eula.txt`
 
         Args:
-            source (str): Use forward slashes for the path. eg `Minecraft/mods/`
-            destination (str): Same as source.
+            source (str): Directory starts from the Instance home path (`/`) along with the file name and the extension. (eg. "eula.txt")
+                -> (File Manager `/` directory) eg `.ampdata/instance/VM_Minecraft/Minecraft/` *this is the home directory*
+            destination (str): Similar to source; do not include the file name. (eg. "test")
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call.
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
             'Origin': source,
             'TargetDirectory': destination
         }
-        await self._call_api('FileManagerPlugin/CopyFile', parameters)
-        return
+        result = await self._call_api('FileManagerPlugin/CopyFile', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def renameFile(self, original: str, new: str) -> None:
+    async def renameFile(self, original: str, new: str) -> ActionResult | str | bool | int | None:
         """
-        Changes the name of a file.
+        Changes the name of a file. \n
+            Path's are absolute and relative to the Instances home directory. Do not include the (`/`)
 
         Args:
-            original (str): Old File name.
-            new (str): New name to change the file to.
+            original (str): The path to the file and the file name included. (eg. "test/myfile.txt")
+            new (str): The file name to be changed; no path needed. (eg. "renamed_myfile.txt")
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call.
+            See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
             'Filename': original,
             'NewFilename': new
         }
-        await self._call_api('FileManagerPlugin/RenameFile', parameters)
-        return
+        result = await self._call_api('FileManagerPlugin/RenameFile', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def getDirectoryListing(self, directory: str) -> str | bool | dict:
+    async def renameDirectory(self, oldDirectory: str, newDirectoryName: str) -> ActionResult | str | bool | int | None:
+        """
+        Changes the name of a file.\n
+            Path's are absolute and relative to the Instances home directory. Do not include the (`/`)
+
+        Args:
+            oldDirectory (str): The full path to the old directory.
+            newDirectoryName (str): The name component of the new directory (not the full path).
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call.
+                See `types.py -> ActionResult`
+        """
+        await self._connect()
+        parameters = {
+            'oldDirectory': oldDirectory,
+            'newDirectoryName': newDirectoryName
+        }
+        result = await self._call_api('FileManagerPlugin/RenameDirectory', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
+
+    async def getDirectoryListing(self, directory: str = "") -> list[Directory] | str | bool | int | None:
         """
         Returns a dictionary of the directory's properties and the files contained in the directory and their properties.
 
@@ -405,9 +466,10 @@ class AMP_API():
             directory (str): Relative to the Server root directory . eg `Minecraft/` - If a file has a similar name it may return the file instead of the directory.
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing the following. \n
-            `{'IsDirectory': bool, 'IsVirtualDirectory': bool, 'Filename': 'string', 'SizeBytes': int, 'Created': 'unix timestamp', 'Modified': 'unix timestamp', 'IsDownloadable': bool, 'IsEditable': bool, 'IsArchive': bool, 'IsExcludedFromBackups': bool}`
+            list[Directory] | str | bool | int | None: Returns a list of Directory dataclasses.
+                See `types.py -> Directory`
         """
+
         await self._connect()
         parameters = {
             'Dir': directory
@@ -417,7 +479,7 @@ class AMP_API():
             return result
         return list(Directory(**directory) for directory in result)
 
-    async def getFileChunk(self, name: str, position: int, length: int) -> str | bool | dict:
+    async def getFileChunk(self, name: str, position: int, length: int) -> FileChunk | str | bool | int | None:
         """
         Returns a specific section of Base64Data from a file.
 
@@ -427,8 +489,8 @@ class AMP_API():
             length (int): How far to read from the start position.
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing the following. \n
-            `{'Base64Data': 'str', 'BytesLength': int}`
+            FileChunk | str | bool | int | None: Returns a FileChunk dataclass.
+                See `types.py -> FileChunk`
         """
         await self._connect()
         parameters = {
@@ -439,25 +501,33 @@ class AMP_API():
         result = await self._call_api('FileManagerPlugin/GetFileChunk', parameters)
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return FileChunk(**result)
+        return FileChunk(**result)  # type:ignore
 
-    async def writeFileChunk(self, filename: str, position: int, data: str) -> None:
+    async def writeFileChunk(self, filename: str, data: str, offset: int, finalChunk: bool) -> ActionResult | str | bool | int | None:
         """
-        Writes data to the file specified starting at the position specified.
+        Write data to a file with an offset.
 
         Args:
-            filename (str): Name of the file to write to.
-            position (int): Position to start writing in the file.
-            data (str): data to write to the file.
+            filename (str): File to write data to.
+            data (str): binary data to be written.
+            offset (int): data offset from 0.
+            finalChunk (bool): UNK
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call.
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
             'Filename': filename,
-            'Position': position,
-            'Data': data
+            'Data': data,
+            'Offset': offset,
+            "FinalChunk": finalChunk
         }
-        await self._call_api('FileManagerPlugin/WriteFileChunk', parameters)
-        return
+        result = await self._call_api('FileManagerPlugin/WriteFileChunk', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
     async def endUserSession(self, session_id: str) -> str | None:
         """
@@ -466,6 +536,9 @@ class AMP_API():
 
         Args:
             session_id (str): session ID to end.
+
+        Returns:
+            None: ""
         """
         if type(self) != AMP_API:
             return self.ADS_ONLY
@@ -477,14 +550,14 @@ class AMP_API():
         await self._call_api('Core/EndUserSession', parameters)
         return
 
-    async def getActiveAMPSessions(self) -> str | bool | dict:
+    async def getActiveAMPSessions(self) -> Session | str | bool | int | None:
         """
         Returns currently active AMP Sessions.\n
         **Requires ADS**
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing the following. \n
-            `{'Source': '127.0.0.1', 'SessionID': '649a601d-694a-48b2-946d-f4fe4c02f920', 'LastActivity': 'unix timestamp', 'StartTime': 'unix timestamp', 'Username': 'bot', 'SessionType': 'FTP'}`
+            Session | str | bool | int | None: Returns a dataclass Session.
+                See `types.py -> Session`
         """
         if type(self) != AMP_API:
             return self.ADS_ONLY
@@ -493,71 +566,91 @@ class AMP_API():
         result = await self._call_api('Core/GetActiveAMPSessions')
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return Session(**result)
+        return Session(**result)  # type:ignore
 
-    async def getInstanceStatuses(self) -> str | bool | dict:
+    async def getInstanceStatuses(self) -> list[InstanceStatus] | dict | str | bool | int | None:
         """
         Returns a dictionary of the Server/Instance Status. \n
         **Requires ADS**
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing the following. \n
-            `{'InstanceID': '0009776e-0d48-44ff-93de-b3852ce3fdad', 'Running': bool}`
+            list[InstanceStatus] | dict | str | bool | int | None: Returns a list of InstanceStatus dataclasses.
+                See `types.py -> InstanceStatus`
+
         """
         if type(self) != AMP_API:
             return self.ADS_ONLY
 
         await self._connect()
         result = await self._call_api('ADSModule/GetInstanceStatuses')
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return list(InstanceStatus(**instance)for instance in result)
 
-    async def trashDirectory(self, dir_name: str) -> None:
+    async def trashDirectory(self, dir_name: str) -> ActionResult | str | bool | int | None:
         """
         Moves a directory to the trash, files must be trashed before they can be `emptied`.\n
         See emptyTrash().
 
-
         Args:
             dir_name (str): Directory name; relative to the Server/Instance root. Supports pathing. eg `/home/config`
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call. 
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
             'DirectoryName': dir_name
         }
-        await self._call_api('FileManagerPlugin/TrashDirectory', parameters)
-        return
+        result = await self._call_api('FileManagerPlugin/TrashDirectory', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def trashFile(self, filename: str) -> None:
+    async def trashFile(self, filename: str) -> ActionResult | str | bool | int | None:
         """
         Moves a file to the trash, files must be trashed before they can be `emptied`. \n
         See emptyTrash().
 
         Args:
             filename (str): File name; relative to the Server/Instance root. Supports pathing. eg `/home/config`
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call. 
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
             'Filename': filename
         }
-        await self._call_api('FileManagerPlugin/TrashFile', parameters)
-        return
+        result = await self._call_api('FileManagerPlugin/TrashFile', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def emptyTrash(self, trash_dir: str) -> None:
+    async def emptyTrash(self, trash_dir: str) -> ActionResult | str | bool | int | None:
         """
         Empties a trash bin for the AMP Server/Instance.
 
         Args:
             trash_dir (str): Directory name; relative to the Server/Instance root. Supports pathing. eg `/home/config` \n
             Typically the directory is called `Trashed Files`, it is case sensitive and located in the Server/Instance root directory.
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call. 
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
             'TrashDirectoryName': trash_dir
         }
-        await self._call_api('FileManagerPlugin/EmptyTrash', parameters)
-        return
+        result = await self._call_api('FileManagerPlugin/EmptyTrash', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def takeBackup(self, title: str, description: str, sticky: bool = False) -> None:
+    async def takeBackup(self, title: str, description: str, sticky: bool = False) -> ActionResult | str | bool | int | None:
         """
         Takes a backup of the AMP Server/Instance.
 
@@ -565,6 +658,10 @@ class AMP_API():
             title (str): Title of the backup; aka `Name`
             description (str): Brief description of why or what the backup is for.
             sticky (bool, optional): Sticky backups won't be deleted to make room for automatic backups. Defaults to `False`.
+
+        Returns:
+            ActionResult | str | bool | int | None: Results from the API call. 
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
@@ -572,10 +669,12 @@ class AMP_API():
             "Description": description,
             "Sticky": sticky
         }
-        await self._call_api('LocalFileBackupPlugin/TakeBackup', parameters)
-        return
+        result = await self._call_api('LocalFileBackupPlugin/TakeBackup', parameters)
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def getAMPUserInfo(self, name: str) -> str | bool | dict:
+    async def getAMPUserInfo(self, name: str) -> User | str | bool | dict | None:
         """
         Retrieves the AMP User information for the provided username.\n
 
@@ -583,8 +682,8 @@ class AMP_API():
             name (str): AMP User name.
 
         Returns:
-            str | bool | dict: Typically returns a dictionary containing the following. \n
-            `{'ID': str, 'Name': 'Gatekeeper', 'Disabled': bool, 'Permissions': [], 'IsSuperUser': bool, 'LastLogin': 'unix timestamp', 'PasswordExpires': bool, 'CannotChangePassword': bool, 'MustChangePassword': bool, 'IsTwoFactorEnabled': bool, 'Roles': list(str), 'IsLDAPUser': bool, 'GravatarHash': str}}
+            User | str | bool | dict: On success returns a User dataclass. 
+                See `types.py -> User`
         """
 
         await self._connect()
@@ -594,9 +693,9 @@ class AMP_API():
         result = await self._call_api('Core/GetAMPUserInfo', parameters)
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return User(**result)
+        return User(**result)  # type:ignore
 
-    async def currentSessionHasPermission(self, permission_node: str) -> str | bool | dict:
+    async def currentSessionHasPermission(self, permission_node: str) -> str | bool | dict | list | None:
         """
         Retrieves the current Session IDs permissions. This will differ between the ADS and a Server/Instance.
 
@@ -606,7 +705,7 @@ class AMP_API():
             Supports wildcards `*`. eg `Core.RoleManagement.*`
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing a bool.
+            str | bool | dict | list | None: On success returns a bool.
         """
         await self._connect()
         parameters = {
@@ -615,7 +714,7 @@ class AMP_API():
         result = await self._call_api('Core/CurrentSessionHasPermission', parameters)
         return result
 
-    async def getAMPRolePermissions(self, role_id: str) -> str | bool | dict:
+    async def getAMPRolePermissions(self, role_id: str) -> str | bool | dict | list | None:
         """
         Retrieves the AMP Role permission nodes for the provided role ID.
 
@@ -623,7 +722,7 @@ class AMP_API():
             role_id (str): The role ID. eg `5d6566e0-fae2-41d7-bfb6-d21033247f2e`
 
         Returns:
-            str | bool | dict: On success returns a list containing all the permission nodes for the provided role ID.
+            str | bool | dict | list | None: On success returns a list containing all the permission nodes for the provided role ID.
         """
         await self._connect()
         parameters = {
@@ -632,31 +731,29 @@ class AMP_API():
         result = await self._call_api("Core/GetAMPRolePermissions", parameters)
         return result
 
-    async def getPermissionsSpec(self) -> str | bool | dict:
+    async def getPermissionsSpec(self) -> str | bool | dict | list | None:
         """
         Retrieves the AMP Permissions node tree.
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing all the permission nodes, descriptions and other attributes.
+            str | bool | dict | list | None: On success returns a dictionary containing all the permission nodes, descriptions and other attributes.
         """
         await self._connect()
         result = await self._call_api("Core/GetPermissionsSpec")
         return result
 
-    async def getRoleIds(self) -> str | bool | dict:
+    async def getRoleIds(self) -> str | bool | dict | list | None:
         """
         Retrieves all the Roles AMP currently has and the role IDs.
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing all the roles and their IDs. Example below. \n
-            `{'00000000-0000-0000-0000-000000000000': 'Default',
-            '9d390d0e-79a0-48c1-8eeb-c803876cd8e1': 'Super Admins'}`
+            Roles | str | bool | dict | list | None: On success returns a Roles dataclass containing all the roles and their IDs. Example below. \n
         """
         await self._connect()
         result = await self._call_api('Core/GetRoleIds')
         return result
 
-    async def createRole(self, name: str, as_common_role: bool = False) -> str | bool | dict:
+    async def createRole(self, name: str, as_common_role: bool = False) -> ActionResult | str | bool | dict | list | None:
         """
         Creates an AMP Role.
 
@@ -665,9 +762,9 @@ class AMP_API():
             as_common_role (bool, optional): A role that everyone has. Defaults to False.
 
         Returns:
-            str | bool | dict: On success returns a dictionary containing the role ID and Status. \n 
-            `{'Result': '41f46907-43ac-40dc-95dc-4db17cf51a9c', 'Status': True}`\n
-            Failure-> `{'result': {'Result': '00000000-0000-0000-0000-000000000000', 'Status': False, 'Reason': 'You do not have permission to create common roles.'}}`
+            ActionResult | str | bool | dict | list | None: On success returns a ActionResult dataclass.
+                See `types.py -> ActionResult`
+
         """
         await self._connect()
         parameters = {
@@ -675,9 +772,11 @@ class AMP_API():
             'AsCommonRole': as_common_role
         }
         result = await self._call_api('Core/CreateRole', parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def getRole(self, role_id: str) -> str | bool | dict:
+    async def getRole(self, role_id: str) -> Role | str | bool | dict | list | None:
         """
         Retrieves the AMP Role information for the provided role ID.
 
@@ -685,8 +784,9 @@ class AMP_API():
             role_id (str): The role ID to get information for.
 
         Returns:
-            str | bool | dict: On success will return a dictionary containing the following. \n
-            `{'ID': '41f46907-43ac-40dc-95dc-4db17cf51a9c', 'IsDefault': bool, 'Name': 'Gatekeeper', 'Description': str, 'Hidden': bool, 'Permissions': list(str), 'Members': list(str), 'IsInstanceSpecific': bool, 'IsCommonRole': bool, 'DisableEdits': bool}`
+            str | bool | dict: On success returns a Role dataclass.
+                See `types.py -> Role`
+
         """
         await self._connect()
         parameters = {
@@ -695,9 +795,9 @@ class AMP_API():
         result = await self._call_api('Core/GetRole', parameters)
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return Role(**result)
+        return Role(**result)  # type:ignore
 
-    async def setAMPUserRoleMembership(self, user_id: str, role_id: str, is_member: bool) -> str | bool | dict:
+    async def setAMPUserRoleMembership(self, user_id: str, role_id: str, is_member: bool) -> ActionResult | str | bool | dict | list | None:
         """
         Adds a user to an AMP role.
 
@@ -707,7 +807,8 @@ class AMP_API():
             is_member (bool): `True` to add the user to the role, `False` to remove the user from the role.
 
         Returns:
-            str | bool | dict: On success returns a `Status` bool.
+            ActionResult | str | bool | dict | list | None: On success returns a ActionResult dataclass.
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
@@ -716,9 +817,11 @@ class AMP_API():
             'IsMember': is_member
         }
         result = await self._call_api('Core/SetAMPUserRoleMembership', parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def SetAMPRolePermission(self, role_id: str, permission_node: str, enabled: Union[None, bool]) -> str | bool | dict:
+    async def setAMPRolePermission(self, role_id: str, permission_node: str, enabled: Union[None, bool]) -> ActionResult | str | bool | dict | list | None:
         """
         Set a permission node to `True` or `False` for the provided AMP role.
 
@@ -728,7 +831,8 @@ class AMP_API():
             enabled (Union[None, bool]): Set a permission to `True`, `False` or `None` depending on the results you can disable or enable an entire tree node of permissions.
 
         Returns:
-            str | bool | dict: On success returns a `Status` bool.
+            ActionResult | str | bool | dict | list | None: On success returns a ActionResult dataclass.
+                See `types.py -> ActionResult`
         """
         await self._connect()
         parameters = {
@@ -737,9 +841,11 @@ class AMP_API():
             'Enabled': enabled
         }
         result = await self._call_api('Core/SetAMPRolePermission', parameters)
-        return result
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
+        return ActionResult(**result)  # type:ignore
 
-    async def getSettingsSpec(self) -> str | bool | dict:
+    async def getSettingsSpec(self) -> str | bool | dict | list | None:
         """
         Retrieves a Server/Instance nodes list.
         See `util.getNodespec` for a list of possible nodes.
@@ -751,7 +857,7 @@ class AMP_API():
         result = await self._call_api('Core/GetSettingsSpec')
         return result
 
-    async def getConfig(self, node: str) -> str | bool | dict:
+    async def getConfig(self, node: str) -> Node | str | bool | dict | list | None:
         # TODO - Need to figure out how this command works entirely. Possible need a new node list
         """
         Returns the config settings for a specific node.
@@ -761,7 +867,6 @@ class AMP_API():
 
         Returns:
             str | bool | dict: On success returns a dictionary containing the following. \n
-            `{'ReadOnly': bool, 'Name': str, 'Description': str , 'Category': str, 'CurrentValue': str, 'ValType': str, 'EnumValuesAreDeferred': bool, 'Node': str, 'InputType': str, 'IsProvisionSpec': bool, 'ReadOnlyProvision': bool, 'Actions': list, 'Keywords': str, 'AlwaysAllowRead': bool, 'Tag': str, 'MaxLength': int, 'Placeholder': str, 'Suffix': str, 'Meta': str, 'RequiresRestart': bool, 'Required': bool}`
         """
         await self._connect()
         parameters = {
@@ -770,9 +875,9 @@ class AMP_API():
         result = await self._call_api("Core/GetConfig", parameters)
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return Node(**result)
+        return Node(**result)  # type:ignore
 
-    async def getConfigs(self, nodes: list[str]) -> list[Node]:
+    async def getConfigs(self, nodes: list[str]) -> list[Node] | str | bool | dict | list | None:
         # TODO - Need to figure out how this command works entirely. Possible need a new node list
         """
         Returns the config settings for each node in the list.
@@ -781,7 +886,8 @@ class AMP_API():
             node (list[str]): List of nodes to look at.
 
         Returns:
-            str | bool | dict: On success returns a list of dictionarys containing the same information as `getConfig`
+            str | bool | dict: On success returns a list of Node dataclasses.
+                See `types.py -> Node`
         """
         await self._connect()
         parameters = {
@@ -792,26 +898,30 @@ class AMP_API():
             return result
         return list(Node(**node) for node in result)
 
-    async def getUpdateInfo(self) -> UpdateInfo:
+    async def getUpdateInfo(self) -> UpdateInfo | str | int | bool | None:
         """
         Returns a data class `UpdateInfo` and `UpdateInfo.Build = AMP_Version` to access Version information for AMP.
 
         Returns:
-            UpdateInfo: data class `UpdateInfo` see `types.py`
+            UpdateInfo | str | int | bool | None: On success returns a UpdateInfo dataclass.
+                See `types.py -> UpdateInfo`
         """
         await self._connect()
         result = await self._call_api("Core/GetUpdateInfo")
         if isinstance(result, Union[None, bool, int, str]):
             return result
-        return UpdateInfo(**result)
+        return UpdateInfo(**result)  # type:ignore
 
-    async def getAllAMPUserInfo(self) -> list[User]:
+    async def getAllAMPUserInfo(self) -> list[User] | str | int | bool | None:
         """
         Represents all the AMP User info.
 
         Returns:
-            list[User]: list of `User` data class.
+            list[User] | str | int | bool | None: On success returns a list of User dataclasses.
+                See `types.py -> User`
         """
         await self._connect()
         result = await self._call_api("Core/GetAllAMPUserInfo")
+        if isinstance(result, Union[None, bool, int, str]):
+            return result
         return list(User(**user) for user in result)
