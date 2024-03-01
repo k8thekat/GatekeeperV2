@@ -49,7 +49,7 @@ class Server(Database):
     def __setattr__(self, name: str, value: Any) -> Any:
         """
         We are overwritting setattr because SQLite returns 0 or 1 for True/False. \n
-        Convert it to a bool for human readable.
+        Convert it to a `bool` for human readable.
 
         """
         if hasattr(Server, name) and (type(getattr(Server, name)) == bool):
@@ -134,11 +134,25 @@ class DBServer(Database):
         else:
             raise ValueError(f"The type of your value does not match the column constraint. {_type} | value type: {type(value)} ")
 
-    async def remove_server(self, instanceid: str):
-        _exists = await self._select_row(table="servers", column="instanceid", where="instanceid", value=instanceid)
+    async def _remove_server(self, instanceid: str) -> int:
+        """
+        Remove a InstanceID from the `servers` table and any tables referencing the `servers.id`.
+
+        Args:
+            instanceid (str): AMP Instance ID
+
+        Raises:
+            ValueError: If the `instanceid` doesn't exist.
+
+        Returns:
+            int: Deleted Row count.
+        """
+        _exists = await self._select_row(table="servers", column="id", where="instanceid", value=instanceid)
         if _exists == None:
             raise ValueError(f"The instanceid provided doesn't exists in the Database. {instanceid}")
-
-        # Check if the server exists
-        # Use the instanceid and check usermetrics
-        # R
+        async with asqlite.connect(self._db_file_path) as db:
+            async with db.cursor() as cur:
+                # TODO - Any other tables referencing `serverid` will need to be added to this list.
+                await cur.execute("DELETE FROM usermetrics WHERE serverid=?", _exists)
+                await cur.execute("DELETE FROM servers WHERE id=?", _exists)
+                return cur.get_cursor().rowcount

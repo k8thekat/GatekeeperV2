@@ -182,3 +182,6 @@ class Database():
                 else:
                     # return None if res is None else res[f"{column}"]
                     return None if res is None else res[column]
+
+    # TODO Make a Colum query command (check if a value exists)
+    # - SELECT EXISTS (SELECT 1 FROM table_name WHERE condition)

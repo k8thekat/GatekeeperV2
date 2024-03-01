@@ -156,7 +156,6 @@ class AMPInstance(AMP_API):
 
     @property
     def manageURL(self) -> str | None:
-        # TODO - Need to figure a way to
         """
         Network URL to manage the AMP Instance
 
@@ -167,7 +166,7 @@ class AMPInstance(AMP_API):
         results = self.getConfig(node="ADSModule.Networking.BaseURL")
         if type(results) == dict and "CurrentValue" in results:
             value = results["CurrentValue"]
-            ret = value + f"/?instance={self.InstanceID}"
+            ret = value + f"/?instance={self.data.InstanceID}"
         return ret
 
     # def __getattribute__(self, __name: str):
