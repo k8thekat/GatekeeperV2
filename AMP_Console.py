@@ -147,8 +147,8 @@ class AMPConsole:
                     continue
 
                 # This will filter any messages such as errors or mods loading, etc..
-                if self.console_filter(entry):
-                    continue
+                # if self.console_filter(entry):
+                #    continue
 
                 if len(entry['Contents']) > 1500:
                     index_hunt = entry['Contents'].find(';')
@@ -231,6 +231,7 @@ class AMPConsole:
             else:
                 self.logger.dev(f'Filtered Message: {message}')
                 return return_bool
+        return False
 
     def console_chat(self, message):
         """This will handle all player chat messages from AMP to Discord.\n
