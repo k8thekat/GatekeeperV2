@@ -374,9 +374,9 @@ class Banner(commands.Cog):
         """Allows the User to add `Channel` or `Server` to a Banner Group."""
         c_status = True
         s_status = True
-        
+
         if self.DB.Get_BannerGroup(name=group_name) == None:
-            return await context.send(content=f'Oops, it appears that `{group_name}` does not exist, please create the banner group via `/bot bannergroup create_group {group_name}`'}', ephemeral=True, delete_after=self._client.Message_Timeout)
+            return await context.send(content=f'Oops, it appears that `{group_name}` does not exist, please create the banner group via `/bot bannergroup create_group {group_name}`', ephemeral=True, delete_after=self._client.Message_Timeout)
 
         if server == None and channel == None:
             return await context.send(content=f"Please select either a `Server` or `Channel` to add to the Banner Group.", ephemeral=True, delete_after=self._client.Message_Timeout)
