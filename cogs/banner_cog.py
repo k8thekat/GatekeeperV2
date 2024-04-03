@@ -20,30 +20,29 @@
 
 '''
 from __future__ import annotations
-from importlib.resources import is_resource
-import os
-import logging
-import pathlib
-from PIL import Image
+
 import asyncio
+import logging
 import math
+import os
+import pathlib
 import sqlite3
 from datetime import datetime
+from importlib.resources import is_resource
 
 import discord
-from discord import app_commands
-from discord.ext import commands, tasks
+from discord import MessageType, app_commands
 from discord.app_commands import Choice
-from discord import MessageType
+from discord.ext import commands, tasks
+from PIL import Image
 
-import utils
-import utils_ui
-import utils_embeds
 import AMP_Handler
 import DB as DB
 import modules.banner_creator as BC
+import utils
+import utils_embeds
+import utils_ui
 from utils_dev.banner_editor.ui.view import Banner_Editor_View
-
 
 # This is used to force cog order to prevent missing methods.
 Dependencies = ["AMP_server_cog.py"]
@@ -371,10 +370,16 @@ class Banner(commands.Cog):
     @banner_group_group.command(name='add')
     @app_commands.autocomplete(server=utils.autocomplete_servers)
     @app_commands.autocomplete(group_name=autocomplete_bannergroups)
-    async def banner_group_add(self, context: commands.Context, group_name: str, server: str = None, channel: discord.abc.GuildChannel = None):
+    async def banner_group_add(self, context: commands.Context, group_name: str, server: None | str = None, channel: None | discord.abc.GuildChannel = None):
         """Allows the User to add `Channel` or `Server` to a Banner Group."""
         c_status = True
         s_status = True
+        
+        if self.DB.Get_BannerGroup(name=group_name) == None:
+            return await context.send(content=f'Oops, it appears that `{group_name}` does not exist, please create the banner group via `/bot bannergroup create_group {group_name}`'}', ephemeral=True, delete_after=self._client.Message_Timeout)
+
+        if server == None and channel == None:
+            return await context.send(content=f"Please select either a `Server` or `Channel` to add to the Banner Group.", ephemeral=True, delete_after=self._client.Message_Timeout)
 
         if server != None:
             db_server = self.DB.GetServer(InstanceID=server)
