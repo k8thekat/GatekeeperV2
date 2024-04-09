@@ -1,10 +1,14 @@
 import logging
-import utils.asqlite as asqlite
-from sqlite3 import Row
 from pathlib import Path
+from sqlite3 import Row
+
+import utils.asqlite as asqlite
 
 VERSION: str = "1.0.1"
 DB_FILENAME: str = "discordBot.db"
+
+# TODO Make a Colum query command (check if a value exists)
+# - SELECT EXISTS (SELECT 1 FROM table_name WHERE condition)
 
 
 class Database():
@@ -94,7 +98,7 @@ class Database():
                 await db.commit()
                 await cur.close()
 
-    async def _update_row(self, table: str, column: str, where: str, value: str | int | bool) -> None:
+    async def _update_row(self, table: str, column: str, where: str | None, value: str | int | bool) -> None:
         """
         A generic SQL update method with a WHERE clause.
 
@@ -107,9 +111,13 @@ class Database():
         Raises:
             sqlite3.OperationalError: If `column`or `table` does not exist.
         """
+
         async with asqlite.connect(self._db_file_path) as db:
             async with db.cursor() as cur:
-                await cur.execute(f"""UPDATE {table} SET {column} = ? WHERE {where} = ?""", value)
+                if where is None:
+                    await cur.execute(f"""UPDATE {table} SET {column} = ?""", value)
+                else:
+                    await cur.execute(f"""UPDATE {table} SET {column} = ? WHERE {where} = ?""", value)
                 await db.commit()
                 await cur.close()
 
@@ -153,7 +161,7 @@ class Database():
                 # return res[f"{column}"] if not None else None
                 return res[column] if not None else None
 
-    async def _select_row(self, table: str, column: str, where: str, value: str | int | bool):
+    async def _select_row_where(self, table: str, column: str, where: str, value: str | int | bool):
         """
         A generic SQL select method with a WHERE clause. 
 
@@ -182,6 +190,3 @@ class Database():
                 else:
                     # return None if res is None else res[f"{column}"]
                     return None if res is None else res[column]
-
-    # TODO Make a Colum query command (check if a value exists)
-    # - SELECT EXISTS (SELECT 1 FROM table_name WHERE condition)

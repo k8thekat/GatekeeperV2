@@ -1,4 +1,5 @@
 from db import Database
+
 import utils.asqlite as asqlite
 
 SETTINGS_SETUP_SQL = """
@@ -16,7 +17,7 @@ CREATE TABLE IF NOT EXISTS owners (
 )STRICT"""
 
 PREFIX_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS prefix (
+CREATE TABLE IF NOT EXISTS prefixes (
     id INTEGER PRIMARY KEY NOT NULL,
     prefix TEXT
 )STRICT"""
@@ -28,8 +29,7 @@ class DBsettings(Database):
 
         Has access to `SETTINGS, OWNERS, PREFIX` tables.
     """
-    # TODO - Add a `set` guild id and `set` role id method.
-    # TODO - Add checks to verify the values already in the table.
+
     async def _initialize_tables(self) -> None:
         tables = [SETTINGS_SETUP_SQL, OWNERS_SETUP_SQL, PREFIX_SETUP_SQL]
         await self.create_tables(schema=tables)
@@ -91,18 +91,18 @@ class DBsettings(Database):
             return None
 
     @property
-    async def prefixs(self) -> list[str] | None:
-        """Returns a list of prefix's the bot will listen for."""
+    async def prefixes(self) -> list[str] | None:
+        """Returns a list of prefixes the bot will listen for."""
         async with asqlite.connect(self._db_file_path) as db:
             async with db.cursor() as cur:
-                await cur.execute("""SELECT prefix FROM prefix""")
+                await cur.execute("""SELECT prefix FROM prefixes""")
                 res = await cur.fetchall()
                 if res is not None:
                     return [entry['prefix'] for entry in res]
 
-    async def update_guild_id(self, guild_id: int) -> None:
+    async def set_guild_id(self, guild_id: int) -> None:
         """
-        Update the Guild ID value in the DATABASE.
+        Set the Guild ID value in the DATABASE.
 
         Args:
             guild_id (int): The Discord Guild ID. eg `602285328320954378`
@@ -112,22 +112,50 @@ class DBsettings(Database):
         """
         if len(str(guild_id)) < 18:
             raise ValueError("Your Guild ID value is to short.")
-        await self._update_column(table="settings", column="guild_id", value=guild_id)
 
-    async def update_role_id(self, role: str, role_id: int) -> None:
+        res = await self._select_column(table="settings", column="guild_id")
+        if res is None:
+            await self._insert_row(table="settings", column="guild_id", value=guild_id)
+        else:
+            await self._update_row(table="settings", column="guild_id", value=guild_id, where=None)
+
+    async def set_mod_role_id(self, role_id: int):
         """
-        Update any Role specific column value in the DATABASE.
+        Set the Mod role id value in the DATABASE.
 
         Args:
-            role (str): The column to be updated.
-            role_id (int): The Discord Role ID.  eg `617967701381611520`
+            role_id (int): The Discord Role ID. eg `617967701381611520`
 
         Raises:
             ValueError: If the Role ID value is to short we raise an exception.
         """
         if len(str(role_id)) < 18:
             raise ValueError("Your Role ID value is to short.")
-        await self._update_column(table="settings", column=role, value=role_id)
+
+        res = await self._select_column(table="settings", column="mod_role_id")
+        if res is None:
+            await self._insert_row(table="settings", column="mod_role_id", value=role_id)
+        else:
+            await self._update_row(table="settings", column="mod_role_id", value=role_id, where=None)
+
+    async def set_donator_role_id(self, role_id: int) -> None:
+        """
+        Set the Donator role id value in the DATABASE.
+
+        Args:
+            role_id (int): The Discord Role ID. eg `617967701381611520`
+
+        Raises:
+            ValueError: If the Role ID value is to short we raise an exception.
+        """
+        if len(str(role_id)) < 18:
+            raise ValueError("Your Role ID value is to short.")
+
+        res = await self._select_column(table="settings", column="donator_role_id")
+        if res is None:
+            await self._insert_row(table="settings", column="donator_role_id", value=role_id)
+        else:
+            await self._update_row(table="settings", column="donator_role_id", value=role_id, where=None)
 
     async def update_message_timeout(self, timeout: int = 120) -> None:
         """
@@ -136,7 +164,12 @@ class DBsettings(Database):
         Args:
             timeout (int): seconds. Default is `120` seconds.
         """
-        await self._update_column(table="settings", column="msg_timeout", value=timeout)
+
+        res = await self._select_column(table="settings", column="msg_timeout")
+        if res is None:
+            await self._insert_row(table="settings", column="msg_timeout", value=timeout)
+        else:
+            await self._update_row(table="settings", column="msg_timeout", value=timeout, where=None)
 
     async def add_owner(self, user_id: int) -> None:
         """
@@ -144,8 +177,15 @@ class DBsettings(Database):
 
         Args:
             user_id (int): Discord User ID.
+
+        Raises:
+            ValueError: If the user_id already exists in the Database.
         """
-        await self._insert_row(table="owners", column="user_id", value=user_id)
+        res = await self._select_row_where(table="owners", column="user_id", where="user_id", value=user_id)
+        if res is None:
+            await self._insert_row(table="owners", column="user_id", value=user_id)
+        else:
+            raise ValueError(f"The user_id provided already exists in the Database. {user_id}")
 
     async def remove_owner(self, user_id: int) -> None:
         """
@@ -154,6 +194,10 @@ class DBsettings(Database):
         Args:
             user_id (int): Discord User ID
         """
+        res = await self._select_row_where(table="owners", column="user_id", where="user_id", value=user_id)
+        if res is None:
+            raise ValueError(f"The user_id provided does not exist in the Database. {user_id}")
+
         async with asqlite.connect(self._db_file_path) as db:
             async with db.cursor() as cur:
                 await cur.execute("""DELETE FROM owners WHERE user_id = ?""", user_id)
@@ -161,21 +205,34 @@ class DBsettings(Database):
 
     async def add_prefix(self, prefix: str) -> None:
         """
-        Add a prefix to the prefix table.
+        Add a prefix to the prefixes table.
 
         Args:
             prefix (str): A phrase or single character. eg `?` or `gatekeeper`
+
+        Raises:
+            ValueError: If the prefix already exists in the Database.
         """
-        await self._insert_row(table="prefix", column="prefix", value=prefix)
+
+        res = await self._select_row_where(table="prefixes", column="prefix", where="prefix", value=prefix)
+        if res is None:
+            await self._insert_row(table="prefixes", column="prefix", value=prefix)
+        else:
+            raise ValueError(f"The prefix provided already exists in the Database. {prefix}")
 
     async def remove_prefix(self, prefix: str) -> None:
         """
-        Remove a prefix from the prefix table.
+        Remove a prefix from the prefixes table.
 
         Args:
             prefix (str): The prefix to remove from the table.
         """
+
+        res = await self._select_row_where(table="prefixes", column="prefix", where="prefix", value=prefix)
+        if res is None:
+            raise ValueError(f"The prefix provided does not exist in the Database. {prefix}")
+
         async with asqlite.connect(self._db_file_path) as db:
             async with db.cursor() as cur:
-                await cur.execute("""DELETE FROM prefix WHERE prefix = ?""", prefix)
+                await cur.execute("""DELETE FROM prefixes WHERE prefix = ?""", prefix)
                 await db.commit()

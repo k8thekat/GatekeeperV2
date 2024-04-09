@@ -12,7 +12,9 @@ cogs/testcog.py
 discordBot.db*
 .env
 sqlite3.exe
-.env
 test.py
 local.py
 json_dump.txt
+changelog_old
+build.py
+database/old_db_update.py
