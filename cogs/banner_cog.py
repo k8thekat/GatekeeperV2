@@ -49,10 +49,10 @@ Dependencies = ["AMP_server_cog.py"]
 
 
 class Banner(commands.Cog):
-    def __init__(self, client: discord.Client):
+    def __init__(self, client: commands.Bot):
         self._client = client
         self.name = os.path.basename(__file__)
-        self.logger = logging.getLogger()  # Point all print/logging statments here!
+        self.logger = logging.getLogger()  # Point all print/logging statements here!
 
         self.AMPHandler = AMP_Handler.getAMPHandler()
         self.AMP = self.AMPHandler.AMP  # Main AMP object
@@ -87,7 +87,7 @@ class Banner(commands.Cog):
     async def on_message_delete(self, message: discord.Message):
         """This should handle if someone deletes the Display Messages."""
 
-        # This should allow on_message_delete to ignore ephermeral message timed delete events.
+        # This should allow on_message_delete to ignore ephemeral message timed delete events.
         if hasattr(message, "type") and message.type == MessageType.chat_input_command:
             return
 
@@ -200,7 +200,10 @@ class Banner(commands.Cog):
             try:
                 amp_server = self.AMPHandler.AMP_Instances[db_server.InstanceID]
             except:
-                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
+                if self.DBConfig.GetSetting("Auto_BG_Remove") == True:
+                    self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
+                else:
+                    continue
 
             banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
             # Store all the images as a `discord.File` for ease of iterations.
@@ -532,6 +535,21 @@ class Banner(commands.Cog):
         if type.value == 1:
             self.DBConfig.SetSetting('Banner_Type', 1)
             return await context.send('Looks like we are going to be using **Custom Banner Images**! Oooooh yea~', ephemeral=True, delete_after=self._client.Message_Timeout)
+
+    @banner_settings.command(name='auto_remove')
+    @utils.role_check()
+    @app_commands.choices(flag=[Choice(name='True', value=1), Choice(name='False', value=0)])
+    async def banner_auto_remove(self, context: commands.Context, flag: Choice[int] = 1):
+        """Selects which type of Server Banner(s) to Display, either Embeds or Images"""
+        self.logger.command(f'{context.author.name} used Bot Banners Auto Remove...')
+
+        if flag.value == 0:
+            self.DBConfig.SetSetting('Auto_BG_Remove', 0)
+            return await context.send('We will be ignoring Servers that are removed from AMP.', ephemeral=True, delete_after=self._client.Message_Timeout)
+
+        if flag.value == 1:
+            self.DBConfig.SetSetting('Auto_BG_Remove', 1)
+            return await context.send('We will be removing Servers from Banner groups when they are removed from AMP.', ephemeral=True, delete_after=self._client.Message_Timeout)
 
 
 async def setup(client):

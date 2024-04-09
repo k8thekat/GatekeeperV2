@@ -20,12 +20,13 @@
 
 '''
 from __future__ import annotations
-import sqlite3
-import pathlib
+
 import datetime
 import json
-import time
 import logging
+import pathlib
+import sqlite3
+import time
 from typing import Union
 
 from DB_Update import DB_Update
@@ -58,7 +59,7 @@ class DBHandler():
         # Always update this value when changing Tables!
         self.DB_Version = DB_Version
 
-        #self.DBConfig.SetSetting('DB_Version', 2.5)
+        # self.DBConfig.SetSetting('DB_Version', 2.5)
         # This should ONLY BE TRUE on new Database's going forward.
         if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
             DB_Update(self.DB, 1.0)
@@ -233,12 +234,12 @@ class Database:
         self._AddConfig('Guild_ID', None)
         self._AddConfig('Moderator_role_id', None)
         self._AddConfig('Permissions', 0)  # 0 = Default | 1 = Custom
-        #self._AddConfig('Server_Info_Display', None)
+        # self._AddConfig('Server_Info_Display', None)
         self._AddConfig('Whitelist_Request_Channel', None)
         self._AddConfig('WhiteList_Wait_Time', 5)
         self._AddConfig('Auto_Whitelist', False)
-        #self._AddConfig('Whitelist_Emoji_Pending', ':arrows_counterclockwise:')
-        #self._AddConfig('Whitelist_Emoji_Done', ':ballot_box_with_check:')
+        # self._AddConfig('Whitelist_Emoji_Pending', ':arrows_counterclockwise:')
+        # self._AddConfig('Whitelist_Emoji_Done', ':ballot_box_with_check:')
         self._AddConfig('Banner_Auto_Update', True)
         self._AddConfig('Banner_Type', 0)  # 0 = Discord embeds | 1 = Custom Banner Images
         self._AddConfig('Bot_Version', None)
@@ -246,6 +247,8 @@ class Database:
         # Donator Settings
         self._AddConfig('Donator_Bypass', False)
         self._AddConfig("Donator_role_id", None)
+        # Prevent Server being removed from Banner Group
+        self._AddConfig("Auto_BG_Remove", False)
 
     def _execute(self, SQL, params):
         Retry = 0
@@ -460,8 +463,8 @@ class Database:
 
         (rows, cur) = self._fetchall("SELECT ID, Message FROM WhitelistReply ORDER BY ID", tuple(SQLArgs))
         for entry in rows:
-            #reply = {'ID' : entry["ID"], 'Message' : entry["Message"]}
-            #reply = {entry["Message"]}
+            # reply = {'ID' : entry["ID"], 'Message' : entry["Message"]}
+            # reply = {entry["Message"]}
             whitelist_replies.append(entry['Message'])
 
         cur.close()
@@ -837,7 +840,7 @@ class DBUser:
                 raise Exception(f"Unable to locate User ID {ID}")
             cur.close()
             super().__setattr__("ID", int(self.ID))
-            #super().__setattr__("DiscordID", int(self.DiscordID))
+            # super().__setattr__("DiscordID", int(self.DiscordID))
         else:
             # we should have a discord id
             if not DiscordID or DiscordID == 0:
@@ -1024,7 +1027,7 @@ class DBServer:
         self._db._UpdateServer(self, **{name: value})
 
     def delServer(self):
-        #self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
+        # self._db._execute("delete from ServerNicknames where ServerID=?", (self.ID,))
         self._db._execute("delete from Servers where ID=?", (self.ID,))
 
     def setDisplayName(self, DisplayName: str):
