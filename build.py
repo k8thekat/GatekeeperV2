@@ -26,11 +26,11 @@ with open("CHANGELOG.md") as changelog:
 if version == cl_ver:
     raise ValueError(f"Version has not been updated `__init__.py`: {version} == `CHANGELOG.md`: {cl_ver}")
 
-# Verify that the current branch is `devtesting`.
+# Verify that the current branch is `developer`.
 output: bytes = subprocess.check_output(["git", "branch"])
 branch: str = output.decode("utf-8").strip("*").strip().split("\n")[0]
-if branch != "devtesting":
-    raise RuntimeError(f"Current branch is not `devtesting`: {branch}")
+if branch != "developer":
+    raise RuntimeError(f"Current branch is not `developer`: {branch}")
 
 # Verify that there are new commits.
 output = subprocess.check_output(["git", "log"])

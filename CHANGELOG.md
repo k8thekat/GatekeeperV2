@@ -1,3 +1,33 @@
+## Version - 0.0.11b - [bf0a6a4](https://github.com/k8thekat/GatekeeperV2/commit/bf0a6a4)
+#### Overall
+- Re-organized branch and files to better facilitate development.
+- Renamed COPYING to LICENSE.
+- Renamed `db.py` to `base.py`.
+- Renamed `db_types.py` to `types.py`.
+
+#### build.py
+- Version control and changelog generator.
+
+#### banner.py
+- Moved the dataclass to `types.py`
+- Changed SQL schema naming conventions.
+- Added `add_channel_to_banner_group()`, `remove_channel_from_banner_group()`, `add_message_to_banner_group()` and `update_banner_settings()`.
+
+#### base.py
+- Renamed class from `Database()` to `Base()`.
+- Moved the `version` SQL schema to a global attribute.
+- Changed the `DB_FILENAME` to "gatekeeper.db".
+- Changed the `VERSION` to "0.0.1".
+
+#### server.py
+- Moved `Server()` dataclass to `types.py`.
+- Changed dataclass name to `ServerSettings()`.
+
+#### settings.py
+- Changed `DBsettings()` to `DBSettings()`.
+- Added version control.
+- Version bump `0.0.11b`
+
 ## Version - 0.0.1b - [f14ceb0](https://github.com/k8thekat/GatekeeperV2/commit/f14ceb0)
 #### Changelog.md
 - Implemented new Changelog Formatting.
