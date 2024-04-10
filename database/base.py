@@ -4,14 +4,16 @@ from sqlite3 import Row
 
 import utils.asqlite as asqlite
 
-VERSION: str = "1.0.1"
-DB_FILENAME: str = "discordBot.db"
+VERSION: str = "0.0.1"
+DB_FILENAME: str = "gatekeeper.db"
 
-# TODO Make a Colum query command (check if a value exists)
-# - SELECT EXISTS (SELECT 1 FROM table_name WHERE condition)
+VERSION_SETUP_SQL = """
+CREATE TABLE IF NOT EXISTS version (
+    value TEXT COLLATE NO CASE NOT NULL
+)STRICT"""
 
 
-class Database():
+class Base():
     """
     Gatekeeper's DATABASE
 
@@ -41,6 +43,16 @@ class Database():
                 await db.execute(schema)
                 await db.commit()
 
+    async def _initialize_tables(self) -> None:
+        """
+        Creates the `Base` table.
+
+        """
+        tables = [
+            VERSION_SETUP_SQL
+        ]
+        await self.create_tables(schema=tables)
+
     @property
     async def version(self) -> str | None:
         """
@@ -59,13 +71,8 @@ class Database():
         """
         Creates DATABASE version table and sets the version value.
         """
-        VERSION_SETUP_SQL = """
-        CREATE TABLE IF NOT EXISTS version (
-        value TEXT COLLATE NO CASE NOT NULL
-        )STRICT"""
 
         async with asqlite.connect(self._db_file_path) as db:
-            await db.execute(VERSION_SETUP_SQL)
             async with db.cursor() as cur:
                 await cur.execute("""INSERT INTO version(value) VALUES(?)""", VERSION)
                 await db.commit()

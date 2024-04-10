@@ -1,9 +1,10 @@
 
-from dataclasses import dataclass
 from typing import Any, Literal
 
-from database.db import Database
 from utils import asqlite
+
+from .base import Base
+from .types import ServerSettings
 
 SERVER_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS servers (
@@ -23,41 +24,7 @@ CREATE TABLE IF NOT EXISTS servers (
 )STRICT"""
 
 
-@dataclass()
-class Server(Database):
-    """
-    Represents the data from the Database table servers.
-
-    **THIS MUST BE UPDATED TO REPRESENT THE servers DATABASE SCHEMA AT ALL TIMES** \n
-    - The dataclass is used to validate column names and column type constraints.
-
-    """
-    id: int
-    instance_id: str
-    instance_name: str
-    ip: str = ""
-    whitelist: bool = False
-    whitelist_disabled: bool = False
-    donator: bool = False
-    chat_channel: int = 0
-    chat_prefix: str = ""
-    event_channel: int = 0
-    role: int = 0
-    avatar_url: str = ""
-    hidden: bool = False
-
-    def __setattr__(self, name: str, value: Any) -> Any:
-        """
-        We are overwriting setattr because SQLite returns 0 or 1 for True/False. \n
-        Convert it to a `bool` for human readable.
-
-        """
-        if hasattr(Server, name) and (type(getattr(Server, name)) == bool):
-            return super().__setattr__(name, bool(value))
-        return super().__setattr__(name, value)
-
-
-class DBServer(Database):
+class DBServer(Base):
     def __init__(self) -> None:
         super().__init__()
 
@@ -95,7 +62,7 @@ class DBServer(Database):
                 return True
                 # return Server(**res) if res is not None else None
 
-    async def update_server(self, instance_id: str, column: str, value: bool | str | int) -> Server | None:
+    async def update_server(self, instance_id: str, column: str, value: bool | str | int) -> ServerSettings | None:
         """
         Update an existing instance_id in the `servers` table.\n
 
@@ -117,9 +84,9 @@ class DBServer(Database):
         if _exists == None:
             raise ValueError(f"The Instance ID provided doesn't exists in the Database. {instance_id}")
 
-        _check = hasattr(Server, column)
+        _check = hasattr(ServerSettings, column)
         if _check is True:
-            _type = type(getattr(Server, column))
+            _type = type(getattr(ServerSettings, column))
         else:
             raise ValueError(f"The column provided does not match the Database Schema. {column}")
 
@@ -127,7 +94,7 @@ class DBServer(Database):
             await self._update_column(table="servers", column=column, value=value)
             # Let's get the updated table values for provided instance_id and return a dataclass to be used.
             res = await self._select_row_where(table="servers", column="*", where="instance_id", value=instance_id)
-            return Server(**res) if res is not None else None
+            return ServerSettings(**res) if res is not None else None
         else:
             raise ValueError(f"The type of your value does not match the column constraint. {_type} | value type: {type(value)} ")
 

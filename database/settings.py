@@ -1,6 +1,6 @@
-from db import Database
-
 import utils.asqlite as asqlite
+
+from .base import Base
 
 SETTINGS_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS settings (
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS prefixes (
 )STRICT"""
 
 
-class DBsettings(Database):
+class DBSettings(Base):
     """
         Gatekeepers Database/Bot Settings class.
 

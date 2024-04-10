@@ -1,8 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import fields
 from typing import Literal
 
-from database.db import Database
 from utils import asqlite
+
+from .base import Base
+from .types import BannerSettings
 
 BANNER_GROUP_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS banner_group (
@@ -21,21 +23,23 @@ CREATE TABLE IF NOT EXISTS banner_group_servers (
 BANNER_GROUP_CHANNELS_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS banner_group_channels (
     id INTEGER PRIMARY KEY,
-    channel_id INTEGER,
     guild_id INTEGER,
+    channel_id INTEGER,
     group_id INTEGER NOT NULL,
     foreign key (group_id) REFERENCES banner_group(id)
+    UNIQUE(guild_id, channel_id, group_id)
 )STRICT"""
 
 BANNER_GROUP_MESSAGES_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS banner_group_messages (
-    channel_id INTEGER NOT NULL,
+    group_channel_id INTEGER NOT NULL,
     message_id INTEGER,
-    foreign key (channel_id) REFERENCES banner_group_channels(id)
+    foreign key (group_channel_id) REFERENCES banner_group_channels(id)
+    UNIQUE(group_channel_id, message_id)
 )STRICT"""
 
 SERVER_BANNERS_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS banners (
+CREATE TABLE IF NOT EXISTS banner_settings (
     server_id INTEGER NOT NULL,
     background_path TEXT,
     blur_background_amount INTEGER,
@@ -54,35 +58,13 @@ CREATE TABLE IF NOT EXISTS banners (
 )STRICT"""
 
 
-@dataclass
-class Banner():
-    """
-    Represents the data from the Database table banners.
-    """
-
-    server_id: int
-    background_path: str
-    blur_background_amount: int
-    color_header: str
-    color_body: str
-    color_host: str
-    color_whitelist_open: str
-    color_whitelist_closed: str
-    color_donator: str
-    color_status_online: str
-    color_status_offline: str
-    color_player_limit_min: str
-    color_player_limit_max: str
-    color_player_online: str
-
-
-class DBBanner(Database):
+class DBBanner(Base):
     def __init__(self) -> None:
         super().__init__()
 
     async def _initialize_tables(self) -> None:
         """
-        Creates the `DBBanner` tables.
+        Creates the `Banner` tables.
 
         """
         tables = [
@@ -207,4 +189,107 @@ class DBBanner(Database):
                     await db.commit()
                     return True
                 else:
-                    raise ValueError(f"The Server ID provided doesn't exists in the Banner Group. {server_id}")
+                    raise ValueError(f"The Server ID provided is not apart of the Banner Group. {server_id}")
+
+    async def add_channel_to_banner_group(self, name: str, channel_id: int, guild_id: int) -> Literal[True]:
+        """
+        Add a Discord Channel to a Banner Group. 
+
+        *Validate channel_id and guild_id prior to use.*
+
+        Args:
+            name (str): The name of the Banner Group.
+            guild_id (int): The Discord Guild ID.
+            channel_id (int): The Discord Channel ID.
+        """
+
+        _group = await self._select_row_where(table="banner_group", column="*", where="name", value=name)
+        if _group is None:
+            raise ValueError(f"The Banner Group Name provided doesn't exists in the Database. {name}")
+
+        async with asqlite.connect(self._db_file_path) as db:
+            async with db.cursor() as cur:
+                res = await cur.execute("""SELECT * FROM banner_group_channels WHERE channel_id = ? AND guild_id = ? AND group_id = ?""", channel_id, guild_id, _group["ID"])
+                if res is None:
+                    await cur.execute("""INSERT INTO banner_group_channels(channel_id, guild_id, group_id) VALUES(?, ?, ?)""", channel_id, guild_id, _group["ID"])
+                    await db.commit()
+                    return True
+                else:
+                    raise ValueError(f"The Channel ID and Guild ID provided is already in the Banner Group. {channel_id} {guild_id}")
+
+    async def remove_channel_from_banner_group(self, name: str, channel_id: int, guild_id: int) -> Literal[True]:
+        """
+        remove_channel_from_banner_group _summary_
+
+        Args:
+            name (str): The name of the Banner Group.
+            channel_id (int): The Discord Channel ID.
+            guild_id (int): The Discord Guild ID.
+        """
+
+        _group = await self._select_row_where(table="banner_group", column="*", where="name", value=name)
+        if _group is None:
+            raise ValueError(f"The Banner Group Name provided doesn't exists in the Database. {name}")
+
+        async with asqlite.connect(self._db_file_path) as db:
+            async with db.cursor() as cur:
+                res = await cur.execute("""SELECT * FROM banner_group_channels WHERE channel_id = ? AND guild_id = ? AND group_id = ?""", channel_id, guild_id, _group["ID"])
+                if res is not None:
+                    await cur.execute("""DELETE FROM banner_group_channels WHERE channel_id = ? AND guild_id = ? AND group_id = ?""", channel_id, guild_id, _group["ID"])
+                    await db.commit()
+                    return True
+                else:
+                    raise ValueError(f"The Channel ID and Guild ID provided isn't apart of the Banner Group. {channel_id} {guild_id}")
+
+    async def add_message_to_banner_group(self, name: str, message_id: int) -> Literal[True]:
+        """
+        Add a Discord Message ID to a Banner Group.
+
+        Args:
+            name (str): The name of the Banner Group.
+            message_id (int): The Discord Message ID.
+        """
+
+        # Get our banner group info
+        _group = await self._select_row_where(table="banner_group", column="*", where="name", value=name)
+        if _group is None:
+            raise ValueError(f"The Banner Group Name provided doesn't exists in the Database. {name}")
+
+        # Get the banner group channel info
+        _group_channel = await self._select_row_where(table="banner_group_channels", column="*", where="group_id", value=_group["id"])
+        if _group_channel is None:
+            raise ValueError(f"The Banner Group doesn't have any channels. {name}")
+
+        async with asqlite.connect(self._db_file_path) as db:
+            async with db.cursor() as cur:
+                # See if the message id and group channel id are already in the banner group.
+                res = await cur.execute("""SELECT * FROM banner_group_messages WHERE message_id = ? AND group_channel_id = ?""", message_id, _group_channel["id"])
+                if res is None:
+                    await cur.execute("""INSERT INTO banner_group_messages(message_id, group_id) VALUES(?, ?)""", message_id, _group_channel["id"])
+                    await db.commit()
+                    return True
+                else:
+                    raise ValueError(f"The Message ID provided is already in the Banner Group. {message_id}")
+
+    async def update_banner_setting(self, server_id: int, setting: str, value: str | int):
+        """
+        Update a Banner Group Setting.
+
+        Args:
+            name (str): The name of the Banner Group.
+            setting (str): The setting to update.
+            value (str | int): The value to update the setting to.
+        """
+
+        _fields = [entry.name for entry in fields(BannerSettings)]
+
+        _server = await self._select_row_where(table="servers", column="*", where="id", value=server_id)
+        if _server is None:
+            raise ValueError(f"The Server ID provided doesn't exists in the Database. {server_id}")
+
+        if setting not in _fields:
+            raise ValueError(f"The setting provided is not a Banner Setting. {setting}")
+
+        async with asqlite.connect(self._db_file_path) as db:
+            async with db.cursor() as cur:
+                await cur.execute(f"""UPDATE banner_settings SET {setting} = ? WHERE server_id = ?""", value, _server["ID"])

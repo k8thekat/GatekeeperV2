@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from sqlite3 import Row
 
-from database.db import Database
-from database.db_types import ServerTypes
 from utils import asqlite
+
+from .base import Base
+from .types import ServerTypes
 
 USERS_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS users (
@@ -44,7 +45,7 @@ CREATE TABLE IF NOT EXISTS user_metrics (
 
 
 @dataclass()
-class IGN(Database):
+class IGN(Base):
     id: int  # id column from ign table.
     name: str  # name from ign table.
     user_id: int  # id from users table.
@@ -135,7 +136,7 @@ class IGN(Database):
         #         return res["type"] if not None else None
 
 
-class DBuser(Database):
+class DBuser(Base):
     def __init__(self) -> None:
         print()
 
