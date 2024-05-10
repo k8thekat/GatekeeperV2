@@ -19,15 +19,16 @@
    02110-1301, USA. 
 '''
 from __future__ import annotations
-import logging
-import pathlib
-import os
-import sys
+
 import importlib
-from argparse import Namespace
-import time
+import logging
+import os
+import pathlib
 import re
+import sys
+import time
 import traceback
+from argparse import Namespace
 
 import AMP
 import DB
@@ -70,7 +71,7 @@ class AMPHandler():
         self.SessionIDlist = {}
 
         self.AMP_Modules = {}
-        self.AMP_Instances = {}
+        self.AMP_Instances: dict[str, AMP.AMPInstance] = {}
 
         self.AMP_Console_Modules = {}
         self.AMP_Console_Threads = {}

@@ -20,12 +20,14 @@
 
 '''
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
-import os
+
 import logging
+import os
 import random
 import sqlite3
 import traceback
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Optional, Union
 
 import discord
 from discord import app_commands
@@ -34,10 +36,14 @@ from discord.ext import commands, tasks
 
 import AMP_Handler
 import DB
-
+from discordBot import Gatekeeper
 import utils
 import utils_embeds
 import utils_ui
+
+if TYPE_CHECKING:
+    from discordBot import Gatekeeper
+
 
 # This is used to force cog order to prevent missing methods.
 # MUST USE ENTIRE FILENAME!
@@ -49,8 +55,8 @@ Whitelist_settings_choices = [app_commands.Choice(name='True', value=True),
 
 
 class Whitelist(commands.Cog):
-    def __init__(self, client: discord.Client):
-        self._client = client
+    def __init__(self, client: Gatekeeper):
+        self._client: Gatekeeper = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
 
@@ -114,14 +120,22 @@ class Whitelist(commands.Cog):
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self, member: discord.Member):
         """Called when a member is kicked or leaves the Server/Guild. Returns a <discord.Member> object."""
-        self.logger.dev(f'Member Leave {self.name}: {member.name} {member}')
+        self.logger.dev(f'Member Leave Event {self.name}: {member.name} {member}')
 
         for key, value in self._client.Whitelist_wait_list.items():
             if member.id == value['context'].message.author.id:
                 self._client.Whitelist_wait_list.pop(key)
                 self.logger.info(f'Removed {member.name} from Whitelist Wait List.')
 
+        db_user: None | DB.DBUser = self.DB.GetUser(value=str(member.id))
+        if db_user != None and db_user.MC_IngameName != None:
+            for instance_id, amp_instance in self.AMPHandler.AMP_Instances.items():
+                if amp_instance.DisplayImageSource == 'internal:MinecraftJava':
+                    self.logger.info(f"Removing {db_user.MC_IngameName} from {amp_instance.FriendlyName} Whitelist.")
+                    amp_instance.removeWhitelist(in_gamename=db_user.MC_IngameName)
+
     # Server Whitelist Commands ------------------------------------------------------------
+
     @commands.hybrid_command(name='whitelist')
     @utils.role_check()
     @app_commands.autocomplete(server=utils.autocomplete_servers)

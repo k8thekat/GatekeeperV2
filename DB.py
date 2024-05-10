@@ -820,6 +820,14 @@ class Database:
 
 
 class DBUser:
+    ID: int
+    DiscordID: str
+    DiscordName: str
+    MC_IngameName: str
+    MC_UUID: str
+    SteamID: str
+    Role: str
+
     def __init__(self, db: Database, ID: int = None, DiscordID: str = None, DiscordName: str = None, MC_IngameName: str = None, MC_UUID: str = None, SteamID: str = None, Role: str = None):
         # set defaults
         Params = locals()

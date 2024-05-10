@@ -88,6 +88,24 @@ class AMPInstance():
         `url `\n
         """
 
+    AMP2Factor: str
+    AMPheader: dict
+    AppState: dict
+    ApplicationEndpoints: dict
+    Console: AMP_Console.AMPConsole
+    ContainerCPUs: int
+    ContainerMemoryMB: int
+    ContainerMemoryPolicy: str
+    Daemon: bool
+    DaemonAutostart: bool
+    DisplayImageSource: str
+    ExcludeFromFirewall: bool
+    FriendlyName: str
+    IP: str
+    InstalledVersion: str
+    InstanceID: int
+    InstanceName: str
+
     def __init__(self, instanceID: int = 0, serverdata: dict = {}, default_console: bool = False, Handler=None, TargetName: str = None):
         self.Initialized = False
         # Do not send messages from people in this list (case insensitive)
@@ -970,7 +988,7 @@ class AMPInstance():
         """Base Function for AMP.getWhitelist"""
         return
 
-    def removeWhitelist(self, db_user, in_gamename: str = None):
+    def removeWhitelist(self, db_user: Union[None, DB.DBUser] = None, in_gamename: str = None):
         """Base Function for AMP.removeWhitelist"""
         return False
 
