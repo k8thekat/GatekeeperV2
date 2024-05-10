@@ -36,10 +36,10 @@ from discord.ext import commands, tasks
 
 import AMP_Handler
 import DB
-from discordBot import Gatekeeper
 import utils
 import utils_embeds
 import utils_ui
+from discordBot import Gatekeeper
 
 if TYPE_CHECKING:
     from discordBot import Gatekeeper
@@ -130,7 +130,7 @@ class Whitelist(commands.Cog):
         db_user: None | DB.DBUser = self.DB.GetUser(value=str(member.id))
         if db_user != None and db_user.MC_IngameName != None:
             for instance_id, amp_instance in self.AMPHandler.AMP_Instances.items():
-                if amp_instance.DisplayImageSource == 'internal:MinecraftJava':
+                if amp_instance.Module == 'Minecraft':
                     self.logger.info(f"Removing {db_user.MC_IngameName} from {amp_instance.FriendlyName} Whitelist.")
                     amp_instance.removeWhitelist(in_gamename=db_user.MC_IngameName)
 

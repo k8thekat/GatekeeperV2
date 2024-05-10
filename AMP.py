@@ -105,6 +105,7 @@ class AMPInstance():
     InstalledVersion: str
     InstanceID: int
     InstanceName: str
+    Module: str
 
     def __init__(self, instanceID: int = 0, serverdata: dict = {}, default_console: bool = False, Handler=None, TargetName: str = None):
         self.Initialized = False
