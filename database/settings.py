@@ -1,25 +1,40 @@
+from sqlite3 import Row
+from typing import Literal
+
 import utils.asqlite as asqlite
 
 from .base import Base
+from .types import *
+
+GUILDS_SETUP_SQL = """
+CREATE TABLE IF NOT EXISTS guilds (
+    guild_id INTEGER UNIQUE NOT NULL
+)STRICT"""
 
 SETTINGS_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS settings (
-    guild_id INTEGER,
+    guild_id INTEGER UNIQUE NOT NULL,
     mod_role_id INTEGER,
     donator_role_id INTEGER,
-    msg_timeout INTEGER
+    msg_timeout INTEGER,
+    FOREIGN KEY (guild_id) REFERENCES guilds(guild_id)
 )STRICT"""
 
 OWNERS_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS owners (
-    id INTEGER PRIMARY KEY NOT NULL,
+    guild_id INTEGER NOT NULL,
     user_id INTEGER UNIQUE,
+    FOREIGN KEY (guild_id) REFERENCES guilds(guild_id),
+    UNIQUE(guild_id, user_id)
 )STRICT"""
 
 PREFIX_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS prefixes (
     id INTEGER PRIMARY KEY NOT NULL,
-    prefix TEXT
+    guild_id INTEGER,
+    prefix TEXT,
+    FOREIGN KEY (guild_id) REFERENCES guilds(guild_id)
+    UNIQUE(guild_id, prefix)
 )STRICT"""
 
 
@@ -27,212 +42,259 @@ class DBSettings(Base):
     """
         Gatekeepers Database/Bot Settings class.
 
-        Has access to `SETTINGS, OWNERS, PREFIX` tables.
+        Has access to `SETTINGS, OWNERS, PREFIX and GUILDS` tables.
     """
 
     async def _initialize_tables(self) -> None:
-        tables = [SETTINGS_SETUP_SQL, OWNERS_SETUP_SQL, PREFIX_SETUP_SQL]
-        await self.create_tables(schema=tables)
+        tables: list[str] = [SETTINGS_SETUP_SQL, OWNERS_SETUP_SQL, PREFIX_SETUP_SQL, GUILDS_SETUP_SQL]
+        await self._create_tables(schema=tables)
 
-    @property
-    async def guild_id(self) -> int | None:
+    async def add_guild_id(self, guild_id: int) -> None | Settings:
         """
-        Gets the Discord Guild ID from the DATABASE.
-
-        Returns:
-            int | None: Discord Guild ID. eg `602285328320954378`
-        """
-        res = await self._select_column(table="settings", column="guild_id")
-        if isinstance(res, int):
-            return res
-        else:
-            return None
-
-    @property
-    async def mod_role_id(self) -> int | None:
-        """
-        Gets the Discord Moderator role ID from the DATABASE.
-
-        Returns:
-            int | None: Discord Moderator role ID. eg `617967701381611520`
-        """
-        res = await self._select_column(table="settings", column="mod_role_id")
-        if isinstance(res, int):
-            return res
-        else:
-            return None
-
-    @property
-    async def msg_timeout(self) -> int | None:
-        """
-        Gets the Message Timeout value from the DATABASE.
-
-        Returns:
-            int | None: Message Timeout value. Default is `120 seconds`.
-        """
-        res = await self._select_column(table="settings", column="msg_timeout")
-        if isinstance(res, int):
-            return res
-        else:
-            return None
-
-    @property
-    async def donator_role_id(self) -> int | None:
-        """
-        Gets the Discord Donator role ID from the DATABASE.
-
-        Returns:
-            int | None: Discord Role ID. eg `617967701381611520`
-        """
-        res = await self._select_column(table="settings", column="donator_role_id")
-        if isinstance(res, int):
-            return res
-        else:
-            return None
-
-    @property
-    async def prefixes(self) -> list[str] | None:
-        """Returns a list of prefixes the bot will listen for."""
-        async with asqlite.connect(self._db_file_path) as db:
-            async with db.cursor() as cur:
-                await cur.execute("""SELECT prefix FROM prefixes""")
-                res = await cur.fetchall()
-                if res is not None:
-                    return [entry['prefix'] for entry in res]
-
-    async def set_guild_id(self, guild_id: int) -> None:
-        """
-        Set the Guild ID value in the DATABASE.
+        Add a Discord Guild ID to the `guilds` table.
 
         Args:
-            guild_id (int): The Discord Guild ID. eg `602285328320954378`
+            guild_id (int): The Discord Guild ID.
 
         Raises:
-            ValueError: If the Guild ID value is to short we raise an exception.
-        """
-        if len(str(guild_id)) < 18:
-            raise ValueError("Your Guild ID value is to short.")
+            ValueError: If the `guild_id` value is to short.
 
-        res = await self._select_column(table="settings", column="guild_id")
-        if res is None:
-            await self._insert_row(table="settings", column="guild_id", value=guild_id)
-        else:
-            await self._update_row(table="settings", column="guild_id", value=guild_id, where=None)
-
-    async def set_mod_role_id(self, role_id: int):
+        Returns:
+            Settings | None: Returns a Settings object if the Guild ID was added to the Database.
         """
-        Set the Mod role id value in the DATABASE.
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        _id: Row | None = await self._insert_row(table="guilds", column="guild_id", value=guild_id)
+
+        if _id is not None:
+            res: None | Row = await self._execute(SQL="""INSERT INTO settings (guild_id, mod_role_id, donator_role_id, msg_timeout) VALUES (?, ?, ?, ?) RETURNING *""", parameters=(_id["guild_id"], None, None, None))
+            return Settings(**res) if res is not None else None
+        return None
+
+    async def get_guild_settings(self, guild_id: int) -> Settings | None:
+        """
+        Gets all the settings from the `settings` table for a specific Discord Guild ID.
 
         Args:
+            guild_id (int): The Discord Guild ID.
+
+        Raises:
+            ValueError: If the `guild_id` value is to short.
+
+        Returns:
+            Settings | None: Returns a Settings dataclass object.
+        """
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        res: asqlite.List[Row] | Row | None = await self._select_row_where(table="settings", column="*", where="guild_id", value=guild_id)
+        return Settings(**res[0]) if res is not None else None
+
+    async def set_mod_role_id(self, guild_id: int, role_id: int) -> Settings | None:
+        """
+        Set the `mod_role_id` value in the `settings` table.
+
+        Args:
+            guild_id (int): The Discord Guild ID.
             role_id (int): The Discord Role ID. eg `617967701381611520`
 
         Raises:
-            ValueError: If the Role ID value is to short we raise an exception.
-        """
-        if len(str(role_id)) < 18:
-            raise ValueError("Your Role ID value is to short.")
+            ValueError: If the role_id value is to short we raise an exception.
+            ValueError: If the guild_id value is to short we raise an exception.
 
-        res = await self._select_column(table="settings", column="mod_role_id")
-        if res is None:
-            await self._insert_row(table="settings", column="mod_role_id", value=role_id)
-        else:
-            await self._update_row(table="settings", column="mod_role_id", value=role_id, where=None)
-
-    async def set_donator_role_id(self, role_id: int) -> None:
+        Returns:
+            Settings | None : Returns a Settings dataclass object.
         """
-        Set the Donator role id value in the DATABASE.
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        if len(str(object=role_id)) < 15:
+            raise ValueError("Your `role_id` value is to short. (<15)")
+
+        res: None | Row = await self._update_row_where(table="settings", column="mod_role_id", value=role_id, where="guild_id", where_value=guild_id)
+        return Settings(**res) if res is not None else None
+
+    async def set_donator_role_id(self, guild_id: int, role_id: int) -> None | Settings:
+        """
+        Update the `donator_role_id`` value in the `settings` table.
 
         Args:
+            guild_id (int): The Discord Guild ID.
             role_id (int): The Discord Role ID. eg `617967701381611520`
 
         Raises:
-            ValueError: If the Role ID value is to short we raise an exception.
-        """
-        if len(str(role_id)) < 18:
-            raise ValueError("Your Role ID value is to short.")
+            ValueError: If the `role_id` value is to short we raise an exception.
+            ValueError: If the `guild_id` value is to short we raise an exception.
 
-        res = await self._select_column(table="settings", column="donator_role_id")
-        if res is None:
-            await self._insert_row(table="settings", column="donator_role_id", value=role_id)
-        else:
-            await self._update_row(table="settings", column="donator_role_id", value=role_id, where=None)
-
-    async def update_message_timeout(self, timeout: int = 120) -> None:
+        Returns:
+            Settings | None: Returns a Settings dataclass object.
         """
-        Updates the Message Timeout aka time till the message is auto-deleted after a the bot sends a message.
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        if len(str(object=role_id)) < 15:
+            raise ValueError("Your `role_id` value is to short. (<15)")
+
+        res: None | Row = await self._update_row_where(table="settings", column="donator_role_id", value=role_id, where="guild_id", where_value=guild_id)
+        return Settings(**res) if res is not None else None
+
+    async def set_message_timeout(self, guild_id: int, timeout: int = 120) -> None | Settings:
+        """
+        Updates the `msg_timeout` value in the `settings` table. \n
+         *aka time till the message is auto-deleted after a the bot sends a message.*
 
         Args:
+            guild_id (int): The Discord Guild ID.
             timeout (int): seconds. Default is `120` seconds.
-        """
-
-        res = await self._select_column(table="settings", column="msg_timeout")
-        if res is None:
-            await self._insert_row(table="settings", column="msg_timeout", value=timeout)
-        else:
-            await self._update_row(table="settings", column="msg_timeout", value=timeout, where=None)
-
-    async def add_owner(self, user_id: int) -> None:
-        """
-        Add a Discord User ID to the owners table. \n
-
-        Args:
-            user_id (int): Discord User ID.
 
         Raises:
-            ValueError: If the user_id already exists in the Database.
-        """
-        res = await self._select_row_where(table="owners", column="user_id", where="user_id", value=user_id)
-        if res is None:
-            await self._insert_row(table="owners", column="user_id", value=user_id)
-        else:
-            raise ValueError(f"The user_id provided already exists in the Database. {user_id}")
+            ValueError: If the `guild_id` value is to short we raise an exception.
 
-    async def remove_owner(self, user_id: int) -> None:
+        Returns:
+            Settings | None: Returns a Settings dataclass object.
         """
-        Remove a Discord User ID from the owners table.
+
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        res: None | Row = await self._update_row_where(table="settings", column="msg_timeout", value=timeout, where="guild_id", where_value=guild_id)
+        return Settings(**res) if res is not None else None
+
+    async def add_owner(self, guild_id: int, user_id: int) -> Owner | None:
+        """
+        Add a Discord User ID to the `owners` table. \n
 
         Args:
-            user_id (int): Discord User ID
-        """
-        res = await self._select_row_where(table="owners", column="user_id", where="user_id", value=user_id)
-        if res is None:
-            raise ValueError(f"The user_id provided does not exist in the Database. {user_id}")
-
-        async with asqlite.connect(self._db_file_path) as db:
-            async with db.cursor() as cur:
-                await cur.execute("""DELETE FROM owners WHERE user_id = ?""", user_id)
-                await db.commit()
-
-    async def add_prefix(self, prefix: str) -> None:
-        """
-        Add a prefix to the prefixes table.
-
-        Args:
-            prefix (str): A phrase or single character. eg `?` or `gatekeeper`
+            guild_id (int): The Discord Guild ID.
+            user_id (int): The Discord User ID.
 
         Raises:
-            ValueError: If the prefix already exists in the Database.
-        """
+            ValueError: If the `guild_id` value is to short we raise an exception.
+            ValueError: If the `user_id` value is to short we raise an exception.
 
-        res = await self._select_row_where(table="prefixes", column="prefix", where="prefix", value=prefix)
-        if res is None:
-            await self._insert_row(table="prefixes", column="prefix", value=prefix)
-        else:
-            raise ValueError(f"The prefix provided already exists in the Database. {prefix}")
-
-    async def remove_prefix(self, prefix: str) -> None:
+        Returns:
+            Owner | None: Returns a Owner dataclass object.
         """
-        Remove a prefix from the prefixes table.
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        if len(str(object=user_id)) < 15:
+            raise ValueError("Your `user_id` value is to short. (<15)")
+
+        res: None | Row = await self._execute(f"""INSERT INTO owners(guild_id, user_id) VALUES(?, ?) ON CONFLICT(guild_id, user_id) DO NOTHING RETURNING *""", (guild_id, user_id))
+        return Owner(**res) if res is not None else None
+
+    async def remove_owner(self, guild_id: int, user_id: int) -> None | Literal[True]:
+        """
+        Remove a Discord User ID from the `owners` table.
 
         Args:
-            prefix (str): The prefix to remove from the table.
+            guild_id (int): The Discord Guild ID.
+            user_id (int): The Discord User ID.
+
+        Raises:
+            ValueError: If the `guild_id` value is to short we raise an exception.
+            ValueError: If the `user_id` value is to short we raise an exception.
+
+        Returns:
+            None
         """
 
-        res = await self._select_row_where(table="prefixes", column="prefix", where="prefix", value=prefix)
-        if res is None:
-            raise ValueError(f"The prefix provided does not exist in the Database. {prefix}")
+        if len(str(object=user_id)) < 15:
+            raise ValueError("Your `user_id` value is to short. (<15)")
 
-        async with asqlite.connect(self._db_file_path) as db:
-            async with db.cursor() as cur:
-                await cur.execute("""DELETE FROM prefixes WHERE prefix = ?""", prefix)
-                await db.commit()
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        res: None | Row = await self._execute("""SELECT * FROM owners WHERE guild_id = ? AND user_id = ?""", (guild_id, user_id))
+        if res is None:
+            raise ValueError(f"The `user_id` provided does not exist in the `owners` table. user_id:{user_id}")
+
+        await self._execute("""DELETE FROM owners WHERE guild_id = ? AND user_id = ?""", (guild_id, user_id))
+        return True
+
+    async def get_owners(self, guild_id: int) -> list[Owner] | None:
+        """
+        Get all the owners from the `owners` table.
+
+        Args:
+            guild_id (int): The Discord Guild ID.
+
+        Raises:
+            ValueError: If the `guild_id` value is to short we raise an exception.
+
+        Returns:
+            list[Owner]: Returns a list of Owner dataclass objects.
+        """
+
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        res: list[Row] | None = await self._fetchall(f"""SELECT * FROM owners WHERE guild_id = ?""", (guild_id,))
+        return [Owner(**row) for row in res] if res is not None else None
+
+    async def add_prefix(self, guild_id: int, prefix: str) -> None | str:
+        """
+        Add a prefix to the `prefixes` table.
+
+        Args:
+            guild_id (int): The Discord Guild ID.
+            prefix(str): A phrase or single character. eg `?` or `gatekeeper`.
+
+        Returns:
+            None | str: Returns the `prefix` if it was added.
+
+        """
+
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        prefix = prefix.strip()
+        res: None | Row = await self._execute("""INSERT INTO prefixes(guild_id, prefix) VALUES(?, ?) ON CONFLICT(guild_id, prefix) DO NOTHING RETURNING *""", (guild_id, prefix))
+        return res["prefix"] if res is not None else None
+
+    async def remove_prefix(self, guild_id: int, prefix: str) -> None | Literal[True]:
+        """
+        Remove a prefix from the `prefixes` table.
+
+        Args:
+            guild_id (int): The Discord Guild ID.
+            prefix(str): The prefix to remove from the table.
+
+        Raises:
+            ValueError: If the prefix does not exist in the Database.
+
+        Returns:
+            None | Literal[True]: Returns `True` if the prefix was removed.
+        """
+
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        res: None | Row = await self._execute("""SELECT prefix FROM prefixes WHERE guild_id = ? AND prefix = ?""", (guild_id, prefix))
+        if res is None:
+            raise ValueError(f"The `prefix` provided does not exist in the `prefixes` table. prefix:{prefix}")
+
+        await self._execute("""DELETE FROM prefixes WHERE guild_id = ? AND prefix = ?""", (guild_id, prefix))
+        return True
+
+    async def get_prefixes(self, guild_id: int) -> list[str] | None:
+        """"
+        Get all the prefixes from the `prefixes` table.
+
+        Args:
+            guild_id (int): The Discord Guild ID.
+
+        Raises:
+            ValueError: If the `guild_id` value is to short we raise an exception.
+
+        Returns:
+            list[str]: Returns a list of prefixes.
+        """
+
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
+        res: list[Row] | None = await self._fetchall(f"""SELECT prefix FROM prefixes WHERE guild_id = ?""", (guild_id,))
+        return [row["prefix"] for row in res] if res is not None else None

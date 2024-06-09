@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Union
@@ -35,7 +36,7 @@ class BannerSettings():
     color_player_online: str = "#f7dc6f"
 
 
-@dataclass()
+@dataclass
 class ServerSettings():
     """
     Represents the data from the Database table servers.
@@ -67,3 +68,23 @@ class ServerSettings():
         if hasattr(ServerSettings, name) and (type(getattr(ServerSettings, name)) == bool):
             return super().__setattr__(name, bool(value))
         return super().__setattr__(name, value)
+
+
+@dataclass
+class Settings():
+    """
+    Represents the data from the `settings` table.
+    """
+    guild_id: int = 0  # references `guilds` table `id` value.
+    mod_role_id: int | None = None
+    donator_role_id: int | None = None
+    msg_timeout: int | None = None
+
+
+@dataclass
+class Owner():
+    """
+    Represents the data from the Database table `owners`.
+    """
+    guild_id: int
+    user_id: int
