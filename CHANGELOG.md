@@ -1,3 +1,11 @@
+## Version - 1.0.1b - [5d75b51](https://github.com/k8thekat/GatekeeperV2/commit/5d75b51)
+#### build.py
+- Forgot to commit changes.
+- Version bump `1.0.0b`
+
+#### CHANGELOG.md
+- Pushed `0.0.11b` changes.
+
 ## Version - 1.0.0b - [2b17217](https://github.com/k8thekat/GatekeeperV2/commit/2b17217)
 #### base.py
 - Added `dir` attribute to assist with `DB_FILE_PATH`.

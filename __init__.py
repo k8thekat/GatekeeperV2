@@ -23,7 +23,7 @@ from __future__ import annotations
 __title__ = "Gatekeeper"
 __author__ = "k8thekat"
 __license__ = "GNU"
-__version__ = "1.0.0b"
+__version__ = "1.0.1b"
 __credits__ = "Discord.py and AMP by CubeCoders"
 
 from typing import Literal, NamedTuple
