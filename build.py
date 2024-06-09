@@ -4,6 +4,9 @@ import re
 import subprocess
 import sys
 
+user = "k8thekat"
+project = "GatekeeperV2"
+
 # Grab Version from __init__.py
 version = ''
 with open('__init__.py') as file:
@@ -63,8 +66,6 @@ for entry in cur_data:
 
 
 # Format the data into the `CHANGELOG.md`
-user = "k8thekat"
-project = "GatekeeperV2"
 set_version = f"## Version - {version} - [{new_commit[:7]}](https://github.com/{user}/{project}/commit/{new_commit})\n"
 data = set_version
 for file_name, file_changes in files.items():
