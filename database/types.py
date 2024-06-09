@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -15,8 +15,26 @@ class ServerTypes(Enum):
     SOURCE_VALVE = 3
 
 
+class WhitelistType(Enum):
+    """
+    Whitelist Types; related to `instance_settings` table.
+
+    """
+    OPEN = 0
+    CLOSED = 1
+    DISABLED = 2
+
+
+class DonatorType(Enum):
+    """
+    DonatorType _summary_
+    """
+    PUBLIC = 0
+    PRIVATE = 1
+
+
 @dataclass
-class BannerSettings():
+class InstanceBannerSettings():
     """
     Represents the data from the Database table banners.
     """
@@ -37,7 +55,15 @@ class BannerSettings():
 
 
 @dataclass
-class ServerSettings():
+class InstanceButton():
+    instance_id: str
+    button_name: str
+    button_url: str
+    button_style: int
+
+
+@dataclass
+class InstanceSettings():
     """
     Represents the data from the Database table servers.
 
@@ -45,17 +71,14 @@ class ServerSettings():
     - The dataclass is used to validate column names and column type constraints.
 
     """
-    id: int
     instance_id: str
     instance_name: str
-    ip: str = ""
-    whitelist: bool = False
-    whitelist_disabled: bool = False
-    donator: bool = False
-    chat_channel: int = 0
-    chat_prefix: str = ""
-    event_channel: int = 0
-    role: int = 0
+    host: str = ""  # could get the local IP from the API
+    password: str | None = None
+    whitelist: WhitelistType = WhitelistType.OPEN
+    donator: DonatorType = DonatorType.PUBLIC
+    discord_console_channel: int = field(default=0)
+    discord_role_id: int = field(default=0)
     avatar_url: str = ""
     hidden: bool = False
 
@@ -65,7 +88,7 @@ class ServerSettings():
         Convert it to a `bool` for human readable.
 
         """
-        if hasattr(ServerSettings, name) and (type(getattr(ServerSettings, name)) == bool):
+        if hasattr(InstanceSettings, name) and (type(getattr(InstanceSettings, name)) == bool):
             return super().__setattr__(name, bool(value))
         return super().__setattr__(name, value)
 
