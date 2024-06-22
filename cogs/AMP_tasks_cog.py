@@ -19,16 +19,22 @@
    02110-1301, USA. 
 '''
 from __future__ import annotations
-import os
 
-
-import utils
-import AMP_Handler
 import logging
-import DB
+import os
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands, tasks
+
+import AMP_Handler
+import DB
+import utils
+from AMP import AMPInstance
+
+if TYPE_CHECKING:
+    from ..AMP import AMPInstance
+    from ..modules.Minecraft.amp_minecraft import AMPMinecraft
 
 # This is used to force cog order to prevent missing methods.
 Dependencies = None
@@ -36,12 +42,12 @@ Dependencies = None
 
 class AMP_Tasks(commands.Cog):
     def __init__(self, client: discord.Client):
-        self._client = client
+        self._client: discord.Client = client
         self.name = os.path.basename(__file__)
         self.logger = logging.getLogger()
 
         self.AMPHandler = AMP_Handler.getAMPHandler()
-        self.AMPInstances = self.AMPHandler.AMP_Instances
+        self.AMPInstances: dict[str, AMPInstance] = self.AMPHandler.AMP_Instances
 
         self.DBHandler = DB.getDBHandler()
         self.DB = self.DBHandler.DB  # Main Database object
@@ -50,7 +56,7 @@ class AMP_Tasks(commands.Cog):
         self.bPerms = utils.get_botPerms()
 
         self.uBot = utils.botUtils(client)
-        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp","AMP")}')
+        self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp", "AMP")}')
 
         self.amp_server_console_messages_send.start()
         self.logger.dev('AMP_Cog Console Message Handler Running: ' + str(self.amp_server_console_messages_send.is_running()))
@@ -215,7 +221,7 @@ class AMP_Tasks(commands.Cog):
     async def amp_server_console_chat_messages_send(self):
         """This handles IN game chat messages and sends them to discord."""
         if self._client.is_ready():
-            AMPChatChannels = {}
+            AMPChatChannels: dict[str | int, list[AMPInstance | AMPMinecraft]] = {}
             for amp_server in self.AMPInstances:
                 AMPServer = self.AMPInstances[amp_server]
 
@@ -230,7 +236,7 @@ class AMP_Tasks(commands.Cog):
             while (Sent_Data):
                 Sent_Data = False
                 for amp_server in self.AMPInstances:
-                    AMPServer_Chat = self.AMPInstances[amp_server]
+                    AMPServer_Chat: AMPMinecraft | AMPInstance = self.AMPInstances[amp_server]
                     AMP_Server_Console_Chat = AMPServer_Chat.Console
 
                     if AMPServer_Chat.Discord_Chat_Channel == None:
@@ -274,7 +280,7 @@ class AMP_Tasks(commands.Cog):
                     message_contents = message['Contents'].replace('\n', ' ')
                     server_prefix = AMPServer_Chat.Discord_Chat_Prefix
 
-                    db_author = self.DB.GetUser(author)
+                    db_author: None | DB.DBUser = self.DB.GetUser(author)
                     if db_author != None:
                         author_prefix = await self.bPerms.get_role_prefix(db_author.DiscordID)
 
@@ -283,7 +289,7 @@ class AMP_Tasks(commands.Cog):
                             name, avatar = AMPServer_Chat.get_IGN_Avatar(db_user=db_author)
 
                         else:
-                            discord_user = self._client.get_user(db_author.DiscordID)
+                            discord_user = self._client.get_user(int(db_author.DiscordID))
                             if discord_user != None:
                                 self.logger.dev('Using Discord Server Information')
                                 name, avatar = discord_user.name, discord_user.avatar
@@ -305,8 +311,8 @@ class AMP_Tasks(commands.Cog):
 
                     await chat_webhook.send(content=message_contents, username=name, avatar_url=avatar)
 
-                    # This is the Chat Relay to seperate AMP Servers.
-                    if chat_webhook.channel.id in AMPChatChannels:
+                    # This is the Chat Relay to separate AMP Servers.
+                    if chat_webhook.channel is not None and chat_webhook.channel.id in AMPChatChannels:
                         self.logger.dev('Found another Server Chat Channel Listening to this Discord channel.')
                         for Server in AMPChatChannels[chat_webhook.channel.id]:
 

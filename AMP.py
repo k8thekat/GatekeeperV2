@@ -22,21 +22,21 @@
 # by k8thekat // Lightning
 # 11/10/2021
 from __future__ import annotations
-import requests
-import requests.sessions
-import pyotp  # 2Factor Authentication Python Module
+
 import json
+import logging
+import sys
+import threading
 import time
 import traceback
+from typing import Literal, Union
 
-import sys
-import logging
-import threading
+import pyotp  # 2Factor Authentication Python Module
+import requests
+import requests.sessions
 
-from typing import Union
-
-import DB
 import AMP_Console
+import DB
 
 
 class AMPInstance():
@@ -1008,7 +1008,7 @@ class AMPInstance():
         Returns `True` if not in Whitelisted"""
         return None
 
-    def Chat_Message(self, message: str, author: str = None, author_prefix: str = None):
+    def Chat_Message(self, message: str, author: str | None = None, author_prefix: str | None = None, server_prefix: str | None = None):
         """Base Function for Discord Chat Messages to AMP ADS"""
         return
 
@@ -1016,9 +1016,9 @@ class AMPInstance():
         """Base Function for Server Chat Message Formatter"""
         return message
 
-    def get_IGN_Avatar(self, db_user=None, user: str = None):
+    def get_IGN_Avatar(self, db_user=None, user: str | None = None) -> tuple[str, str]:
         """Base Function for customized discord messages (Primarily Minecraft)"""
-        return False
+        return "", ""
 
     def Broadcast_Message(self, message, prefix: str = None):
         """Base Function for Broadcast Messages to AMP ADS"""

@@ -19,14 +19,16 @@
    02110-1301, USA. 
 '''
 from __future__ import annotations
+
+import base64
+import json
+from typing import Literal
+
+import requests
+
 import AMP
 import AMP_Console
-import requests
-import json
-import base64
-
 from DB import DBUser
-
 
 DisplayImageSources = ["internal:MinecraftJava"]
 
@@ -149,7 +151,7 @@ class AMPMinecraft(AMP.AMPInstance):
 
     def getHeadbyUUID(self, UUID: str):
         """Gets a Users Player Head via UUID"""
-        # DOESNT WORK FOR AVATAR ICONS.. DONT USE IT!
+        # DOESN'T WORK FOR AVATAR ICONS.. DONT USE IT!
         MChead = 'https://mc-heads.net/head/' + UUID
         return MChead
 
@@ -160,7 +162,7 @@ class AMPMinecraft(AMP.AMPInstance):
         result = self.CallAPI(f'{self.APIModule}/BanUserByID', parameters)
         return result
 
-    def Chat_Message(self, message: str, author: str = None, author_prefix: str = None, server_prefix: str = None):
+    def Chat_Message(self, message: str, author: str | None = None, author_prefix: str | None = None, server_prefix: str | None = None):
         """Sends a customized message via tellraw through the console."""
         self.Login()
         # Colors:
@@ -184,7 +186,7 @@ class AMPMinecraft(AMP.AMPInstance):
         """Formats the message for Discord \n"""
         return message
 
-    def get_IGN_Avatar(self, db_user: DBUser = None, user: str = None):
+    def get_IGN_Avatar(self, db_user: DBUser | None = None, user: str | None = None) -> tuple[str, str] | Literal[False]:
         """Handles returning customized discord message data for Minecraft Servers only."""
 
         if db_user != None and db_user.MC_IngameName != None and db_user.MC_UUID != None:
