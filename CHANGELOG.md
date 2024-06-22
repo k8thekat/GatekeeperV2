@@ -1,3 +1,59 @@
+## Version - 1.0.2b - [ba040f5](https://github.com/k8thekat/GatekeeperV2/commit/ba040f5)
+#### banner.py
+- `isort` imports.
+- changed schema layout of multiple tables.
+- moved `banner_settings` schema to `instances.py`
+- Added `Banner_Group_Message()` dataclass.
+- Added `Banner_Group_Channel()` dataclass.
+	- Added functionality to update/remove discord channel id
+	- Added functionality to add/remove and get discord messages
+- Added `Banner_Group()` dataclass.
+	- Added functionality to remove a banner group.
+	- Added functionality to add/remove/get and update instances in a group.
+	- Added functionality to add/remove and get all `Banner_Group_Channels()`.
+- Added `DBBanner()` class to handle Instance Banner functionality.
+
+#### server.py -> instance.py
+- Changed `server.py` to `instance.py`
+- Added methods to update/set every column of the schema.
+- Updated class names from `Server` to `Instance`; along with dataclasses in `types.py`.
+
+#### settings.py
+- Updated doc strings to be more consistent.
+
+#### types.py
+- Added `ButtonStyle()` enum.
+- Added `ButtonStyle_Old()` enum.
+- Changed `InstanceBannerSettings()` to `Instance_Banner_Settings()` for readability.
+	- Changed `server_id` to `instance_id`.
+	- Changed `background_path` to `image_path`.
+- Changed `InstanceButton()` to `Instance_Button()`.
+- Changed `InstanceSettings()` to `Instance_Settings()`.
+	- Updated docstring to match schema.
+	- Updated attributes to match schema.
+
+#### user.py
+- `isort` imports.
+- Updated schema's to match `Instance` table change and naming conventions.
+- Added `__hash__()` and `__eq__()` methods to the `Metrics()` dataclass for usability with `set()`.
+- Added `__hash__()` and `__eq__()` methods to the `IGN()` dataclass for usability with `set()`.
+	- Added an `exists()` decorator for all `IGN()` dataclass methods to validate table entries.
+	- Removed `_validate_metrics()` as the decorator replaced it's functionality.
+	- Changed the `.metrics` property to use `set` instead of `list`. Updated code to match.
+	- Fixed login in `update_metrics()` to handle duplicate/existing entries.
+	- Added `user_id` validation to `update_user_id()` parameter.
+- Updated `User()` dataclass.
+	- Removed `_validate_igns()` and created `exists()` wrapper function.
+	- Convert `igns` property to a `set`. Updated code to follow.
+- Updated `DBUser()`
+	- Added `user_id` parameter validation to `add_user()` method.
+	- Added `get_unique_visitors()` method to get unique visitors for a specific `instance_id`.
+	- Added `role_d` parameter validation to `add_role_instance()` method, same with `remove_role_instance()`, `add_guild_instances()` and `remove_guild_instances()` methods .
+- Pushed `1.0.0b` and `1.0.1b` changes.
+
+#### __init__.py
+- Version bump `1.0.1b`.
+
 ## Version - 1.0.1b - [5d75b51](https://github.com/k8thekat/GatekeeperV2/commit/5d75b51)
 #### build.py
 - Forgot to commit changes.
