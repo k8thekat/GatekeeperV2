@@ -57,10 +57,10 @@ class DBSettings(Base):
             guild_id (int): The Discord Guild ID.
 
         Raises:
-            ValueError: If the `guild_id` value is to short.
+            ValueError: If the `guild_id` value is to short we raise an exception.
 
         Returns:
-            Settings | None: Returns a Settings object if the Guild ID was added to the Database.
+            Settings | None: Returns a Settings dataclass object if the Guild ID was added to the Database.
         """
         if len(str(object=guild_id)) < 15:
             raise ValueError("Your `guild_id` value is to short. (<15)")
@@ -80,7 +80,7 @@ class DBSettings(Base):
             guild_id (int): The Discord Guild ID.
 
         Raises:
-            ValueError: If the `guild_id` value is to short.
+            ValueError: If the `guild_id` value is to short we raise an exception.
 
         Returns:
             Settings | None: Returns a Settings dataclass object.
@@ -100,8 +100,8 @@ class DBSettings(Base):
             role_id (int): The Discord Role ID. eg `617967701381611520`
 
         Raises:
-            ValueError: If the role_id value is to short we raise an exception.
-            ValueError: If the guild_id value is to short we raise an exception.
+            ValueError: If the `role_id` value is to short we raise an exception.
+            ValueError: If the `guild_id` value is to short we raise an exception.
 
         Returns:
             Settings | None : Returns a Settings dataclass object.
@@ -198,7 +198,7 @@ class DBSettings(Base):
             ValueError: If the `user_id` value is to short we raise an exception.
 
         Returns:
-            None
+            None | True: Returns `True` if the User ID was removed from the `owners` table.
         """
 
         if len(str(object=user_id)) < 15:
@@ -242,6 +242,9 @@ class DBSettings(Base):
             guild_id (int): The Discord Guild ID.
             prefix(str): A phrase or single character. eg `?` or `gatekeeper`.
 
+        Raises:
+            ValueError: If the `guild_id` value is to short we raise an exception.
+
         Returns:
             None | str: Returns the `prefix` if it was added.
 
@@ -263,7 +266,8 @@ class DBSettings(Base):
             prefix(str): The prefix to remove from the table.
 
         Raises:
-            ValueError: If the prefix does not exist in the Database.
+            ValueError: If the `guild_id` value is to short we raise an exception.
+            ValueError: If the `prefix` does not exist we raise an exception.
 
         Returns:
             None | Literal[True]: Returns `True` if the prefix was removed.

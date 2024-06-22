@@ -27,19 +27,41 @@ class WhitelistType(Enum):
 
 class DonatorType(Enum):
     """
-    DonatorType _summary_
+    Donator Types; related to `instance_settings` table.
     """
     PUBLIC = 0
     PRIVATE = 1
 
 
+class ButtonStyle(Enum):
+    """
+    Represents `discord.ButtonStyle` 2.0 values.
+    """
+    primary = 0
+    secondary = 1
+    success = 2
+    danger = 3
+    link = 4
+
+
+class ButtonStyle_Old(Enum):
+    """
+    Represents `discord.ButtonStyle` old values.
+    """
+    blurple: ButtonStyle = ButtonStyle.primary
+    grey: ButtonStyle = ButtonStyle.secondary
+    green: ButtonStyle = ButtonStyle.success
+    red: ButtonStyle = ButtonStyle.danger
+    link: ButtonStyle = ButtonStyle.link
+
+
 @dataclass
-class InstanceBannerSettings():
+class Instance_Banner_Settings():
     """
     Represents the data from the Database table banners.
     """
-    server_id: int
-    background_path: str = "./resources/banners/AMP_Banner.jpg"
+    instance_id: str
+    image_path: str = "./resources/banners/AMP_Banner.jpg"
     blur_background_amount: int = 0
     color_header: str = "#85c1e9"
     color_body: str = "#f2f3f4"
@@ -55,29 +77,32 @@ class InstanceBannerSettings():
 
 
 @dataclass
-class InstanceButton():
-    instance_id: str
-    button_name: str
-    button_url: str
-    button_style: int
+class Instance_Button():
+    """
+    Represent's the data `instance_buttons` table.
+    """
+    instance_id: str = ""
+    button_name: str = ""
+    button_url: str = ""
+    button_style: ButtonStyle = ButtonStyle.primary
 
 
 @dataclass
-class InstanceSettings():
+class Instance_Settings():
     """
-    Represents the data from the Database table servers.
+    Represents the data from the `Instances` table.
 
-    **THIS MUST BE UPDATED TO REPRESENT THE servers DATABASE SCHEMA AT ALL TIMES** \n
+    **THIS MUST BE UPDATED TO REPRESENT THE Instance DATABASE SCHEMA AT ALL TIMES** \n
     - The dataclass is used to validate column names and column type constraints.
 
     """
-    instance_id: str
-    instance_name: str
+    instance_id: str = ""
     host: str = ""  # could get the local IP from the API
-    password: str | None = None
+    password: str = ""
     whitelist: WhitelistType = WhitelistType.OPEN
+    whitelist_button: bool = False
     donator: DonatorType = DonatorType.PUBLIC
-    discord_console_channel: int = field(default=0)
+    discord_console_channel_id: int = field(default=0)
     discord_role_id: int = field(default=0)
     avatar_url: str = ""
     hidden: bool = False
@@ -88,7 +113,7 @@ class InstanceSettings():
         Convert it to a `bool` for human readable.
 
         """
-        if hasattr(InstanceSettings, name) and (type(getattr(InstanceSettings, name)) == bool):
+        if hasattr(Instance_Settings, name) and (type(getattr(Instance_Settings, name)) == bool):
             return super().__setattr__(name, bool(value))
         return super().__setattr__(name, value)
 

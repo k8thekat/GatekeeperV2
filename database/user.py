@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import functools
 from dataclasses import InitVar, dataclass, field
-from sqlite3 import Cursor, IntegrityError, Row
+from datetime import datetime, timedelta
+from sqlite3 import Cursor, IntegrityError, OperationalError, Row
 from typing import List, Literal, Self
 
 import utils.asqlite as asqlite
@@ -32,8 +34,8 @@ CREATE TABLE IF NOT EXISTS ign_metrics (
     last_login REAL,
     playtime INTEGER,
     created_at REAL,
-    FOREIGN KEY (instance_id) REFERENCES servers(instance_id),
-    FOREIGN KEY (ign_id) REFERENCES ign(id)
+    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
+    FOREIGN KEY (ign_id) REFERENCES ign(id),
     UNIQUE(ign_id, instance_id)
 )STRICT"""
 
@@ -44,7 +46,7 @@ CREATE TABLE IF NOT EXISTS user_instances (
     user_id INTEGER NOT NULL,
     instance_id TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (instance_id) REFERENCES servers(instance_id),
+    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
     UNIQUE(user_id, instance_id)
 )STRICT"""
 
@@ -54,7 +56,7 @@ ROLE_INSTANCES_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS role_instances (
     role_id INTEGER NOT NULL,
     instance_id TEXT NOT NULL,
-    FOREIGN KEY (instance_id) REFERENCES servers(instance_id),
+    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
     UNIQUE(role_id, instance_id)
 )STRICT"""
 
@@ -64,7 +66,7 @@ GUILD_INSTANCES_SETUP_SQL = """
 CREATE TABLE IF NOT EXISTS guild_instances (
     guild_id INTEGER NOT NULL,
     instance_id TEXT NOT NULL,
-    FOREIGN KEY (instance_id) REFERENCES servers(instance_id),
+    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
     UNIQUE(guild_id, instance_id)
 )STRICT"""
 
@@ -72,12 +74,23 @@ CREATE TABLE IF NOT EXISTS guild_instances (
 @dataclass()
 class Metrics(Base):
     """
-    The Metrics class that represents an IGN's metrics.
+    Represents the data from the `ign_metrics` table.
     """
     ign_id: int
     instance_id: str
     playtime: int
+    last_login: float  # type:ignore
+    created_at: float  # type:ignore
     _pool: InitVar[asqlite.Pool | None] = None
+
+    def __hash__(self) -> int:
+        return hash((self.ign_id, self.instance_id))
+
+    def __eq__(self, other) -> Any | Literal[False]:
+        try:
+            return self.ign_id == other.ign_id and self.instance_id == other.instance_id
+        except AttributeError:
+            return False
 
     @property
     def last_login(self) -> datetime:
@@ -116,12 +129,36 @@ class Metrics(Base):
 
 @dataclass()
 class IGN(Base):
+    """
+    Represents the data from the `ign` table with methods to update it and access the metrics information related to the `ign`.
+    See `metrics` attribute for more information.
+
+    """
     id: int  # primary key from `ign` table. **UNIQUE**
     name: str  # `name`` from `ign` table.
     user_id: int  # `user_id` from `users` table.
     type_id: ServerTypes  # `type_id` from `ign` table.
-    metrics: list[Metrics] = field(default_factory=list)  # `ign_metrics` table.
+    metrics: set[Metrics] = field(default_factory=set)  # `ign_metrics` table.
     _pool: InitVar[asqlite.Pool | None] = None
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other) -> Any | Literal[False]:
+        try:
+            return self.id == other.id
+        except AttributeError:
+            return False
+
+    @staticmethod
+    def exists(func):
+        @functools.wraps(wrapped=func)
+        async def wrapper_exists(self: IGN, *args, **kwargs) -> bool:
+            res: Row | None = await self._fetchone(f"""SELECT id FROM ign WHERE id = ?""", (self.id,))
+            if res is None:
+                raise ValueError(f"The `id` of this class doesn't exists in the `ign` table. ID:{self.id}")
+            return await func(self, *args, **kwargs)
+        return wrapper_exists
 
     @property
     def type(self) -> str:
@@ -131,33 +168,7 @@ class IGN(Base):
         """
         return ServerTypes(value=self.type_id).name
 
-    # TODO - Test once Instance table is created.
-    async def _validate_metrics(self, metric: Metrics) -> None:
-        """
-        Checks if a `Metrics` object already exists in our `IGN.metrics` attribute.
-
-        Args:
-            metric (Metrics): The `Metrics` dataclass object
-
-        Returns:
-            None : Returns `None`
-        """
-        _temp: list[Metrics] = self.metrics
-
-        if len(self.metrics) == 0:
-            self.metrics.append(metric)
-            return None
-
-        for entry in self.metrics:
-            # These are my 2 UNIQUE constraints.
-
-            if (entry.ign_id == metric.ign_id) and (entry.instance_id == metric.instance_id):
-                return None
-            else:
-                _temp.append(metric)
-        self.metrics: list[Metrics] = _temp
-
-    # TODO - Test once Instance table is created.
+    @exists
     async def _replace_metrics(self, metric: Metrics) -> None:
         """
         Replace an existing `Metrics` dataclass in our `IGN.metrics` attribute.
@@ -169,34 +180,36 @@ class IGN(Base):
         Returns:
             None: Returns `None`
         """
-        _temp: List[Metrics] = self.metrics
+        _temp: list[Metrics] = list(self.metrics)
 
         if len(self.metrics) == 0:
-            self.metrics.append(metric)
+            self.metrics.add(metric)
             return None
 
-        for entry in self.metrics:
+        for entry in _temp:
             if (entry.ign_id == metric.ign_id) and (entry.instance_id == metric.instance_id):
                 _temp.remove(entry)
                 _temp.append(metric)
                 break
-        self.metrics = _temp
+        self.metrics = set(_temp)
 
-    # TODO - Test once Instance table is created.
-    async def get_metrics(self) -> IGN:
+    @exists
+    async def get_metrics(self) -> set[Metrics]:
         """
-        Updates the IGN object with the latest Metrics from the `ign_metrics` table.
-        """
-        _metrics: None | list[Row] = await self._fetchall(f"""SELECT * FROM ign_metrics WHERE ign_id = ?""", (self.id,))
-        if _metrics is not None:
-            [await self._validate_metrics(metric=Metrics(**entry)) for entry in _metrics]
-        return self
+        Updates our Self with the latest Metrics from the `ign_metrics` table.
 
-    # TODO - Test once Instance table is created.
+        Returns:
+            set[Metrics]: Returns our `Self.metrics` attribute.
+        """
+        res: None | list[Row] = await self._fetchall(f"""SELECT * FROM ign_metrics WHERE ign_id = ?""", (self.id,))
+        if res is not None:
+            self.metrics = set([Metrics(**entry) for entry in res])
+        return self.metrics
+
+    @exists
     async def update_metrics(self, instance_id: str, last_login: float = datetime.now().timestamp(), playtime: int = 0) -> Metrics | None:
         """
-        Update the IGN's metrics for the provided `instance_id`.
-        * Also updates the self `IGN` dataclass object.
+        Update our Self's metrics attribute for the provided `instance_id`.
 
         Args:
             instance_id (str): The AMP Instance ID.
@@ -204,12 +217,17 @@ class IGN(Base):
             playtime (int, optional): The playtime in minutes. Defaults to 0.
 
         Returns:
-            Metrics | None: Returns a `Metrics` dataclass object, while also updating the `IGN` dataclass object.
+            Metrics | None: Returns a `Metrics` dataclass object, while also updating our Self object.
         """
         _exists: Row | None = await self._fetchone(f"""SELECT * FROM ign_metrics WHERE ign_id = ? and instance_id = ?""", (self.id, instance_id))
         if _exists is None:
-            res: Row | None = await self._execute(f"""INSERT INTO ign_metrics(ign_id, instance_id, last_login, playtime, created_at)
-                                      VALUES(?, ?, ?, ?, ?) RETURNING *""", (self.id, instance_id, last_login, playtime, datetime.now().timestamp()))
+            try:
+                res: Row | None = await self._execute(f"""INSERT INTO ign_metrics(ign_id, instance_id, last_login, playtime, created_at)
+                                        VALUES(?, ?, ?, ?, ?) RETURNING *""", (self.id, instance_id, last_login, playtime, datetime.now().timestamp()))
+            except IntegrityError as e:
+                if e.args[0] == "FOREIGN KEY constraint failed":
+                    raise NotImplementedError(f"The `instance_id` provided does not exist in the `instances` table. Instance ID: {instance_id}")
+                raise e
             return Metrics(**res) if res is not None else None
         else:
             metrics = Metrics(**_exists)
@@ -221,6 +239,7 @@ class IGN(Base):
         return metrics
 
     # TODO - Test once Instance table is created.
+    @exists
     async def get_instance_metrics(self, instance_id: str) -> Metrics | None:
         """
         Get the Metrics data for a specific `instance_id`.
@@ -236,18 +255,20 @@ class IGN(Base):
             return Metrics(**_metrics)
         return None
 
+    @exists
     async def get_global_playtime(self) -> int:
         """
-        Returns the total playtime across all servers.
+        Returns the total playtime across all instances.
 
         Returns:
-            int: The total playtime across all servers in minutes.
+            int: The total playtime across all instances in minutes.
         """
         res: list[Row] | None = await self._fetchall(f"""SELECT playtime FROM ign_metrics WHERE ign_id=?""", (self.id,))
         if res is not None:
             return sum([entry["playtime"] for entry in res])
         return 0
 
+    @exists
     async def get_instance_last_login(self, instance_id: str) -> datetime | None:
         """
        Returns the last time this IGN logged into the provided `instance_id`.
@@ -263,15 +284,16 @@ class IGN(Base):
             return datetime.fromtimestamp(timestamp=res["last_login"])
         return None
 
+    @exists
     async def update_name(self, name: str) -> Self | None:
         """
-        Updates the IGN name in the `ign` table and returns an updated class object.
+        Updates the IGN name in the `ign` table.
 
         Args:
             name (str): The IGN.
 
         Returns:
-            Self | None: Returns an updated `IGN` dataclass object.
+            Self | None: Returns an updated Self object.
         """
         try:
             await self._execute(f"""UPDATE ign SET name = ? WHERE id = ?""", (name, self.id))
@@ -280,16 +302,21 @@ class IGN(Base):
         self.name = name
         return self
 
+    @exists
     async def update_user_id(self, user_id: int) -> Self | None:
         """
-        Updates the IGN `user_id` in the `ign` table and returns an updated class object.
+        Updates the `user_id` in the `ign` table
 
         Args:
             user_id (int): The Discord User ID.
 
         Returns:
-            Self | None: Returns an updated `IGN` dataclass object.
+            Self | None: Returns an updated Self object.
         """
+
+        if len(str(object=user_id)) < 15:
+            raise ValueError("Your `user_id` value is to short. (<15)")
+
         try:
             await self._execute(f"""UPDATE ign SET user_id = ? WHERE id = ?""", (user_id, self.id))
         except IntegrityError as e:
@@ -297,15 +324,16 @@ class IGN(Base):
         self.user_id = user_id
         return self
 
+    @exists
     async def update_type_id(self, type_id: ServerTypes) -> Self | None:
         """
-        Updates the IGN `type_id` in the `ign` table and returns an updated class object.
+        Updates the `type_id` in the `ign` table.
 
         Args:
             type_id (ServerTypes): The ServerTypes enum value.
 
         Returns:
-            Self | None: Returns an updated `IGN` dataclass object.
+            Self | None: Returns an updated Self object.
         """
         try:
             await self._execute(f"""UPDATE ign SET type_id = ? WHERE id = ?""", (type_id.value, self.id))
@@ -314,9 +342,10 @@ class IGN(Base):
         self.type_id = type_id
         return self
 
+    @exists
     async def delete_ign(self) -> int:
         """
-        Removes all entries of an IGN from the `ign` table and the `user_metrics` table. Regardless of Server.
+        Removes all entries our Self from the `ign` table and the `user_metrics` table. Regardless of Instance.
 
         Args:
             ign (str): The IGN to delete from the `ign` table.
@@ -332,26 +361,16 @@ class IGN(Base):
 
 @ dataclass()
 class User(Base):
+    """
+    This represents the data from the `user` table with methods to update it and the AMP Instances it has access to for commands.
+    See `instance_ids`.
+
+
+    """
     user_id: int
-    igns: list[IGN] = field(default_factory=list)
+    igns: set[IGN] = field(default_factory=set)
     instance_ids: set[str] = field(default_factory=set)
     _pool: InitVar[asqlite.Pool | None] = None
-
-    async def _validate_igns(self, ign: IGN) -> None:
-        _temp: list[IGN] = self.igns
-
-        if len(self.igns) == 0:
-            self.igns.append(ign)
-            return None
-
-        for entry in self.igns:
-            # These are my 3 UNIQUE constraints.
-
-            if (entry.name == ign.name) and (entry.type_id == ign.type_id) and (entry.user_id == ign.user_id):
-                return None
-            else:
-                _temp.append(ign)
-        self.igns = _temp
 
     async def add_ign(self, name: str, type_id: ServerTypes = ServerTypes.GENERAL) -> User | None:
         """
@@ -380,17 +399,17 @@ class User(Base):
             raise ValueError(f"The `user_id` provided already has an `name` of this `type_id` in the Database. name:{name} user_id:{self.user_id} type_id:{type_id.value}")
 
         if res is not None:
-            await self._validate_igns(ign=IGN(**res))
+            self.igns.add(IGN(**res))
             return self
 
     async def _get_igns(self) -> None:
         """
-        Get all the IGN's that belong to this DBUser.
+        Get all the IGN's that belong to this User.
         """
 
         res: list[Row] | None = await self._fetchall(f"""SELECT * FROM ign WHERE user_id = ?""", (self.user_id,))
         if res is not None:
-            [await self._validate_igns(ign=await IGN(**entry).get_metrics()) for entry in res]
+            self.igns = set([IGN(**entry) for entry in res])
         return None
 
     async def _get_instance_list(self) -> None:
@@ -399,7 +418,7 @@ class User(Base):
         """
         res: list[Row] | None = await self._fetchall(f"""SELECT instance_id FROM user_instances WHERE user_id = ?""", (self.user_id,))
         if res is not None:
-            self.instance_ids.update([entry["instance_id"] for entry in res])
+            self.instance_ids = set([entry["instance_id"] for entry in res])
         return None
 
     # TODO - Test once Instance table is done.
@@ -415,7 +434,7 @@ class User(Base):
             ValueError: If the `instance_id` value is to short.
 
         Returns:
-            User | None: Returns an updated `User` object if the `instance_id` was added to the Database.
+            User | None: Returns an updated Self object if the `instance_id` was added to the Database.
         """
 
         res: Row | None = await self._execute(f"""INSERT INTO user_instances(user_id, instance_id) VALUES(?, ?)
@@ -436,11 +455,11 @@ class User(Base):
             instance_id (str): The AMP Instance ID.
 
         Returns:
-            User | None: Returns an updated `User` object if the `instance_id` was removed from the Database.
+            User | None: Returns an updated Self object if the `instance_id` was removed from the Database.
 
         """
         await self._execute(f"""DELETE FROM user_instances WHERE user_id = ? AND instance_id = ?""", (self.user_id, instance_id))
-        self.instance_ids.discard(instance_id)
+        self.instance_ids.remove(instance_id)
         return self
 
     # TODO - Test once Instance table is done.
@@ -455,7 +474,7 @@ class User(Base):
         for role_id in roles:
             res: list[Row] | None = await self._fetchall(f"""SELECT instance_id FROM role_instances WHERE role_id = ?""", (role_id,))
             if res is not None:
-                self.instance_ids.update([entry["instance_id"] for entry in res])
+                self.instance_ids = set([entry["instance_id"] for entry in res])
         return None
 
     # TODO - Test once Instance table is done.
@@ -463,9 +482,12 @@ class User(Base):
         """
         Get all `instance_ids` that this DBUser is allowed to interact with based on their guild.
         """
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
         res: list[Row] | None = await self._fetchall(f"""SELECT instance_id FROM guild_instances WHERE guild_id = ?""", (guild_id,))
         if res is not None:
-            self.instance_ids.update([entry["instance_id"] for entry in res])
+            self.instance_ids = set([entry["instance_id"] for entry in res])
         return None
 
 
@@ -474,8 +496,6 @@ class DBUser(Base):
     Represents a Discord User in our DATABASE.
 
     """
-    # TODO - Possibly a get_all_igns() method.
-    # - Maybe filter by `instance_id` for leader boards or similar?
 
     async def _initialize_tables(self) -> None:
         """
@@ -494,11 +514,14 @@ class DBUser(Base):
             user_id(int): The Discord User ID.
 
         Raises:
-            ValueError: If the `user_id` already exists in the Database.
+            ValueError: If the `user_id` already exists we raise an exception.
+            ValueError: If the `user_id` value is to short we raise an exception.
 
         Returns:
             User | None: Returns a User object if the Discord ID exists in the Database.
         """
+        if len(str(object=user_id)) < 15:
+            raise ValueError("Your `user_id` value is to short. (<15)")
 
         _exists: List[Row] | None = await self._select_row_where(table="users", column="user_id", where="user_id", value=user_id)
         if _exists is not None:
@@ -509,16 +532,23 @@ class DBUser(Base):
 
     async def get_user(self, user_id: int, roles: list[int] | int | None = None, guild_id: int | None = None) -> User | None:
         """
-        Get a User object based on the Discord User ID.
+        Get a User object based on the Discord User ID. Use the `roles` and `guild_id` to populate AMP Instances the User is allowed to interact with.
 
         Args:
             user_id(int): The Discord User ID.
             roles(list[int] | int | None, optional): The Discord Role ID's. Defaults to None.
             guild_id(int | None, optional): The Discord Guild ID. Defaults to None.
 
+        Raises:
+            ValueError: If the `user_id` value is to short we raise an exception.
+            ValueError: If the `user_id` value doesn't exists we raise an exception.
+
         Returns:
             User | None: Returns a User object if the Discord ID exists in the Database.
         """
+
+        if len(str(object=user_id)) < 15:
+            raise ValueError("Your `user_id` value is to short. (<15)")
 
         _exists: Row | None = await self._fetchone("""SELECT * FROM users WHERE user_id = ?""", (user_id,))
         if _exists is None:
@@ -553,9 +583,38 @@ class DBUser(Base):
             raise ValueError(f"The `name` and `type_id` provided doesn't exists in the `ign` table. name:{name} type_id:{type_id.value}")
         return IGN(**_exists)
 
-    async def get_all_igns(self) -> list[IGN] | None:
-        res: List[Row] | None = await self._fetchall(f"""SELECT * FROM ign""")
+    async def get_all_igns(self, instance_id: str | None = None) -> list[IGN] | None:
+        if instance_id is None:
+            res: List[Row] | None = await self._fetchall(f"""SELECT * FROM ign""")
+        else:
+            res: List[Row] | None = await self._fetchall(f"""SELECT * FROM ign WHERE instance_id = ?""", (instance_id,))
         return [IGN(**entry) for entry in res] if res is not None else None
+
+    async def get_unique_visitors(self, instance_id: str, since: timedelta = timedelta(days=7)) -> list[IGN] | None:
+        """
+        Get the number of unique `IGN` visitors in the last `since` time.
+
+        Args:
+            instance_id (str): The AMP Instance ID.
+            since (timedelta, optional): How far back to select from `ign_metrics`. Defaults to timedelta(days=7).
+
+        Returns:
+            list[IGN] | None: Returns a list of `IGN` objects.
+        """
+        _time: datetime | float = datetime.now() - since
+        _time = _time.timestamp()
+        _temp_ign: list[IGN] = []
+        _users: list[Row] | None = await self._fetchall(f"""SELECT * FROM ign_metrics WHERE instance_id = ? AND created_at > ?""", (instance_id, _time))
+        if _users is None:
+            return None
+
+        for user in _users:
+            _ign: Row | None = await self._fetchone(f"""SELECT * FROM ign WHERE id = ?""", (user["ign_id"],))
+            if _ign is not None:
+                _temp_ign.append(IGN(**_ign))
+            else:
+                continue
+        return _temp_ign
 
     # TODO - Test once server table is done.
     async def add_role_instance(self, role_id: int, instance_id: str) -> None | Literal[True]:
@@ -568,11 +627,15 @@ class DBUser(Base):
             instance_id(str): The AMP Instance ID.
 
         Raises:
+            ValueError: If the `role_id` value is to short we raise an exception.
             ValueError: If the `role_id` provided already has this `instance_id` in the Database.
 
         Returns:
             None | Literal[True]: Returns `True` if the `role_id` and `instance_id` was added to the Database.
         """
+
+        if len(str(object=role_id)) < 15:
+            raise ValueError("Your `role_id` value is to short. (<15)")
 
         res: Row | None = await self._execute(f"""INSERT INTO role_instances(role_id, instance_id) VALUES(?, ?)
                                  ON CONFLICT(role_id, instance_id) DO NOTHING""", (role_id, instance_id))
@@ -591,11 +654,15 @@ class DBUser(Base):
             instance_id(str): The AMP Instance ID.
 
         Raises:
+            ValueError: If the `role_id` value is to short we raise an exception.
             ValueError: If the `role_id` provided doesn't have this `instance_id` in the Database.
 
         Returns:
             int : Returns the number of rows deleted.
         """
+        if len(str(object=role_id)) < 15:
+            raise ValueError("Your `role_id` value is to short. (<15)")
+
         _exists: Row | None = await self._fetchone(f"""SELECT * FROM role_instances WHERE role_id = ? AND instance_id = ?""", (role_id, instance_id))
         if _exists is None:
             raise ValueError(f"The `role_id` provided doesn't have this `instance_id` in the Database. role_id:{role_id} instance_id:{instance_id}")
@@ -614,11 +681,14 @@ class DBUser(Base):
             instance_id (str): The AMP Instance ID.
 
         Raises:
+            ValueError: If the `guild_id` value is to short we raise an exception.
             ValueError: If the `guild_id` provided already has this `instance_id` in the Database.
 
         Returns:
             None | Literal[True]: Returns `True` if the `guild_id` and `instance_id` was added to the Database.
         """
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
 
         res: Row | None = await self._execute(f"""INSERT INTO guild_instances(guild_id, instance_id) VALUES(?, ?)
                                  ON CONFLICT(guild_id, instance_id) DO NOTHING""", (guild_id, instance_id))
@@ -637,11 +707,15 @@ class DBUser(Base):
             instance_id (str): The AMP Instance ID.
 
         Raises:
+            ValueError: If the `guild_id` value is to short we raise an exception.
             ValueError: If the `guild_id` provided doesn't have this `instance_id` in the Database.
 
         Returns:
             int : Returns the number of rows deleted.
         """
+        if len(str(object=guild_id)) < 15:
+            raise ValueError("Your `guild_id` value is to short. (<15)")
+
         _exists: Row | None = await self._fetchone(f"""SELECT * FROM guild_instances WHERE guild_id = ? AND instance_id = ?""", (guild_id, instance_id))
         if _exists is None:
             raise ValueError(f"The `guild_id` provided doesn't have this `instance_id` in the Database. guild_id:{guild_id} instance_id:{instance_id}")
