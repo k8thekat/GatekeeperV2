@@ -9,15 +9,11 @@ VERSION: str = "0.0.1"
 DB_FILENAME: str = "gatekeeper.db"
 dir: Path = Path(__file__).parent
 # DB_FILE_PATH: str = dir.joinpath(DB_FILENAME).as_posix()
-DB_FILE_PATH = Path("/home/k8thekat/").joinpath(DB_FILENAME).as_posix()
-
-VERSION_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS version (
-    value TEXT COLLATE NOCASE NOT NULL
-)STRICT"""
+DB_FILE_PATH: str = Path("/home/k8thekat/").joinpath(DB_FILENAME).as_posix()
+SCHEMA_FILE_PATH: str = Path(__file__).parent.joinpath("schema.sql").as_posix()
 
 
-class Base():
+class Base:
     """
     Gatekeeper's DATABASE
 
@@ -110,30 +106,15 @@ class Base():
                 res = await conn.execute(SQL, parameters)
             return res.get_cursor()
 
-    async def _create_tables(self, schema: str | list[str]) -> None:
+    async def _create_tables(self) -> None:
         """
-        Creates the DATABASE tables. \n
-        ** Please have `CREATE TABLE IF NOT EXISTS` as your first line**
-
-        Args:
-            schema (str | list[str]): SQLITE schema setup. Supports list of schema's or single entry.
-        """
-        if isinstance(schema, list):
-            for table in schema:
-                await self._create_tables(schema=table)
-
-        else:
-            schema_name_end: int = schema.find("(")
-            self._logger.debug(f"Creating table: {schema[27:schema_name_end].strip()}")
-            await self._execute(SQL=schema)
-
-    async def _initialize_tables(self) -> None:
-        """
-        Creates the `Base` table.
+        Creates the DATABASE tables from `SCHEMA_FILE_PATH`. \n
 
         """
-        tables: str = VERSION_SETUP_SQL
-        await self._create_tables(schema=tables)
+        with open(file=SCHEMA_FILE_PATH, mode="r") as f:
+            async with asqlite.connect(database=DB_FILE_PATH) as db:
+                async with db.cursor() as cur:
+                    await cur.executescript(sql_script=f.read())
 
     async def _get_version(self) -> str | None:
         """

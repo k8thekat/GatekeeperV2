@@ -11,65 +11,6 @@ import utils.asqlite as asqlite
 from .base import Base
 from .types import *
 
-USERS_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER UNIQUE NOT NULL
-)STRICT"""
-
-IGN_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS ign (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    user_id INTEGER NOT NULL,
-    type_id INTEGER NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    UNIQUE(name, type_id),
-    UNIQUE(type_id, user_id)
-)STRICT"""
-
-METRICS_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS ign_metrics (
-    ign_id INTEGER NOT NULL,
-    instance_id TEXT NOT NULL,
-    last_login REAL,
-    playtime INTEGER,
-    created_at REAL,
-    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
-    FOREIGN KEY (ign_id) REFERENCES ign(id),
-    UNIQUE(ign_id, instance_id)
-)STRICT"""
-
-# This will be used to determine what instances a user can
-# interact with via `/commands` based upon their discord user id.
-USER_INSTANCES_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS user_instances (
-    user_id INTEGER NOT NULL,
-    instance_id TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
-    UNIQUE(user_id, instance_id)
-)STRICT"""
-
-# This will be used to determine what instances a discord user can
-# interact with via `/commands` based upon their discord role id.
-ROLE_INSTANCES_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS role_instances (
-    role_id INTEGER NOT NULL,
-    instance_id TEXT NOT NULL,
-    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
-    UNIQUE(role_id, instance_id)
-)STRICT"""
-
-# This will be used to determine what instances a discord user can
-# interact with via `/commands` based upon the discord guild id.
-GUILD_INSTANCES_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS guild_instances (
-    guild_id INTEGER NOT NULL,
-    instance_id TEXT NOT NULL,
-    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
-    UNIQUE(guild_id, instance_id)
-)STRICT"""
-
 
 @dataclass()
 class Metrics(Base):
@@ -153,7 +94,7 @@ class IGN(Base):
     @staticmethod
     def exists(func):
         @functools.wraps(wrapped=func)
-        async def wrapper_exists(self: IGN, *args, **kwargs) -> bool:
+        async def wrapper_exists(self: Self, *args, **kwargs) -> bool:
             res: Row | None = await self._fetchone(f"""SELECT id FROM ign WHERE id = ?""", (self.id,))
             if res is None:
                 raise ValueError(f"The `id` of this class doesn't exists in the `ign` table. ID:{self.id}")
@@ -365,7 +306,6 @@ class User(Base):
     This represents the data from the `user` table with methods to update it and the AMP Instances it has access to for commands.
     See `instance_ids`.
 
-
     """
     user_id: int
     igns: set[IGN] = field(default_factory=set)
@@ -493,18 +433,9 @@ class User(Base):
 
 class DBUser(Base):
     """
-    Represents a Discord User in our DATABASE.
+    Controls the interactions with our `user` table and any reference tables in our DATABASE.
 
     """
-
-    async def _initialize_tables(self) -> None:
-        """
-        Creates the `DBUser` tables.
-        """
-        tables: list[str] = [USERS_SETUP_SQL, IGN_SETUP_SQL, METRICS_SETUP_SQL,
-                             USER_INSTANCES_SETUP_SQL, ROLE_INSTANCES_SETUP_SQL,
-                             GUILD_INSTANCES_SETUP_SQL]
-        await self._create_tables(schema=tables)
 
     async def add_user(self, user_id: int) -> User | None:
         """

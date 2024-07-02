@@ -9,41 +9,12 @@ from .base import Base
 from .instance import Instance
 from .types import Instance_Banner_Settings
 
-BANNER_GROUP_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS banner_group (
-    group_id INTEGER PRIMARY KEY,
-    name TEXT UNIQUE
-)STRICT"""
-
-BANNER_GROUP_SERVER_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS banner_group_instances (
-    instance_id INTEGER NOT NULL,
-    group_id INTEGER NOT NULL,
-    FOREIGN KEY (instance_id) REFERENCES instances(instance_id),
-    FOREIGN KEY (group_id) REFERENCES banner_group(group_id),
-)STRICT"""
-
-BANNER_GROUP_CHANNELS_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS banner_group_channels (
-    id INTEGER PRIMARY KEY,
-    discord_guild_id INTEGER,
-    discord_channel_id INTEGER,
-    group_id INTEGER NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES banner_group(id)
-    UNIQUE(discord_guild_id, discord_channel_id, group_id)
-)STRICT"""
-
-BANNER_GROUP_MESSAGES_SETUP_SQL = """
-CREATE TABLE IF NOT EXISTS banner_group_messages (
-    group_channel_id INTEGER NOT NULL,
-    discord_message_id INTEGER,
-    FOREIGN KEY (group_channel_id) REFERENCES banner_group_channels(id)
-    UNIQUE(group_channel_id, discord_message_id)
-)STRICT"""
-
 
 @dataclass
 class Banner_Group_Message():
+    """
+    Represents the data from the `banner_group_messages` table.
+    """
     group_channel_id: int
     discord_message_id: int
 
@@ -60,7 +31,7 @@ class Banner_Group_Message():
 @dataclass
 class Banner_Group_Channel(Base):
     """
-    Represents the data from the Banner Group Channel table.
+    Represents the data from the `banner_group_channels` table.
     """
     id: int | None
     discord_guild_id: int | None
@@ -69,13 +40,11 @@ class Banner_Group_Channel(Base):
     discord_messages: set[Banner_Group_Message] | None
     _pool: InitVar[asqlite.Pool | None] = None
 
-    # TODO - Finish wrapper decorator to validate table entry before any methods.
-    # TODO - Update method for `discord_channel_id`
     @staticmethod
     def exists(func):
         @functools.wraps(wrapped=func)
-        async def wrapper_exists(self: Banner_Group_Channel, *args, **kwargs) -> bool:
-            res: Row | None = await self._fetchone(f"""SELECT id FROM banner_group_channels WHERE id = ?""", (self.id,))
+        async def wrapper_exists(self: Self, *args, **kwargs) -> bool:
+            res: Row | None = await self._fetchone(SQL=f"""SELECT id FROM banner_group_channels WHERE id = ?""", parameters=(self.id,))
             if res is None:
                 raise ValueError(f"The `id` of this class doesn't exist in the `banner_group_channels` table. ID: {self.id}")
             return await func(self, *args, **kwargs)
@@ -83,23 +52,35 @@ class Banner_Group_Channel(Base):
 
     @exists
     async def _remove_channel(self) -> None:
+        """
+        Remove this Banner Group Channel from the `banner_group_channels` table.
+        """
         self.discord_guild_id = None
         self.discord_channel_id = None
         self.discord_messages = None
-        await self._execute(f"""DELETE FROM banner_group_messages WHERE group_channel_id = ?""", (self.id,))
-        await self._execute(f"""DELETE FROM banner_group_channels WHERE id = ?""", (self.id,))
+        # await self._execute(f"""DELETE FROM banner_group_messages WHERE group_channel_id = ?""", (self.id,))
+        await self._execute(SQL=f"""DELETE FROM banner_group_channels WHERE id = ?""", parameters=(self.id,))
         self.id = None
 
     @exists
     async def update_discord_channel_id(self, discord_channel_id: int) -> Self:
-        await self._execute(f"""UPDATE banner_group_channels SET discord_channel_id = ? WHERE id = ?""", (discord_channel_id, self.id))
+        """
+        Update the `discord_channel_id` of this Banner Group Channel.
+
+        Args:
+            discord_channel_id (int): The Discord Channel ID.
+
+        Returns:
+            Self: An updated Banner Group Channel object.
+        """
+        await self._execute(SQL=f"""UPDATE banner_group_channels SET discord_channel_id = ? WHERE id = ?""", parameters=(discord_channel_id, self.id))
         self.discord_channel_id = discord_channel_id
         return self
 
     @exists
     async def add_message(self, discord_message_id: int) -> Self:
         """
-        add_message _summary_
+        Add a Discord Message ID to the `banner_group_messages` table related to this Banner Group Channel.
 
         Args:
             discord_message_id (int): The Discord Message ID.
@@ -108,9 +89,11 @@ class Banner_Group_Channel(Base):
             ValueError: The `discord_message_id` provided already exists in the `banner_group_messages` table.
 
         Returns:
-            Banner_Group_Message: A Banner Group Message dataclass object.
+            Self: An updated Banner Group Channel object.
         """
-        res: Row | None = await self._execute(f"""INSERT INTO banner_group_messages(group_channel_id, discord_message_id) VALUES(?, ?) ON CONFLICT(group_channel_id, discord_message_id) DO NOTHING RETURNING *""", (self.id, discord_message_id))
+        res: Row | None = await self._execute(SQL=f"""INSERT INTO banner_group_messages(group_channel_id, discord_message_id) VALUES(?, ?)
+                                              ON CONFLICT(group_channel_id, discord_message_id) DO NOTHING RETURNING *""",
+                                              parameters=(self.id, discord_message_id))
         if res is None:
             raise ValueError(f"The `discord_message_id` provided already exists in the `banner_group_messages` table. Message ID: {discord_message_id}")
 
@@ -129,10 +112,10 @@ class Banner_Group_Channel(Base):
             discord_message_id (int): The Discord Message ID.
 
         Returns:
-            Self: An Update Banner Group Channel object.
+            Self: An updated Banner Group Channel object.
         """
         assert self.id
-        await self._execute(f"""DELETE FROM banner_group_messages WHERE group_channel_id = ? and discord_message_id = ?""", (self.id, discord_message_id))
+        await self._execute(SQL=f"""DELETE FROM banner_group_messages WHERE group_channel_id = ? and discord_message_id = ?""", parameters=(self.id, discord_message_id))
         if self.discord_messages is None:
             return self
         for message in self.discord_messages:
@@ -149,7 +132,7 @@ class Banner_Group_Channel(Base):
         Returns:
             set[Banner_Group_Message]: Returns `self.discord_messages` attribute.
         """
-        res: list[Row] | None = await self._fetchall(f"""SELECT * FROM banner_group_messages WHERE group_channel_id = ?""", (self.id,))
+        res: list[Row] | None = await self._fetchall(SQL=f"""SELECT * FROM banner_group_messages WHERE group_channel_id = ?""", parameters=(self.id,))
         if res is None:
             return self.discord_messages
         self.discord_messages = set([Banner_Group_Message(**message) for message in res])
@@ -159,7 +142,7 @@ class Banner_Group_Channel(Base):
 @dataclass()
 class Banner_Group(Base):
     """
-    This houses the Group ID, Name, Instances and Banner_Group_Channels related to the Banner Group.
+    Represents the data from the `banner_group` table.
     """
     group_id: int | None
     name: str | None
@@ -170,8 +153,8 @@ class Banner_Group(Base):
     @staticmethod
     def exists(func):
         @functools.wraps(wrapped=func)
-        async def wrapper_exists(self: Banner_Group, *args, **kwargs) -> bool:
-            res: Row | None = await self._fetchone(f"""SELECT group_id FROM banner_group WHERE group_id = ?""", (self.group_id,))
+        async def wrapper_exists(self: Self, *args, **kwargs) -> bool:
+            res: Row | None = await self._fetchone(SQL=f"""SELECT group_id FROM banner_group WHERE group_id = ?""", parameters=(self.group_id,))
             if res is None:
                 raise ValueError(f"The `group_id` of this class doesn't exist in the `banner_group` table. Group ID: {self.group_id}")
             return await func(self, *args, **kwargs)
@@ -197,8 +180,8 @@ class Banner_Group(Base):
         self.name = None
         self.instances = None
         # await self._execute(f"""DELETE FROM banner_group_channels WHERE group_id=?""", (self.group_id,))
-        await self._execute(f"""DELETE FROM banner_group_instances WHERE group_id=?""", (self.group_id,))
-        await self._execute(f"""DELETE FROM banner_group WHERE name=?""", (name,))
+        # await self._execute(f"""DELETE FROM banner_group_instances WHERE group_id=?""", (self.group_id,))
+        await self._execute(SQL=f"""DELETE FROM banner_group WHERE name=?""", parameters=(name,))
         self.group_id = None
 
     @exists
@@ -217,8 +200,8 @@ class Banner_Group(Base):
             Self: An Updated Banner Group object.
         """
 
-        await self._execute(f"""INSERT INTO banner_group_instances(instance_id, group_id) VALUES(?, ?)""", (instance_id, self.group_id))
-        res: Row | None = await self._fetchone(f"""SELECT * FROM instances WHERE instance_id = ?""", (instance_id,))
+        await self._execute(SQL=f"""INSERT INTO banner_group_instances(instance_id, group_id) VALUES(?, ?)""", parameters=(instance_id, self.group_id))
+        res: Row | None = await self._fetchone(SQL=f"""SELECT * FROM instances WHERE instance_id = ?""", parameters=(instance_id,))
         if res is None:
             raise ValueError(f"The `instance_id` provided doesn't exists in the `instances` table. Instance ID: {instance_id}")
 
@@ -243,10 +226,10 @@ class Banner_Group(Base):
         Returns:
             Self: An Update Banner Group object.
         """
-        _exists: Row | None = await self._fetchone(f"""SELECT * FROM instances WHERE instance_id = ?""", (instance_id,))
+        _exists: Row | None = await self._fetchone(SQL=f"""SELECT * FROM instances WHERE instance_id = ?""", parameters=(instance_id,))
         if _exists is None:
             raise ValueError(f"The `instance_id` provided doesn't exists in the `instances` table. Instance ID: {instance_id}")
-        await self._execute(f"""DELETE FROM banner_group_instances WHERE instance_id=? AND group_id=?""", (instance_id, self.group_id))
+        await self._execute(SQL=f"""DELETE FROM banner_group_instances WHERE instance_id=? AND group_id=?""", parameters=(instance_id, self.group_id))
         if self.instances is None:
             return self
         for instance in self.instances:
@@ -266,7 +249,7 @@ class Banner_Group(Base):
         Returns:
             set[Instance] | None: Returns `self.instances`.
         """
-        res: list[Row] | None = await self._fetchall(f"""SELECT instance_id FROM banner_group_instances WHERE group_id=?""", (self.group_id,))
+        res: list[Row] | None = await self._fetchall(SQL=f"""SELECT instance_id FROM banner_group_instances WHERE group_id=?""", parameters=(self.group_id,))
         if res is None:
             return self.instances
         self.instances = set([Instance(**instance) for instance in res])
@@ -283,7 +266,7 @@ class Banner_Group(Base):
         Returns:
             set[Banner_Group_Channel] | None: Returns `self.channels`.
         """
-        res: list[Row] | None = await self._fetchall(f"""SELECT * FROM banner_group_channels WHERE group_id=?""", (self.group_id,))
+        res: list[Row] | None = await self._fetchall(SQL=f"""SELECT * FROM banner_group_channels WHERE group_id=?""", parameters=(self.group_id,))
         if res is None:
             return self.channels
         self.channels = set([Banner_Group_Channel(**channel) for channel in res])
@@ -305,9 +288,9 @@ class Banner_Group(Base):
         Returns:
             Banner_Group_Channel: A Banner Group Channel dataclass object.
         """
-        res: Row | None = await self._execute(f"""INSERT INTO banner_group_channels(discord_guild_id, discord_channel_id, group_id) VALUES(?, ?, ?)
+        res: Row | None = await self._execute(SQL=f"""INSERT INTO banner_group_channels(discord_guild_id, discord_channel_id, group_id) VALUES(?, ?, ?)
                             ON CONFLICT(discord_guild_id, discord_channel_id) DO NOTHING RETURNING *""",
-                                              (discord_guild_id, discord_channel_id, self.group_id))
+                                              parameters=(discord_guild_id, discord_channel_id, self.group_id))
         if res is None:
             raise ValueError(f"The `discord_guild_id` and `discord_channel_id` provided already exists in the `banner_group_channels` table. Guild ID: {discord_guild_id}, Channel ID: {discord_channel_id}")
         if self.channels is None:
@@ -318,18 +301,9 @@ class Banner_Group(Base):
 
 
 class DBBanner(Base):
-    async def _initialize_tables(self) -> None:
-        """
-        Creates the `Banner` tables.
-
-        """
-        tables: list[str] = [
-            BANNER_GROUP_SETUP_SQL,
-            BANNER_GROUP_SERVER_SETUP_SQL,
-            BANNER_GROUP_CHANNELS_SETUP_SQL,
-            BANNER_GROUP_MESSAGES_SETUP_SQL
-        ]
-        await self._create_tables(schema=tables)
+    """
+    Controls the interactions with our `banner_group` table and any reference tables in our DATABASE.
+    """
 
     async def add_banner_group(self, name: str) -> Banner_Group | None:
         """
@@ -345,13 +319,13 @@ class DBBanner(Base):
             Banner_Group | None: Returns a `Banner_Group` object if the name provided already exists in the Database.
 
         """
-        res: Row | None = await self._execute(f"""INSERT INTO banner_group(name) VALUES(?) ON CONFLICT(name) DO NOTHING RETURNING * """, (name,))
+        res: Row | None = await self._execute(SQL=f"""INSERT INTO banner_group(name) VALUES(?) ON CONFLICT(name) DO NOTHING RETURNING * """, parameters=(name,))
         if res is None:
             raise ValueError(f"The `name` provided already exists in the `banner_group` table. Name: {name}")
         return Banner_Group(**res)
 
     async def get_banner_group(self, name: str) -> Banner_Group | None:
-        res: Row | None = await self._fetchone(f"""SELECT * FROM banner_group WHERE name=?""", (name,))
+        res: Row | None = await self._fetchone(SQL=f"""SELECT * FROM banner_group WHERE name=?""", parameters=(name,))
         if res is None:
             raise ValueError(f"The `name` provided doesn't exists in the `banner_group` table. Name: {name}")
         _group = Banner_Group(**res)

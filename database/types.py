@@ -1,8 +1,6 @@
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import InitVar, dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Any, Union
+from typing import Any, Self, Union
 
 
 class ServerTypes(Enum):
@@ -33,6 +31,14 @@ class DonatorType(Enum):
     PRIVATE = 1
 
 
+class BannerType(Enum):
+    """
+    Banner Image Types; related to `instance_banner_settings` table.
+    """
+    EMBED = 0
+    IMAGES = 1
+
+
 class ButtonStyle(Enum):
     """
     Represents `discord.ButtonStyle` 2.0 values.
@@ -55,53 +61,151 @@ class ButtonStyle_Old(Enum):
     link: ButtonStyle = ButtonStyle.link
 
 
-@dataclass
+class Banner_Element():
+    """
+    Holds the data from the `banner_element_color` and `banner_element_position` table.\n
+
+    * Holds the x, y values and color for an element in the Instance_Banner_Settings.
+    """
+    x: int
+    y: int
+    color: str
+    _limit = 52429070  # X= 800, Y = 600
+
+    def __init__(self, value: int = 0, color: str = "#FFFFFF") -> None:
+        self.x = value >> 16
+        self.y = value & 0xFFFF
+        self.color = color
+
+    def pack(self) -> int:
+        """
+        Pack our X and Y values into a 32-bit integer.
+
+        Returns:
+            int: A 32-bit integer with the x and y values packed together.
+        """
+        res: int = (self.x << 16) | self.y
+        if self._limit < res:
+            raise Exception(f"Banner cords out of bounds: 32-bit int: {res} | Limit: {self._limit}")
+        return res
+
+    def set_cords(self, value: int):
+        self.x = value >> 16
+        self.y = value & 0xFFFF
+
+    def set_color(self, value: str):
+        self.color = value
+
+    @ staticmethod
+    def _pack(x: int, y: int) -> int:
+        """
+        Pack the provided X and Y values into a 32-bit integer.
+
+        Args:
+            x (int): int to pack
+            y (int): int to pack
+
+        Returns:
+            int: A 32-bit integer with the x and y values packed together.
+        """
+        return (x << 16) | y
+
+
+@ dataclass
 class Instance_Banner_Settings():
     """
-    Represents the data from the Database table banners.
+    Represent's the data associated with the `instance_banner_settings`, 
+    `banner_element_color` and `banner_element_position` table.
     """
     instance_id: str
     image_path: str = "./resources/banners/AMP_Banner.jpg"
     blur_background_amount: int = 0
-    color_header: str = "#85c1e9"
-    color_body: str = "#f2f3f4"
-    color_host: str = "#5dade2"
-    color_whitelist_open: str = "#f7dc6f"
-    color_whitelist_closed: str = "#cb4335"
-    color_donator: str = "#212f3c"
-    color_status_online: str = "#28b463"
-    color_status_offline: str = "#e74c3c"
-    color_player_limit_min: str = "#ba4a00"
-    color_player_limit_max: str = "#5dade2"
-    color_player_online: str = "#f7dc6f"
+    name: Banner_Element = field(default_factory=Banner_Element)
+    description: Banner_Element = field(default_factory=Banner_Element)
+    host: Banner_Element = field(default_factory=Banner_Element)
+    password: Banner_Element = field(default_factory=Banner_Element)
+    whitelist_open: Banner_Element = field(default_factory=Banner_Element)
+    whitelist_closed: Banner_Element = field(default_factory=Banner_Element)
+    donator: Banner_Element = field(default_factory=Banner_Element)
+    status_online: Banner_Element = field(default_factory=Banner_Element)
+    status_offline: Banner_Element = field(default_factory=Banner_Element)
+    metrics: Banner_Element = field(default_factory=Banner_Element)
+    unique_visors: Banner_Element = field(default_factory=Banner_Element)
+    player_limit_min: Banner_Element = field(default_factory=Banner_Element)
+    player_limit_max: Banner_Element = field(default_factory=Banner_Element)
+    players_online: Banner_Element = field(default_factory=Banner_Element)
+
+    @property
+    def exclude_properties(self) -> list[str]:
+        return ["instance_id", "image_path", "blur_background_amount"]
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in self.exclude_properties:
+            return super().__setattr__(name, value)
+        try:
+            cur: Any = getattr(self, name)
+        except AttributeError:
+            cur = None
+
+        # Make sure we don't already have a Banner_Element dataclass as our attribute
+        # if we do; update the attribute with the cords as an int value is going to be our X,Y
+        if isinstance(cur, Banner_Element):
+            # If we have an int value we need to convert it into cords and set it.
+            if isinstance(value, int):
+                # print("SET CORDS", value)
+                return cur.set_cords(value=value)
+            elif isinstance(value, str):
+                # print("SET COLOR", value)
+                return cur.set_color(value=value)
+            else:
+                raise ValueError(f"Invalid value expected `int` or `str`. Value: {type(value)}{value}")
+        else:
+            if isinstance(value, str):
+                # print("SET COLOR NO ELEMENT", value)
+                return super().__setattr__(name, Banner_Element(color=value))
+            elif isinstance(value, int):
+                # print("SET CORDS NO ELEMENT", value)
+                return super().__setattr__(name, Banner_Element(value=value))
+        pass
+
+    def parse(self, data: dict[str, Any]) -> Self:
+        for key, value in data.items():
+            setattr(self, key, value)
+        return self
 
 
-@dataclass
+@ dataclass
 class Instance_Button():
     """
-    Represent's the data `instance_buttons` table.
-    """
+Represent's the data `instance_buttons` table.
+"""
     instance_id: str = ""
     button_name: str = ""
     button_url: str = ""
     button_style: ButtonStyle = ButtonStyle.primary
 
 
-@dataclass
+@ dataclass
 class Instance_Settings():
     """
-    Represents the data from the `Instances` table.
+    Represents the data from the `instances` table.
 
     **THIS MUST BE UPDATED TO REPRESENT THE Instance DATABASE SCHEMA AT ALL TIMES** \n
     - The dataclass is used to validate column names and column type constraints.
 
     """
     instance_id: str = ""
+    description: bool = True
     host: str = ""  # could get the local IP from the API
     password: str = ""
     whitelist: WhitelistType = WhitelistType.OPEN
     whitelist_button: bool = False
+    emoji: str = ""
     donator: DonatorType = DonatorType.PUBLIC
+    donator_bypass: bool = False
+    metrics: bool = False
+    status: bool = True
+    unique_visitors: bool = False
     discord_console_channel_id: int = field(default=0)
     discord_role_id: int = field(default=0)
     avatar_url: str = ""
@@ -116,23 +220,3 @@ class Instance_Settings():
         if hasattr(Instance_Settings, name) and (type(getattr(Instance_Settings, name)) == bool):
             return super().__setattr__(name, bool(value))
         return super().__setattr__(name, value)
-
-
-@dataclass
-class Settings():
-    """
-    Represents the data from the `settings` table.
-    """
-    guild_id: int = 0  # references `guilds` table `id` value.
-    mod_role_id: int | None = None
-    donator_role_id: int | None = None
-    msg_timeout: int | None = None
-
-
-@dataclass
-class Owner():
-    """
-    Represents the data from the Database table `owners`.
-    """
-    guild_id: int
-    user_id: int
