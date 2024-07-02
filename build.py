@@ -9,7 +9,7 @@ project = "GatekeeperV2"
 
 # Grab Version from __init__.py
 version = ''
-with open('__init__.py') as file:
+with open('gatekeeper/__init__.py') as file:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', file.read(), re.MULTILINE).group(1)  # type:ignore
 
 if not version:

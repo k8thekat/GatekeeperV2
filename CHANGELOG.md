@@ -1,3 +1,80 @@
+## Version - 1.0.2a - [9d2c55d](https://github.com/k8thekat/GatekeeperV2/commit/9d2c55d)
+#### .gitignore
+- Added the `wiki` directory.
+
+#### __init__.py
+- Relocated to the `gatekeeper` directory.
+
+#### banner.py
+- Removed SQL schema and related code.
+	- Switched to `schema.sql`.
+- Updated docstrings.
+- Finished TODOs.
+- Updated typechecking parameters for `exists()` wrapper.
+- Added parameter definition to our method calls.
+- Added `ON DELETE CASCADE` to multiple tables.
+	- Removed relevant SQL code to Delete entries.
+
+#### base.py
+- Removed SQL schema and related code.
+	- Switched to `schema.sql`.
+
+#### instance.py
+- Removed SQL schema and related code.
+	- Switched to `schema.sql`.
+- Updated docstrings.
+- Added parameter definition to our method calls.
+- Added `Instance_Banner()` dataclass.
+	- Added `_pack()` method to convert our X,Y cords into a 32-bit integer.
+	- Added `color_validation()` method to verify Hex color codes.
+	- Added `pos_validation()` method to validate our X,Y cords are not larger than our Image Resolution.
+	- Added `property_validation()` method to validate the class attribute we are updating.
+	- Added `set_color()` method to update our `banner_element_color` table columns.
+	- Added `set_position()` method to update our `banner_element_position` table columns.
+- Re-built `_get_banner()` method to support our element position and element color tables.
+- Added `set_emoji()` method to our `Instance()` dataclass.
+
+#### schema.sql
+- Moved all Schema definitions to this file.
+- Added `ON DELETE CASCADE` to multiple relationship tables.
+- Added commenting.
+
+#### settings.py
+- Removed SQL schema and related code.
+	- Switched to `schema.sql`.
+- Converted `Settings()` dataclass into a DB dataclass and moved methods from `DBSettings()` to this new DB dataclass.
+	- Added `set_auto_update_banner()` method for our new `settings` column entry.
+	- Added `set_banner_type()` method for our new `settings` column entry.
+	- Added `set_auto_whitelist()` method for our new `settings` column entry.
+	- Added `set_whitelist_request_channel` method for our new `settings` column entry.
+	- Added methods for our new `whitelist_reply` table.
+
+#### types.py
+- Added `BannerType(Enum)` to handle Banner type distinction.
+- Added `Banner_Element()` to handle color and position of each banner element setting.
+- Updated attributes of `Instance_Banner_Settings()` to match the table values. Converted all attributes to used `Banner_Element()`.
+	- Added helper methods to handle updating/setting attributes of `Instance_Banner_Settings()`.
+- Updated `Instance_Settings()` attributes to match the table.
+
+#### user.py
+- Removed SQL schema and related code.
+	- Switched to `schema.sql`.
+- Updated type definition for our `exists()` method.
+
+#### token.ini
+- Basic outline in place.
+- Support for values in `DISCORD, AMP, GITHUB and WEBSITE`
+
+#### parser.py
+- Basic outline in place.
+
+#### main.py
+- Placeholder.
+
+#### Changelog.md
+- Pushed `1.0.1b` changes.
+- Version bump to `1.0.2b`
+
 ## Version - 1.0.2b - [ba040f5](https://github.com/k8thekat/GatekeeperV2/commit/ba040f5)
 #### banner.py
 - `isort` imports.
