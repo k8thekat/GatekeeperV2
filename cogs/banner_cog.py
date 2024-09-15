@@ -105,7 +105,7 @@ class Banner(commands.Cog):
         banner_file_list = _cwd.iterdir()
         for entry in banner_file_list:
             banners.append(entry.name)
-        return [app_commands.Choice(name=banner, value=banner) for banner in banners if current.lower() in banner.lower()]
+        return [app_commands.Choice(name=banner, value=banner) for banner in banners if current.lower() in banner.lower()][:25]
 
     async def autocomplete_bannergroups(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """This provides a Choice List of Banner Group Names"""
