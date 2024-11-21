@@ -28,13 +28,11 @@ ___
 
 ### **Requirements**
 _________
-- Python 3.8 or greater **Python 3.12 -> [Help](#installing-python-312)**
+- **Python 3.11 -> [Help](#installing-python-311)** or greater
     - See **[Setting up Python](#setting-up-python)**
-- Pip 22.1 or greater
 - Cube Coders AMP License
     - *https://cubecoders.com/AMP*
 - Discord Bot Account
-    - See [Creating a Discord Bot Account](https://discordpy.readthedocs.io/en/stable/discord.html)
 
 ## **Setting up Python**
 ___
@@ -63,7 +61,7 @@ Installers can be downloaded from [here](https://www.python.org/downloads/window
     - Make sure you select the option to install `pip`, and (under Advanced Options) the options to install Python for all users on the system and add it to the system’s environment variables. 
     - *Note* - This will mean Python is installed in Program Files and is essential to ensuring it can be used by AMP.
 
-### Installing Python 3.12
+### Installing Python 3.11
 
 Follow instructions listed above for your respective operating system.
 1. Open the `requirements.txt` and update `numpy==1.25.1` -> `numpy` and `yarl==1.9.2` -> `yarl` to no longer have version requirements.

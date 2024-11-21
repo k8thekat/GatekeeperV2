@@ -1,24 +1,25 @@
-'''
-   Copyright (C) 2021-2022 Katelynn Cadwallader.
+"""
+Copyright (C) 2021-2022 Katelynn Cadwallader.
 
-   This file is part of Gatekeeper, the AMP Minecraft Discord Bot.
+This file is part of Gatekeeper, the AMP Minecraft Discord Bot.
 
-   Gatekeeper is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+Gatekeeper is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
 
-   Gatekeeper is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-   License for more details.
+Gatekeeper is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with Gatekeeper; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA. 
+You should have received a copy of the GNU General Public License
+along with Gatekeeper; see the file COPYING.  If not, write to the Free
+Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
+02110-1301, USA.
 
-'''
+"""
+
 from __future__ import annotations
 
 import datetime
@@ -46,14 +47,14 @@ Handler = None
 DB_Version = 3.0
 
 
-class DBHandler():
+class DBHandler:
     def __init__(self):
         global DB_Version
         self.logger = logging.getLogger(__name__)
         self.DB = Database(Handler=self)
         self.DBConfig = self.DB.DBConfig
         self.SuccessfulDatabase = True
-        self.Bot_Version = ''
+        self.Bot_Version = ""
         self.bot_sync_required = False
 
         # Always update this value when changing Tables!
@@ -61,20 +62,22 @@ class DBHandler():
 
         # self.DBConfig.SetSetting('DB_Version', 2.5)
         # This should ONLY BE TRUE on new Database's going forward.
-        if self.DBConfig.GetSetting('DB_Version') == None and self.DB.DBExists:
+        if self.DBConfig.GetSetting("DB_Version") == None and self.DB.DBExists:
             DB_Update(self.DB, 1.0)
             return
 
         # This is to handle 1.0.0 Converting to new DB Version systems.
-        if type(self.DBConfig.GetSetting('DB_Version')) == str and self.DBConfig.GetSetting('DB_Version') == '1.0.0':
-            self.DBConfig.SetSetting('DB_Version', '1.0')
+        if type(self.DBConfig.GetSetting("DB_Version")) == str and self.DBConfig.GetSetting("DB_Version") == "1.0.0":
+            self.DBConfig.SetSetting("DB_Version", "1.0")
 
         # This handles version checks and calling all updates from version 1.0
-        if self.DB_Version > float(self.DBConfig.GetSetting('DB_Version')):
-            self.logger.warn(f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}")
-            self.DBUpdate = DB_Update(self.DB, float(self.DBConfig.GetSetting('DB_Version')))
+        if self.DB_Version > float(self.DBConfig.GetSetting("DB_Version")):
+            self.logger.warning(
+                f"**ATTENTION** Gatekeeperv2 Database is on Version: {self.DB_Version}, your Database is on Version: {self.DBConfig.GetSetting('DB_Version')}"
+            )
+            self.DBUpdate = DB_Update(self.DB, float(self.DBConfig.GetSetting("DB_Version")))
 
-        self.logger.info(f'DB Handler Initialization...DB Version: {self.DBConfig.GetSetting("DB_Version")}')
+        self.logger.info(f"DB Handler Initialization...DB Version: {self.DBConfig.GetSetting('DB_Version')}")
 
     def dbServerConsoleSetup(self, server):
         """This sets the DB Server Console_Flag, Console_Filtered and Discord_Console_Channel to default values"""
@@ -84,7 +87,7 @@ class DBHandler():
             self.DB_Server.Console_Filtered = True
             self.DB_Server.Discord_Console_Channel = None  # Should be a str, can be an int. eg 289450670581350401
         except:
-            self.logger.warning(f'**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}')
+            self.logger.warning(f"**ATTENTION** DBConfig Default Console Settings have been set for {server.FriendlyName}")
 
 
 def getDBHandler() -> DBHandler:
@@ -107,7 +110,9 @@ class Database:
         else:
             self.DBHandler = getDBHandler()
 
-        self._db = sqlite3.connect("discordBot.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, check_same_thread=False)
+        self._db = sqlite3.connect(
+            "discordBot.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, check_same_thread=False
+        )
         self._db.row_factory = sqlite3.Row
         if not self.DBExists:
             self._InitializeDatabase()
@@ -230,22 +235,22 @@ class Database:
 
         # Any Default Config Settings should go here during INIT.
         # Still keep the ones in Update; just in case existing DBs need updating.
-        self._AddConfig('DB_Version', DB_Version)
-        self._AddConfig('Guild_ID', None)
-        self._AddConfig('Moderator_role_id', None)
-        self._AddConfig('Permissions', 0)  # 0 = Default | 1 = Custom
+        self._AddConfig("DB_Version", DB_Version)
+        self._AddConfig("Guild_ID", None)
+        self._AddConfig("Moderator_role_id", None)
+        self._AddConfig("Permissions", 0)  # 0 = Default | 1 = Custom
         # self._AddConfig('Server_Info_Display', None)
-        self._AddConfig('Whitelist_Request_Channel', None)
-        self._AddConfig('WhiteList_Wait_Time', 5)
-        self._AddConfig('Auto_Whitelist', False)
+        self._AddConfig("Whitelist_Request_Channel", None)
+        self._AddConfig("WhiteList_Wait_Time", 5)
+        self._AddConfig("Auto_Whitelist", False)
         # self._AddConfig('Whitelist_Emoji_Pending', ':arrows_counterclockwise:')
         # self._AddConfig('Whitelist_Emoji_Done', ':ballot_box_with_check:')
-        self._AddConfig('Banner_Auto_Update', True)
-        self._AddConfig('Banner_Type', 0)  # 0 = Discord embeds | 1 = Custom Banner Images
-        self._AddConfig('Bot_Version', None)
-        self._AddConfig('Message_Timeout', 60)
+        self._AddConfig("Banner_Auto_Update", True)
+        self._AddConfig("Banner_Type", 0)  # 0 = Discord embeds | 1 = Custom Banner Images
+        self._AddConfig("Bot_Version", None)
+        self._AddConfig("Message_Timeout", 60)
         # Donator Settings
-        self._AddConfig('Donator_Bypass', False)
+        self._AddConfig("Donator_Bypass", False)
         self._AddConfig("Donator_role_id", None)
         # Prevent Server being removed from Banner Group
         self._AddConfig("Auto_BG_Remove", False)
@@ -253,7 +258,7 @@ class Database:
     def _execute(self, SQL, params):
         Retry = 0
 
-        while (1):
+        while 1:
             try:
                 cur = self._db.cursor()
                 cur.execute(SQL, params)
@@ -308,7 +313,7 @@ class Database:
     def AddServer(self, InstanceID: str, InstanceName: str = None, FriendlyName: str = None):
         return DBServer(db=self, InstanceID=InstanceID, InstanceName=InstanceName, FriendlyName=FriendlyName)
 
-    def GetServer(self, InstanceID: str = None, ServerID: str = None):
+    def GetServer(self, InstanceID: str | int | None = None, ServerID: str | None = None) -> DBServer | None:
         if not InstanceID and not ServerID:
             return None
 
@@ -333,7 +338,7 @@ class Database:
         (rows, cur) = self._fetchall("Select ID from Servers", tuple(SQLArgs))
         for entry in rows:
             Server = DBServer(self, ID=entry["ID"])
-            serverlist[Server.InstanceID] = ('InstanceName: ' + Server.InstanceName)
+            serverlist[Server.InstanceID] = "InstanceName: " + Server.InstanceName
 
         cur.close()
         return serverlist
@@ -341,7 +346,10 @@ class Database:
     def GetUser(self, value: str):
         """Finds a User using either DiscordID, DiscordName, MC_InGameName, MC_UUID, or SteamID."""
         # find the user
-        (row, cur) = self._fetchone(f"select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?", (value, value, value, value, value))
+        (row, cur) = self._fetchone(
+            "select ID from Users where DiscordID=? or DiscordName=? or MC_IngameName=? or MC_UUID=? or SteamID=?",
+            (value, value, value, value, value),
+        )
         if not row:
             cur.close()
             return None
@@ -352,11 +360,25 @@ class Database:
         cur.close()
         return ret
 
-    def AddUser(self, DiscordID: str = None, DiscordName: str = None, MC_IngameName: str = None, MC_UUID: str = None, SteamID: str = None):
+    def AddUser(
+        self,
+        DiscordID: str = None,
+        DiscordName: str = None,
+        MC_IngameName: str = None,
+        MC_UUID: str = None,
+        SteamID: str = None,
+    ):
         try:
-            return DBUser(db=self, DiscordID=DiscordID, DiscordName=DiscordName, MC_IngameName=MC_IngameName, MC_UUID=MC_UUID, SteamID=SteamID)
+            return DBUser(
+                db=self,
+                DiscordID=DiscordID,
+                DiscordName=DiscordName,
+                MC_IngameName=MC_IngameName,
+                MC_UUID=MC_UUID,
+                SteamID=SteamID,
+            )
         except Exception as e:
-            print('DBUser error', e)
+            print("DBUser error", e)
             return None
 
     def GetAllUsers(self):
@@ -412,11 +434,13 @@ class Database:
             cur.close()
             return False
 
-        regex = {'ID': row['ID'], 'Name': row['Name'], 'Type': row['Type'], 'Pattern': row['Pattern']}
+        regex = {"ID": row["ID"], "Name": row["Name"], "Type": row["Type"], "Pattern": row["Pattern"]}
         cur.close()
         return regex
 
-    def UpdateRegexPattern(self, Pattern: str = None, Type: int = None, ID: int = None, Pattern_Name: str = None, Name: str = None) -> bool:
+    def UpdateRegexPattern(
+        self, Pattern: str = None, Type: int = None, ID: int = None, Pattern_Name: str = None, Name: str = None
+    ) -> bool:
         """Update a Regex Pattern in the RegexPatterns Table using either its `Name` or `ID`"""
         if ID == None:
             (row, cur) = self._fetchone("SELECT ID FROM RegexPatterns WHERE Name=?", (Pattern_Name,))
@@ -427,19 +451,19 @@ class Database:
             cur.close()
 
         SQL = "UPDATE RegexPatterns SET "
-        SQL_Val = ''
+        SQL_Val = ""
         SQLArgs = []
 
         args = locals()
         for arg in args:
-            if args[arg] != None and arg in ['Pattern', 'Type', 'Name']:
+            if args[arg] != None and arg in ["Pattern", "Type", "Name"]:
                 if len(SQL_Val):
-                    SQL_Val = SQL_Val + ','
+                    SQL_Val = SQL_Val + ","
 
-                SQL_Val = SQL_Val + f'{arg}=? '
+                SQL_Val = SQL_Val + f"{arg}=? "
                 SQLArgs.append(args[arg])
 
-        SQL = SQL + SQL_Val + 'WHERE ID=?'
+        SQL = SQL + SQL_Val + "WHERE ID=?"
         SQLArgs.append(ID)  # Need to append ID last.
         self._execute(SQL, tuple(SQLArgs))
         return True
@@ -451,7 +475,7 @@ class Database:
         SQLArgs = []
         (rows, cur) = self._fetchall("SELECT ID, Name, Type, Pattern FROM RegexPatterns ORDER BY ID", tuple(SQLArgs))
         for entry in rows:
-            regex_patterns[entry['ID']] = {'Name': entry['Name'], 'Type': entry['Type'], 'Pattern': entry['Pattern']}
+            regex_patterns[entry["ID"]] = {"Name": entry["Name"], "Type": entry["Type"], "Pattern": entry["Pattern"]}
 
         cur.close()
         return regex_patterns
@@ -465,7 +489,7 @@ class Database:
         for entry in rows:
             # reply = {'ID' : entry["ID"], 'Message' : entry["Message"]}
             # reply = {entry["Message"]}
-            whitelist_replies.append(entry['Message'])
+            whitelist_replies.append(entry["Message"])
 
         cur.close()
         return whitelist_replies
@@ -488,7 +512,13 @@ class Database:
 
     def Get_BannerGroup(self, name: str = None, ID: int = None):
         """Selects a Banner Group Table matching the `name` provided."""
-        (ret, cur) = self._fetchone("SELECT ID FROM BannerGroup WHERE name=? or ID=?", (name, ID,))
+        (ret, cur) = self._fetchone(
+            "SELECT ID FROM BannerGroup WHERE name=? or ID=?",
+            (
+                name,
+                ID,
+            ),
+        )
         if not ret:
             return None
         cur.close()
@@ -508,26 +538,32 @@ class Database:
         return `Banner_info[entry['name']] = {'InstanceName': list[entry['InstanceName']], 'Discord_Channel': list[entry['Discord_Channel_ID']]}`"""
         banner_id = self.Get_BannerGroup(name)
         Banner_info = {}
-        (row, cur) = self._fetchall("""SELECT BG.*, Servers.InstanceName FROM Servers, BannerGroup as BG, BannerGroupServers as BGS 
-                                    WHERE BG.ID=? AND Servers.ID=BGS.ServerID AND BGS.BannerGroupID=BG.ID""", (banner_id,))
+        (row, cur) = self._fetchall(
+            """SELECT BG.*, Servers.InstanceName FROM Servers, BannerGroup as BG, BannerGroupServers as BGS 
+                                    WHERE BG.ID=? AND Servers.ID=BGS.ServerID AND BGS.BannerGroupID=BG.ID""",
+            (banner_id,),
+        )
 
         if row:
             for entry in row:
-                if entry['name'] not in Banner_info:
-                    Banner_info[entry['name']] = {'InstanceName': [], 'Discord_Channel': []}
+                if entry["name"] not in Banner_info:
+                    Banner_info[entry["name"]] = {"InstanceName": [], "Discord_Channel": []}
 
-                if entry['InstanceName'] not in Banner_info[entry['name']]['InstanceName']:
-                    Banner_info[entry['name']]['InstanceName'].append(entry['InstanceName'])
+                if entry["InstanceName"] not in Banner_info[entry["name"]]["InstanceName"]:
+                    Banner_info[entry["name"]]["InstanceName"].append(entry["InstanceName"])
 
-        (row, cur) = self._fetchall("""SELECT BG.*, BGC.Discord_Channel_ID FROM BannerGroup as BG, BannerGroupChannels as BGC
-                                    WHERE BG.ID=? AND BGC.BannerGroupID=BG.ID""", (banner_id,))
+        (row, cur) = self._fetchall(
+            """SELECT BG.*, BGC.Discord_Channel_ID FROM BannerGroup as BG, BannerGroupChannels as BGC
+                                    WHERE BG.ID=? AND BGC.BannerGroupID=BG.ID""",
+            (banner_id,),
+        )
         if row:
             for entry in row:
-                if entry['name'] not in Banner_info:
-                    Banner_info[entry['name']] = {'InstanceName': [], 'Discord_Channel': []}
+                if entry["name"] not in Banner_info:
+                    Banner_info[entry["name"]] = {"InstanceName": [], "Discord_Channel": []}
 
-                if entry['Discord_Channel_ID'] not in Banner_info[entry['name']]['Discord_Channel']:
-                    Banner_info[entry['name']]['Discord_Channel'].append(entry['Discord_Channel_ID'])
+                if entry["Discord_Channel_ID"] not in Banner_info[entry["name"]]["Discord_Channel"]:
+                    Banner_info[entry["name"]]["Discord_Channel"].append(entry["Discord_Channel_ID"])
 
         cur.close()
         return Banner_info
@@ -564,17 +600,25 @@ class Database:
         `example: {916195413839712277: {'name': 'TestBannerGroup', 'guild_id': 602285328320954378, 'servers': [1], 'messages': [1079236992145051668]}}`"""
         Banners = {}
         # We need to get each BannerGroupID and then get the corresponding Discord_Message_IDs, ServerIDs and Name from related tables.
-        (row, cur) = self._fetchall("""SELECT BGC.*, BGS.ServerID, BG.name, BG.ID, BGM.Discord_Message_ID
+        (row, cur) = self._fetchall(
+            """SELECT BGC.*, BGS.ServerID, BG.name, BG.ID, BGM.Discord_Message_ID
                                         FROM BannerGroup as BG, BannerGroupServers as BGS, BannerGroupChannels as BGC 
                                         LEFT JOIN BannerGroupMessages as BGM                       
                                         ON BGM.BannerGroupChannelsID=BGC.ID
                                         WHERE BGS.BannerGroupID=BG.ID and BGC.BannerGroupID=BG.ID
-                                        ORDER BY BGC.Discord_Channel_ID""", ())
+                                        ORDER BY BGC.Discord_Channel_ID""",
+            (),
+        )
 
         for entry in row:
             # if BannerGroupChannels.Discord_Channel_ID not in Banners:
             if entry["Discord_Channel_ID"] not in Banners:
-                Banners[entry["Discord_Channel_ID"]] = {"name": entry["name"], "guild_id": entry["Discord_Guild_ID"], "servers": [], "messages": []}
+                Banners[entry["Discord_Channel_ID"]] = {
+                    "name": entry["name"],
+                    "guild_id": entry["Discord_Guild_ID"],
+                    "servers": [],
+                    "messages": [],
+                }
 
             # if BannerGroupServers.ServerID not in Banners:
             if entry["ServerID"] not in Banners[entry["Discord_Channel_ID"]]["servers"]:
@@ -598,7 +642,9 @@ class Database:
 
         server_id = ret["ID"]
         # Lets use our ServerID and attempt to find a match in our DB. Ideally we don't want a match; so we can add an entry. Otherwise we return.
-        (ret, cur) = self._fetchone("SELECT ServerID FROM BannerGroupServers WHERE ServerID=? and BannerGroupID=?", (server_id, banner_id))
+        (ret, cur) = self._fetchone(
+            "SELECT ServerID FROM BannerGroupServers WHERE ServerID=? and BannerGroupID=?", (server_id, banner_id)
+        )
         if not ret and banner_id != None:
             self._execute("INSERT INTO BannerGroupServers(ServerID, BannerGroupID) values(?, ?)", (server_id, banner_id))
             return True
@@ -619,24 +665,38 @@ class Database:
     def Add_Channel_to_BannerGroup(self, banner_groupname: str, channelid: int, guildid: int):
         """Add a Channel to a BannerGroups listing."""
         banner_id = self.Get_BannerGroup(banner_groupname)
-        (ret, cur) = self._fetchone("SELECT ID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=? and BannerGroupID=?", (channelid, guildid, banner_id))
+        (ret, cur) = self._fetchone(
+            "SELECT ID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=? and BannerGroupID=?",
+            (channelid, guildid, banner_id),
+        )
         if not ret and banner_id != None:
-            self._execute("INSERT INTO BannerGroupChannels(Discord_Channel_ID, Discord_Guild_ID, BannerGroupID) values(?, ?, ?)", (channelid, guildid, banner_id))
+            self._execute(
+                "INSERT INTO BannerGroupChannels(Discord_Channel_ID, Discord_Guild_ID, BannerGroupID) values(?, ?, ?)",
+                (channelid, guildid, banner_id),
+            )
             return True
         cur.close()
         return False
 
     def Remove_Channel_from_BannerGroup(self, channelid: int, guildid: int):
         """Remove a Channel from a BannerGroups listing, this also removes any related Banner Group Message table entries."""
-        (ret, cur) = self._fetchone("SELECT BannerGroupID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=?", (channelid, guildid))
+        (ret, cur) = self._fetchone(
+            "SELECT BannerGroupID FROM BannerGroupChannels WHERE Discord_Channel_ID=? and Discord_Guild_ID=?",
+            (channelid, guildid),
+        )
         if not ret:
             return
         banner_id = ret["BannerGroupID"]
-        (ret, cur) = self._fetchone("SELECT ID FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid))
+        (ret, cur) = self._fetchone(
+            "SELECT ID FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid)
+        )
         if not ret:
             return
         self._execute("DELETE FROM BannerGroupMessages WHERE BannerGroupChannelsID=?", (ret["ID"],))
-        self._execute("DELETE FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=? AND Discord_Guild_ID=?", (banner_id, channelid, guildid))
+        self._execute(
+            "DELETE FROM BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=? AND Discord_Guild_ID=?",
+            (banner_id, channelid, guildid),
+        )
         cur.close()
 
     def Get_Channels_for_BannerGroup(self, banner_groupname: str):
@@ -645,12 +705,14 @@ class Database:
         bgc_list = []
         if banner_id != None:
             # We need to get the BGC ID matching the Banner Group ID and Discord Channel ID First.
-            (row, cur) = self._fetchall("SELECT Discord_Channel_ID FROM BannerGroupChannels WHERE BannerGroupID=?", (banner_id,))
+            (row, cur) = self._fetchall(
+                "SELECT Discord_Channel_ID FROM BannerGroupChannels WHERE BannerGroupID=?", (banner_id,)
+            )
             if not row:
                 return
             for entry in row:
-                if entry['Discord_Channel_ID'] not in bgc_list:
-                    bgc_list.append(entry['Discord_Channel_ID'])
+                if entry["Discord_Channel_ID"] not in bgc_list:
+                    bgc_list.append(entry["Discord_Channel_ID"])
             cur.close()
             return bgc_list
 
@@ -659,12 +721,17 @@ class Database:
         banner_id = self.Get_BannerGroup(banner_groupname)
         if banner_id != None:
             # We need to get the BannerGroupChannel ID and add Messages using its ID
-            (ret, cur) = self._fetchone("SELECT ID from BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid))
+            (ret, cur) = self._fetchone(
+                "SELECT ID from BannerGroupChannels WHERE BannerGroupID=? AND Discord_Channel_ID=?", (banner_id, channelid)
+            )
             if not ret:
                 return
             BGC_ID = ret["ID"]
             cur.close()
-            self._execute("INSERT INTO BannerGroupMessages(BannerGroupChannelsID, Discord_Message_ID) values(?, ?)", (BGC_ID, messageid))
+            self._execute(
+                "INSERT INTO BannerGroupMessages(BannerGroupChannelsID, Discord_Message_ID) values(?, ?)",
+                (BGC_ID, messageid),
+            )
 
     def Remove_Message_from_BannerGroup(self, messageid: int):
         """Removes a Discord Message ID from a BannerGroup"""
@@ -675,12 +742,15 @@ class Database:
         banner_id = self.Get_BannerGroup(banner_groupname)
         if banner_id == None:
             return
-        (ret, cur) = self._fetchall("""SELECT Discord_Message_ID, BannerGroupChannels.ID, BannerGroupChannels.Discord_Channel_ID FROM BannerGroupMessages, BannerGroupChannels 
-                                    WHERE BannerGroupChannels.BannerGroupID=? and BannerGroupMessages.BannerGroupChannelsID=BannerGroupChannels.ID""", (banner_id,))
+        (ret, cur) = self._fetchall(
+            """SELECT Discord_Message_ID, BannerGroupChannels.ID, BannerGroupChannels.Discord_Channel_ID FROM BannerGroupMessages, BannerGroupChannels 
+                                    WHERE BannerGroupChannels.BannerGroupID=? and BannerGroupMessages.BannerGroupChannelsID=BannerGroupChannels.ID""",
+            (banner_id,),
+        )
         banner_info = {}
         for entry in ret:
             if entry["Discord_Channel_ID"] not in banner_info:
-                banner_info[entry["Discord_Channel_ID"]] = {'messages': []}
+                banner_info[entry["Discord_Channel_ID"]] = {"messages": []}
             if entry["Discord_Message_ID"] not in banner_info[entry["Discord_Channel_ID"]]:
                 banner_info[entry["Discord_Channel_ID"]]["messages"].append(entry["Discord_Message_ID"])
         cur.close()
@@ -719,7 +789,13 @@ class Database:
         jdata = dump_to_json({"Type": "UpdateConfig", "Name": Name, "Value": Value})
         self._logdata(jdata)
 
-    def GetLog(self, AfterTime: datetime.datetime = None, BeforeTime: datetime.datetime = None, StartingID: int = None, Limit: int = 100):
+    def GetLog(
+        self,
+        AfterTime: datetime.datetime = None,
+        BeforeTime: datetime.datetime = None,
+        StartingID: int = None,
+        Limit: int = 100,
+    ):
         SQL = "Select L.ID, L.Log, L.LogDate from Log L"
         Params = []
         if StartingID or AfterTime or BeforeTime:
@@ -776,9 +852,16 @@ class Database:
             qentries = ("?," * Count)[:-1]
             Params = tuple(NeededUsers[0:Count])
             NeededUsers = NeededUsers[Count:]
-            (rows, cur) = self._fetchall(f"Select ID, DiscordID, DiscordName, IngameName, UUID from Users where ID in ({qentries})", tuple(Params))
+            (rows, cur) = self._fetchall(
+                f"Select ID, DiscordID, DiscordName, IngameName, UUID from Users where ID in ({qentries})", tuple(Params)
+            )
             for entry in rows:
-                Users[int(entry["ID"])] = {"DiscordID": int(entry["DiscordID"]), "DiscordName": entry["DiscordName"], "IngameName": entry["IngameName"], "UUID": entry["UUID"]}
+                Users[int(entry["ID"])] = {
+                    "DiscordID": int(entry["DiscordID"]),
+                    "DiscordName": entry["DiscordName"],
+                    "IngameName": entry["IngameName"],
+                    "UUID": entry["UUID"],
+                }
             cur.close()
 
         # get servers
@@ -828,7 +911,17 @@ class DBUser:
     SteamID: str
     Role: str
 
-    def __init__(self, db: Database, ID: int = None, DiscordID: str = None, DiscordName: str = None, MC_IngameName: str = None, MC_UUID: str = None, SteamID: str = None, Role: str = None):
+    def __init__(
+        self,
+        db: Database,
+        ID: int = None,
+        DiscordID: str = None,
+        DiscordName: str = None,
+        MC_IngameName: str = None,
+        MC_UUID: str = None,
+        SteamID: str = None,
+        Role: str = None,
+    ):
         # set defaults
         Params = locals()
         Params.pop("self")
@@ -901,51 +994,56 @@ class DBUser:
 
 class DBServer:
     """DB Server Attributes:
-        `InstanceID: str` \n
-        `InstanceName: str` \n
-        `FriendlyName: str` \n
-        `DisplayName: str` \n
-        `Description: str` \n
-        `Host: str` \n
-        `Whitelist: bool (0/1)` \n
-        `Whitelist_disabled: bool` \n
-        `Donator: bool (0/1)` \n
-        `Discord_Console_Channel: int` \n
-        `Discord_Chat_Channel: int` \n
-        `Discord_Chat_Prefix: str` \n
-        `Discord_Event_Channel: int` \n
-        `Discord_Role: int` \n
-        `Console_Flag: bool (0/1)` \n
-        `Console_Filtered: bool (0/1)` \n
-        `Console_Filtered_Type: integer (0 = Blacklist| 1 = Whitelist)` \n
-        `Avatar_url: str` \n
-        `Hidden: bool (0/1)` \n
-        """
+    `InstanceID: str` \n
+    `InstanceName: str` \n
+    `FriendlyName: str` \n
+    `DisplayName: str` \n
+    `Description: str` \n
+    `Host: str` \n
+    `Whitelist: bool (0/1)` \n
+    `Whitelist_disabled: bool` \n
+    `Donator: bool (0/1)` \n
+    `Discord_Console_Channel: int` \n
+    `Discord_Chat_Channel: int` \n
+    `Discord_Chat_Prefix: str` \n
+    `Discord_Event_Channel: int` \n
+    `Discord_Role: int` \n
+    `Console_Flag: bool (0/1)` \n
+    `Console_Filtered: bool (0/1)` \n
+    `Console_Filtered_Type: integer (0 = Blacklist| 1 = Whitelist)` \n
+    `Avatar_url: str` \n
+    `Hidden: bool (0/1)` \n
+    """
 
-    def __init__(self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, FriendlyName: str = None):
+    Discord_Chat_Prefix: str
+
+    def __init__(
+        self, db: Database, ID: int = None, InstanceID: str = None, InstanceName: str = None, FriendlyName: str = None
+    ):
         # set defaults
         Params = locals()
         Params.pop("self")
         Params.pop("db")
         Params.pop("__class__")
         super().__setattr__("_db", db)
-        server_attr = {'DisplayName': None,
-                       'Description': None,
-                       'Host': '192.168.1.1',
-                       'Whitelist': False,
-                       'Whitelist_disabled': 0,
-                       'Donator': 0,
-                       'Console_Flag': 1,
-                       'Console_Filtered': 0,
-                       'Console_Filtered_Type': 0,
-                       'Discord_Console_Channel': None,
-                       'Discord_Chat_Channel': None,
-                       'Discord_Chat_Prefix': None,
-                       'Discord_Event_Channel': None,
-                       'Discord_Role': None,
-                       'Avatar_url': None,
-                       'Hidden': 0
-                       }
+        server_attr = {
+            "DisplayName": None,
+            "Description": None,
+            "Host": "192.168.1.1",
+            "Whitelist": False,
+            "Whitelist_disabled": 0,
+            "Donator": 0,
+            "Console_Flag": 1,
+            "Console_Filtered": 0,
+            "Console_Filtered_Type": 0,
+            "Discord_Console_Channel": None,
+            "Discord_Chat_Channel": None,
+            "Discord_Chat_Prefix": None,
+            "Discord_Event_Channel": None,
+            "Discord_Role": None,
+            "Avatar_url": None,
+            "Hidden": 0,
+        }
 
         for key, value in server_attr.items():
             super().__setattr__(key, value)
@@ -953,7 +1051,7 @@ class DBServer:
         for entry in Params:
             super().__setattr__(entry, Params[entry])
 
-        if (self.ID is not None):
+        if self.ID is not None:
             super().__setattr__("ID", int(self.ID))
 
         # if given a database and ID then look up our values
@@ -975,7 +1073,7 @@ class DBServer:
             if server:
                 raise Exception("InstanceID already found")
 
-           # DBFields = Params
+            # DBFields = Params
 
             # create the sql line
             SQL = "insert into Servers ("
@@ -1009,13 +1107,13 @@ class DBServer:
             jdata = dump_to_json({"Type": "AddServer", "ServerID": self.ID, "InstanceID": InstanceID})
             self._db._logdata(jdata)
 
-        if (self.Discord_Console_Channel is not None):
+        if self.Discord_Console_Channel is not None:
             super().__setattr__("Discord_Console_Channel", int(self.Discord_Console_Channel))
-        if (self.Discord_Chat_Channel is not None):
+        if self.Discord_Chat_Channel is not None:
             super().__setattr__("Discord_Chat_Channel", int(self.Discord_Chat_Channel))
-        if (self.Discord_Event_Channel is not None):
+        if self.Discord_Event_Channel is not None:
             super().__setattr__("Discord_Event_Channel", int(self.Discord_Event_Channel))
-        if (self.Discord_Role is not None):
+        if self.Discord_Role is not None:
             super().__setattr__("Discord_Role", int(self.Discord_Role))
 
     def __setattr__(self, name: str, value):
@@ -1026,7 +1124,13 @@ class DBServer:
             # convert to bool
             value = bool(value)
 
-        elif name in ["Discord_Console_Channel", "Discord_Chat_Channel", "Discord_Event_Channel", "Discord_Role", "Console_Filtered_Type"]:
+        elif name in [
+            "Discord_Console_Channel",
+            "Discord_Chat_Channel",
+            "Discord_Event_Channel",
+            "Discord_Role",
+            "Console_Filtered_Type",
+        ]:
             if value is not None:
                 value = int(value)
 
@@ -1083,9 +1187,12 @@ class DBServer:
         Returns `dict['ID': {'Name': entry['Name'], 'Type': entry['Type'], 'Pattern': entry['Pattern']}]`"""
         regex_patterns = {}
         SQLArgs = []
-        (rows, cur) = self._db._fetchall("SELECT RP.ID, RP.Name, RP.Type, RP.Pattern FROM ServerRegexPatterns SRP, RegexPatterns RP WHERE SRP.ServerID=? and SRP.RegexPatternID = RP.ID", (self.ID,))
+        (rows, cur) = self._db._fetchall(
+            "SELECT RP.ID, RP.Name, RP.Type, RP.Pattern FROM ServerRegexPatterns SRP, RegexPatterns RP WHERE SRP.ServerID=? and SRP.RegexPatternID = RP.ID",
+            (self.ID,),
+        )
         for entry in rows:
-            regex_patterns[entry['ID']] = {'Name': entry['Name'], 'Type': entry['Type'], 'Pattern': entry['Pattern']}
+            regex_patterns[entry["ID"]] = {"Name": entry["Name"], "Type": entry["Type"], "Pattern": entry["Pattern"]}
 
         cur.close()
         return regex_patterns
@@ -1119,8 +1226,8 @@ class DBConfig:
         if name == "_ConfigNameToID":
             return val
 
-        if name == 'Message_Timeout':
-            if (type(val) == str) and val == 'None':
+        if name == "Message_Timeout":
+            if (type(val) == str) and val == "None":
                 val = None
 
             if (type(val) == str) and val.isnumeric():
@@ -1167,21 +1274,23 @@ class DBConfig:
 
 class DBBanner:
     def __init__(self, DB: Database, ServerID: int = None, background_path: str = None):
-        self._attr_list = {'_db': DB,
-                           'ServerID': int(ServerID),
-                           'background_path': background_path,
-                           'blur_background_amount': 0,
-                           'color_header': "#85c1e9",
-                           'color_body': "#f2f3f4",
-                           'color_host': "#5dade2",
-                           'color_whitelist_open': "#f7dc6f",
-                           'color_whitelist_closed': "#cb4335",
-                           'color_donator': "#212f3c",
-                           'color_status_online': "#28b463",
-                           'color_status_offline': "#e74c3c",
-                           'color_player_limit_min': "#ba4a00",
-                           'color_player_limit_max': "#5dade2",
-                           'color_player_online': "#f7dc6f"}
+        self._attr_list = {
+            "_db": DB,
+            "ServerID": int(ServerID),
+            "background_path": background_path,
+            "blur_background_amount": 0,
+            "color_header": "#85c1e9",
+            "color_body": "#f2f3f4",
+            "color_host": "#5dade2",
+            "color_whitelist_open": "#f7dc6f",
+            "color_whitelist_closed": "#cb4335",
+            "color_donator": "#212f3c",
+            "color_status_online": "#28b463",
+            "color_status_offline": "#e74c3c",
+            "color_player_limit_min": "#ba4a00",
+            "color_player_limit_max": "#5dade2",
+            "color_player_online": "#f7dc6f",
+        }
 
         for attr in self._attr_list:
             super().__setattr__(attr, self._attr_list[attr])
@@ -1197,7 +1306,7 @@ class DBBanner:
             SQLVars = []
 
             for entry in self._attr_list:
-                if entry.startswith('_'):
+                if entry.startswith("_"):
                     continue
                 SQL += entry + ","
                 SQLVars.append(self._attr_list[entry])
@@ -1212,8 +1321,7 @@ class DBBanner:
         cur.close()
 
     def __setattr__(self, name: str, value):
-
-        if name == 'blur_background_amount':
+        if name == "blur_background_amount":
             value = int(value)
 
         super().__setattr__(name, value)

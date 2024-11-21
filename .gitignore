@@ -13,3 +13,4 @@ discordBot.db*
 sqlite3.exe
 .env
 local.py
+.venv/*
