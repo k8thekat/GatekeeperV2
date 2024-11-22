@@ -30,7 +30,6 @@ from datetime import UTC, datetime, timezone
 from typing import TYPE_CHECKING, TypedDict
 
 import DB
-from AMP import AMPInstance
 
 if TYPE_CHECKING:
     from AMP import AMPInstance
