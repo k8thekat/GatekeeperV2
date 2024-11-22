@@ -1,3 +1,9 @@
+__**Update 4.7.4**__
+# Hotfix for issue #102
+- Added a TypedDict for Console entries.
+- Fixed logic in time handling for AMP 2.6.0.0
+- Added attributes to DBServer to fix linter in AMP_Console.py.
+
 __**Update**__
 - stealth update; no version change with this.
 - Fixed minor issues inside `banner_cog`
