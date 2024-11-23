@@ -1,0 +1,3 @@
+- Create a deployment command to create the channels/roles for a freshly launched server with the name provided.
+- Ping/check nameservers/DNS
+- Ping/check Mojang Auth servers

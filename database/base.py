@@ -123,8 +123,8 @@ class Base:
         Returns:
             str | None: DATABASE version (Major.Minor.Revision) eg `1.0.2`
         """
-        res: Row | None = await self._select_column(table="version", column="value")
-
+        # res: Row | None = await self._select_column(table="version", column="value")
+        res: Row | None = await self._fetchone(SQL=f"""SELECT value FROM version""")
         return res["value"] if res is not None else None
 
     async def _set_version(self):
@@ -138,107 +138,107 @@ class Base:
         """
         Updates the DATABASE with the current version the script is at.
         """
-        await self._execute(SQL="""UPDATE version SET value = ?""", parameters=(VERSION,))
+        await self._execute(SQL="""UPDATE version SET value=?""", parameters=(VERSION,))
 
-    async def _insert_row(self, table: str, column: str, value: str | int | bool) -> None | Row:
-        """
-        A generic SQL insert method.
+    # async def _insert_row(self, table: str, column: str, value: str | int | bool) -> None | Row:
+    #     """
+    #     A generic SQL insert method.
 
-        Args:
-            table (str): The TABLE to be used.
-            column (str): The COLUMN to insert into.
-            value (str | int | bool): The VALUE to be inserted into the SQL table column specified.
-        Raises:
-            sqlite3.OperationalError: If the `column` or `table` does not exists.
-        Returns:
-            sqlite.Row | None: Returns Row.
-        """
-        res: Row | None = await self._fetchone(SQL=f"""INSERT INTO {table}({column}) VALUES(?) ON CONFLICT({column}) DO NOTHING RETURNING *""", parameters=(value,))
-        return res if not None else None
+    #     Args:
+    #         table (str): The TABLE to be used.
+    #         column (str): The COLUMN to insert into.
+    #         value (str | int | bool): The VALUE to be inserted into the SQL table column specified.
+    #     Raises:
+    #         sqlite3.OperationalError: If the `column` or `table` does not exists.
+    #     Returns:
+    #         sqlite.Row | None: Returns Row.
+    #     """
+    #     res: Row | None = await self._fetchone(SQL=f"""INSERT INTO {table}({column}) VALUES(?) ON CONFLICT({column}) DO NOTHING RETURNING *""", parameters=(value,))
+    #     return res if not None else None
 
-    async def _update_row_where(self, table: str, column: str, where: str | None, where_value: str | int | bool, value: str | int | bool) -> None | Row:
-        """
-        A generic SQL update method with a WHERE clause.
+    # async def _update_row_where(self, table: str, column: str, where: str | None, where_value: str | int | bool, value: str | int | bool) -> None | Row:
+    #     """
+    #     A generic SQL update method with a WHERE clause.
 
-        Args:
-            table (str): The TABLE to be used.
-            column (str): The COLUMN to be updated.
-            where (str | int | bool): The VALUE to match in the COLUMN. `WHERE {where} = ?`
-            where_value (str | int | bool): The VALUE to search for with WHERE.
-            value (str | int | bool): The VALUE to be updated in the SQL table column specified.
+    #     Args:
+    #         table (str): The TABLE to be used.
+    #         column (str): The COLUMN to be updated.
+    #         where (str | int | bool): The VALUE to match in the COLUMN. `WHERE {where} = ?`
+    #         where_value (str | int | bool): The VALUE to search for with WHERE.
+    #         value (str | int | bool): The VALUE to be updated in the SQL table column specified.
 
-        Raises:
-            sqlite3.OperationalError: If `column`or `table` does not exist.
+    #     Raises:
+    #         sqlite3.OperationalError: If `column`or `table` does not exist.
 
-        Returns:
-            sqlite.Row | None: Returns Row.
-        """
-        if where is None:
-            res: Row | None = await self._fetchone(SQL=f"""UPDATE {table} SET {column} = ? RETURNING *""", parameters=(value,))
-        else:
-            res = await self._fetchone(SQL=f"""UPDATE {table} SET {column} = ? WHERE {where} = ? RETURNING *""", parameters=(value, where_value))
-        return res if not None else None
+    #     Returns:
+    #         sqlite.Row | None: Returns Row.
+    #     """
+    #     if where is None:
+    #         res: Row | None = await self._fetchone(SQL=f"""UPDATE {table} SET {column} = ? RETURNING *""", parameters=(value,))
+    #     else:
+    #         res = await self._fetchone(SQL=f"""UPDATE {table} SET {column} = ? WHERE {where} = ? RETURNING *""", parameters=(value, where_value))
+    #     return res if not None else None
 
-    async def _select_column(self, table: str, column: str) -> Row | None:
-        """
-        A generic SQL select method.
+    # async def _select_column(self, table: str, column: str) -> Row | None:
+    #     """
+    #     A generic SQL select method.
 
-        Args:
-            table (str): The TABLE to be used.
-            column (str): The COLUMN to be selected.
+    #     Args:
+    #         table (str): The TABLE to be used.
+    #         column (str): The COLUMN to be selected.
 
-        Raises:
-            sqlite3.OperationalError: If `column`or `table` does not exist.
+    #     Raises:
+    #         sqlite3.OperationalError: If `column`or `table` does not exist.
 
-        Returns:
-            sqlite.Row | None: Returns Row.
-        """
+    #     Returns:
+    #         sqlite.Row | None: Returns Row.
+    #     """
 
-        res: Row | None = await self._fetchone(SQL=f"""SELECT {column} FROM {table}""")
-        return res if not None else None
+    #     res: Row | None = await self._fetchone(SQL=f"""SELECT {column} FROM {table}""")
+    #     return res if not None else None
 
-    async def _select_row_where(self, table: str, column: str, where: str, value: str | int | bool) -> asqlite.List[Row] | None:
-        """
-        A generic SQL select method with a WHERE clause.
+    # async def _select_row_where(self, table: str, column: str, where: str, value: str | int | bool) -> asqlite.List[Row] | None:
+    #     """
+    #     A generic SQL select method with a WHERE clause.
 
-        Args:
-            table (str): The TABLE to be used.
-            column (str): The COLUMN to be selected. Supports wildcard `*`.
-            where (str): The VALUE to match in the COLUMN. `WHERE {where} = ?`
-            value (str | int | bool): The VALUE to search for.
+    #     Args:
+    #         table (str): The TABLE to be used.
+    #         column (str): The COLUMN to be selected. Supports wildcard `*`.
+    #         where (str): The VALUE to match in the COLUMN. `WHERE {where} = ?`
+    #         value (str | int | bool): The VALUE to search for.
 
-        Raises:
-            sqlite3.OperationalError: If `column`or `table` does not exist.
+    #     Raises:
+    #         sqlite3.OperationalError: If `column`or `table` does not exist.
 
-        Returns:
-            sqlite.Row | None: Returns a list of Rows.
-        """
+    #     Returns:
+    #         sqlite.Row | None: Returns a list of Rows.
+    #     """
 
-        res: list[Row] | None = await self._fetchall(f"""SELECT {column} FROM {table} WHERE {where} = ?""", (value,))
-        if res is not None and len(res) > 0:
-            return res
-        return None
+    #     res: list[Row] | None = await self._fetchall(f"""SELECT {column} FROM {table} WHERE {where} = ?""", (value,))
+    #     if res is not None and len(res) > 0:
+    #         return res
+    #     return None
 
-    async def _delete_row_where(self, table: str, where: str, value: str | int | bool) -> int:
-        """
-        A generic SQL delete method with a WHERE clause.
+    # async def _delete_row_where(self, table: str, where: str, value: str | int | bool) -> int:
+    #     """
+    #     A generic SQL delete method with a WHERE clause.
 
-        Args:
-            table (str): The TABLE to be used.
-            where (str): The VALUE to match in the COLUMN. `WHERE {where} = ?`
-            value (str | int | bool): The VALUE to search for.
+    #     Args:
+    #         table (str): The TABLE to be used.
+    #         where (str): The VALUE to match in the COLUMN. `WHERE {where} = ?`
+    #         value (str | int | bool): The VALUE to search for.
 
-        Raises:
-            sqlite3.OperationalError: If `column`or `table` does not exist.
+    #     Raises:
+    #         sqlite3.OperationalError: If `column`or `table` does not exist.
 
-        Returns:
-            int: Returns the amount of rows deleted.
-        """
+    #     Returns:
+    #         int: Returns the amount of rows deleted.
+    #     """
 
-        async with asqlite.connect(database=DB_FILE_PATH) as db:
-            async with db.cursor() as cur:
-                await cur.execute(f"""DELETE FROM {table} WHERE {where} = ?""", value)
-                res: int = cur.get_cursor().rowcount
-                await cur.close()
-                await db.commit()
-                return res
+    #     async with asqlite.connect(database=DB_FILE_PATH) as db:
+    #         async with db.cursor() as cur:
+    #             await cur.execute(f"""DELETE FROM {table} WHERE {where} = ?""", value)
+    #             res: int = cur.get_cursor().rowcount
+    #             await cur.close()
+    #             await db.commit()
+    #             return res

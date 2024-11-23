@@ -24,14 +24,15 @@ CREATE TABLE
     IF NOT EXISTS whitelist_replies (
         guild_id INTEGER NOT NULL,
         reply TEXT NOT NULL,
-        FOREIGN KEY (guild_id) REFERENCES guilds (guild_id) ON DELETE CASCADE
+        FOREIGN KEY (guild_id) REFERENCES guilds (guild_id) ON DELETE CASCADE,
+        UNIQUE (guild_id, reply)
     ) STRICT;
 
 -- Used to commands permissions and will exist in a customer decorator command check.
 CREATE TABLE
     IF NOT EXISTS owners (
         guild_id INTEGER NOT NULL,
-        user_id INTEGER UNIQUE,
+        user_id INTEGER,
         FOREIGN KEY (guild_id) REFERENCES guilds (guild_id) ON DELETE CASCADE,
         UNIQUE (guild_id, user_id)
     ) STRICT;

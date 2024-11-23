@@ -1,5 +1,6 @@
 from dataclasses import InitVar, dataclass, field
 from enum import Enum
+from sqlite3 import Row
 from typing import Any, Self, Union
 
 
@@ -50,7 +51,7 @@ class ButtonStyle(Enum):
     link = 4
 
 
-class ButtonStyle_Old(Enum):
+class ButtonStyle_Old():
     """
     Represents `discord.ButtonStyle` old values.
     """
@@ -89,11 +90,11 @@ class Banner_Element():
             raise Exception(f"Banner cords out of bounds: 32-bit int: {res} | Limit: {self._limit}")
         return res
 
-    def set_cords(self, value: int):
+    def _set_cords(self, value: int) -> None:
         self.x = value >> 16
         self.y = value & 0xFFFF
 
-    def set_color(self, value: str):
+    def _set_color(self, value: str) -> None:
         self.color = value
 
     @ staticmethod
@@ -129,15 +130,16 @@ class Instance_Banner_Settings():
     donator: Banner_Element = field(default_factory=Banner_Element)
     status_online: Banner_Element = field(default_factory=Banner_Element)
     status_offline: Banner_Element = field(default_factory=Banner_Element)
+    status_other: Banner_Element = field(default_factory=Banner_Element)
     metrics: Banner_Element = field(default_factory=Banner_Element)
-    unique_visors: Banner_Element = field(default_factory=Banner_Element)
+    unique_visitors: Banner_Element = field(default_factory=Banner_Element)
     player_limit_min: Banner_Element = field(default_factory=Banner_Element)
     player_limit_max: Banner_Element = field(default_factory=Banner_Element)
     players_online: Banner_Element = field(default_factory=Banner_Element)
 
     @property
     def exclude_properties(self) -> list[str]:
-        return ["instance_id", "image_path", "blur_background_amount"]
+        return ["pool", "_pool", "_limit", "instance_id", "image_path", "blur_background_amount"]
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name in self.exclude_properties:
@@ -152,25 +154,22 @@ class Instance_Banner_Settings():
         if isinstance(cur, Banner_Element):
             # If we have an int value we need to convert it into cords and set it.
             if isinstance(value, int):
-                # print("SET CORDS", value)
-                return cur.set_cords(value=value)
+                return cur._set_cords(value=value)
             elif isinstance(value, str):
-                # print("SET COLOR", value)
-                return cur.set_color(value=value)
+                return cur._set_color(value=value)
             else:
                 raise ValueError(f"Invalid value expected `int` or `str`. Value: {type(value)}{value}")
         else:
             if isinstance(value, str):
-                # print("SET COLOR NO ELEMENT", value)
                 return super().__setattr__(name, Banner_Element(color=value))
             elif isinstance(value, int):
-                # print("SET CORDS NO ELEMENT", value)
                 return super().__setattr__(name, Banner_Element(value=value))
         pass
 
-    def parse(self, data: dict[str, Any]) -> Self:
-        for key, value in data.items():
-            setattr(self, key, value)
+    def parse(self, data: Row) -> Self:
+        _temp: list[str] = data.keys()
+        for key in _temp:
+            setattr(self, key, data[key])
         return self
 
 
@@ -194,22 +193,22 @@ class Instance_Settings():
     - The dataclass is used to validate column names and column type constraints.
 
     """
-    instance_id: str = ""
-    description: bool = True
-    host: str = ""  # could get the local IP from the API
-    password: str = ""
-    whitelist: WhitelistType = WhitelistType.OPEN
-    whitelist_button: bool = False
-    emoji: str = ""
-    donator: DonatorType = DonatorType.PUBLIC
-    donator_bypass: bool = False
-    metrics: bool = False
-    status: bool = True
-    unique_visitors: bool = False
-    discord_console_channel_id: int = field(default=0)
-    discord_role_id: int = field(default=0)
-    avatar_url: str = ""
-    hidden: bool = False
+    instance_id: str
+    description: bool
+    host: str   # could get the local IP from the API
+    password: str
+    whitelist: WhitelistType
+    whitelist_button: bool
+    emoji: str
+    donator: DonatorType
+    donator_bypass: bool
+    metrics: bool
+    status: bool
+    unique_visitors: bool
+    discord_console_channel_id: int
+    discord_role_id: int
+    avatar_url: str
+    hidden: bool
 
     def __setattr__(self, name: str, value: Union[str, int, bool]) -> Any:
         """

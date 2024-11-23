@@ -4,8 +4,9 @@ import re
 from dataclasses import InitVar, dataclass, fields
 from datetime import datetime
 from sqlite3 import Row
-from typing import Any, Literal, Self
+from typing import Any, ClassVar, Literal, Self
 
+from database.types import Banner_Element
 from utils import asqlite
 
 from .base import Base
@@ -26,6 +27,10 @@ class Instance_Metrics(Base):
 @dataclass
 class Instance_Banner(Instance_Banner_Settings, Base):
     _pool: InitVar[asqlite.Pool | None] = None
+    _banner_size: ClassVar[tuple[int, int]] = (800, 600)
+
+    def __post_init__(self, _pool: asqlite.Pool | None = None) -> None:
+        self._limit: int = self._pack(x=self._banner_size[0], y=self._banner_size[1])
 
     @staticmethod
     def _pack(x: int, y: int) -> int:
@@ -41,7 +46,7 @@ class Instance_Banner(Instance_Banner_Settings, Base):
         """
         return (x << 16) | y
 
-    def color_validation(self, value: str) -> None | str:
+    def _color_validation(self, value: str) -> None | str:
         """
         Uses regex the value provided is a valid hex color.
 
@@ -51,11 +56,13 @@ class Instance_Banner(Instance_Banner_Settings, Base):
         Returns:
             None | str: Returns the value if it is a valid hex color, else returns None.
         """
-        if len(value) in [3, 4, 6, 8] and re.search(f'([0-9a-f]{{{len(value)}}})$', value):
+        if value.startswith("#"):
+            _temp: str = value[1:]
+        if re.search(pattern=f"([a-f0-9]{{{len(_temp)}}})", string=_temp, flags=re.IGNORECASE):
             return value
         return None
 
-    def pos_validation(self, value: tuple[int, int]) -> None | int:
+    def _pos_validation(self, value: tuple[int, int]) -> None | int:
         """
         Validates the X,Y by attempting to bit offset them into a 32-bit integer.
 
@@ -65,11 +72,12 @@ class Instance_Banner(Instance_Banner_Settings, Base):
         Returns:
             None | int: Returns the value as a 32-bit integer if it is valid, else returns None.
         """
-        if len(value) == 2 and self._pack(x=value[0], y=value[1]) <= 52429070:
+        print(type(value), type(self._limit))
+        if len(value) == 2 and self._pack(x=value[0], y=value[1]) <= self._limit:
             return self._pack(x=value[0], y=value[1])
         return None
 
-    def property_validation(self, value: str) -> str:
+    def _property_validation(self, value: str) -> str:
         """
         Verifies the `property` provided is an attribute of `Instance_Banner_Settings`.
 
@@ -88,7 +96,7 @@ class Instance_Banner(Instance_Banner_Settings, Base):
         else:
             raise ValueError(f"The `property` provided is invalid. Property: {value}")
 
-    async def set_color(self, property: str, color: str = "#FFFFFF") -> None:
+    async def set_color(self, property: str, color: str = "#FFFFFF") -> Banner_Element:
         """
         Update the `banner_element_color` column(property) with the provided hex color code.
 
@@ -99,14 +107,18 @@ class Instance_Banner(Instance_Banner_Settings, Base):
         Raises:
             ValueError: If the color provided is not a hex color code.
         """
-        property = self.property_validation(value=property)
-        res: None | str = self.color_validation(value=color)
+        property = self._property_validation(value=property)
+        res: None | str = self._color_validation(value=color)
         if res is None:
             raise ValueError(f"The `color` provided is invalid. Color: {color}")
         else:
             await self._execute(SQL=f"""UPDATE banner_element_color SET {property} = ? WHERE instance_id = ?""", parameters=(color, self.instance_id))
+        _element: Banner_Element = getattr(self, property)
+        if isinstance(_element, Banner_Element):
+            _element._set_color(value=res)
+        return _element
 
-    async def set_position(self, property: str, position: tuple[int, int] = (0, 0)) -> None:
+    async def set_position(self, property: str, position: tuple[int, int] = (0, 0)) -> Banner_Element:
         """
         Update the `banner_element_position` column(property) with the provided X,Y position.
 
@@ -117,13 +129,17 @@ class Instance_Banner(Instance_Banner_Settings, Base):
         Raises:
             ValueError: If the position provided is larger than our Banner Resolution (800x600).
         """
-        property = self.property_validation(value=property)
+        property = self._property_validation(value=property)
 
-        res: None | int = self.pos_validation(value=position)
+        res: None | int = self._pos_validation(value=position)
         if res is None:
             raise ValueError(f"The `position` provided is invalid. Position: {position}")
         else:
             await self._execute(SQL=f"""UPDATE banner_element_position SET {property} = ? WHERE instance_id = ?""", parameters=(res, self.instance_id))
+        _element: Banner_Element = getattr(self, property)
+        if isinstance(_element, Banner_Element):
+            _element._set_cords(value=res)
+        return _element
 
 
 @dataclass()
@@ -148,11 +164,11 @@ class Instance(Base):
     @staticmethod
     def exists(func):
         @functools.wraps(wrapped=func)
-        async def wrapper_exists(self: Self, *args, **kwargs) -> bool:
+        async def wrapper_exists(self: Self, *args, **kwargs) -> Any:
             res: Row | None = await self._fetchone(SQL=f"""SELECT instance_id FROM instances WHERE instance_id = ?""", parameters=(self.instance_id,))
             if res is None:
                 raise ValueError(f"The `instance_id` of this class doesn't exist in the `instances` table. ID: {self.instance_id}")
-            return await func(self, *args, *kwargs)
+            return await func(self, *args, **kwargs)
         return wrapper_exists
 
     @property
@@ -173,11 +189,17 @@ class Instance(Base):
         self._created_at: float = value
 
     @property
-    def settings(self) -> Instance_Settings:
+    def settings(self) -> Instance_Settings | None:
         """
         Represents the data from the `instance_settings` table.
         """
+        if hasattr(self, "_settings") is False:
+            return None
         return self._settings
+
+    @settings.deleter
+    def settings(self) -> None:
+        del self._settings
 
     @property
     def metrics(self) -> Instance_Metrics:
@@ -194,7 +216,7 @@ class Instance(Base):
         return self._banner
 
     @exists
-    async def _remove_instance(self) -> bool | None:
+    async def remove_instance(self) -> bool | None:
         """
         Remove a `instance_id` from the `instances` table and any tables referencing the `instances_id`.
 
@@ -206,20 +228,17 @@ class Instance(Base):
         """
         assert self.instance_id  # this is validated in the `exists` decorator
         try:
-            # await self._delete_row_where(table="instances", where="instance_id", value=self.instance_id)
             await self._execute(SQL=f"""DELETE FROM instances WHERE instance_id = ?""", parameters=(self.instance_id,))
         except Exception as e:
             raise ValueError(f"The `instance_id` provided doesn't exists in the Database. instance_id:{self.instance_id}")
-        # await self._delete_row_where(table="instance_settings", where="instance_id", value=self.instance_id)
-        # await self._delete_row_where(table="instance_buttons", where="instance_id", value=self.instance_id)
-        # await self._delete_row_where(table="instance_metrics", where="instance_id", value=self.instance_id)
         self.instance_id = None
         self.instance_name = None
         self.created_at = 0
+        del self.settings
         return True
 
     @exists
-    async def _get_settings(self) -> Self:
+    async def get_settings(self) -> Instance_Settings:
         """
         Get the data from the `instance_settings` table.
 
@@ -231,10 +250,10 @@ class Instance(Base):
         if res is None:
             raise ValueError(f"The `instance_id` provided doesn't have an entry in the `instance_settings` table. Instance ID:{self.instance_id}")
         self._settings = Instance_Settings(**res)
-        return self
+        return self._settings
 
     @exists
-    async def _get_metrics(self) -> Self:
+    async def get_metrics(self) -> Instance_Metrics:
         """
         Get the data from the `instance_metrics` table.
 
@@ -246,10 +265,10 @@ class Instance(Base):
         if res is None:
             raise ValueError(f"The `instance_id` provided doesn't have an entry in the `instance_metrics` table. Instance ID:{self.instance_id}")
         self._metrics = Instance_Metrics(**res)
-        return self
+        return self._metrics
 
     @exists
-    async def _get_banner(self) -> Self:
+    async def get_banner(self) -> Instance_Banner:
         banner_settings: Row | None = await self._fetchone(SQL=f"""SELECT image_path, blur_background_amount FROM instance_banner_settings
                                                WHERE instance_id = ?""", parameters=(self.instance_id,))
         if banner_settings is None:
@@ -266,12 +285,29 @@ class Instance(Base):
             raise ValueError(f"The `instance_id` provided doesn't have an entry in the `banner_element_position` table. Instance ID:{self.instance_id}")
 
         _temp = Instance_Banner(**{**banner_settings, **banner_element_colors})
-        _temp.parse(**banner_element_pos)
+        _temp.parse(data=banner_element_pos)
         self._banner: Instance_Banner = _temp
-        return self
+        return self._banner
 
     @exists
-    async def set_host(self, host: str) -> str:
+    async def set_description_visible(self, visible: bool = True) -> bool | None:
+        """
+        Controls if the description should be visible in the Banner.\n
+        Sets the `description` attribute in the `instance_settings` table.
+
+        Args:
+            visible (bool, optional): True or False. Defaults to True.
+
+        Returns:
+            bool | None: Returns `Instance_Settings.description`.
+        """
+        await self._execute(SQL=f"""UPDATE instance_settings SET description=? WHERE instance_id=?""", parameters=(visible, self.instance_id))
+        if self.settings is not None:
+            self.settings.description = visible
+            return self.settings.description
+
+    @exists
+    async def set_host(self, host: str) -> str | None:
         """
         Set the `host` attribute in the `instance_settings` table.
 
@@ -279,14 +315,15 @@ class Instance(Base):
             host (str): The host/IP for users to access the instance.
 
         Returns:
-            str: Returns `Instance_Settings.host`.
+            str | None: Returns `Instance_Settings.host`.
         """
         await self._execute(SQL=f"""UPDATE instance_settings SET host=? WHERE instance_id=?""", parameters=(host.strip(), self.instance_id))
-        self.settings.host = host.strip()
-        return self.settings.host
+        if self.settings is not None:
+            self.settings.host = host.strip()
+            return self.settings.host
 
     @exists
-    async def set_password(self, password: str) -> str:
+    async def set_password(self, password: str) -> str | None:
         """
         Set the `password` attribute in the `instance_settings` table.
 
@@ -294,14 +331,15 @@ class Instance(Base):
             password (str): The password to use to connect to the instance.
 
         Returns:
-            str: Returns `Instance_Settings.password`.
+            str | None: Returns `Instance_Settings.password`.
         """
         await self._execute(SQL=f"""UPDATE instance_settings SET password=? WHERE instance_id=?""", parameters=(password.strip(), self.instance_id))
-        self.settings.password = password.strip()
-        return self.settings.password
+        if self.settings is not None:
+            self.settings.password = password.strip()
+            return self.settings.password
 
     @exists
-    async def set_whitelist(self, whitelist: WhitelistType) -> WhitelistType:
+    async def set_whitelist(self, whitelist: WhitelistType = WhitelistType.OPEN) -> WhitelistType | None:
         """
         Set the `whitelist` attribute in the `instance_settings` table.
 
@@ -309,14 +347,15 @@ class Instance(Base):
             whitelist (WhitelistType): The Whitelist Type.
 
         Returns:
-            WhitelistType: Returns `Instance_Settings.whitelist`.
+            WhitelistType | None: Returns `Instance_Settings.whitelist`.
         """
         await self._execute(SQL=f"""UPDATE instance_settings SET whitelist=? WHERE instance_id=?""", parameters=(whitelist.value, self.instance_id))
-        self.settings.whitelist = whitelist
-        return self.settings.whitelist
+        if self.settings is not None:
+            self.settings.whitelist = whitelist
+            return self.settings.whitelist
 
     @exists
-    async def set_whitelist_button(self, whitelist_button: bool) -> bool:
+    async def set_whitelist_button(self, whitelist_button: bool = False) -> bool | None:
         """
         Set the `whitelist_button` attribute in the `instance_settings` table.
 
@@ -324,46 +363,116 @@ class Instance(Base):
             whitelist_button (bool): `True or False` if the whitelist button should be seen.
 
         Returns:
-            bool: Returns `Instance_Settings.whitelist_button`.
+            bool | None: Returns `Instance_Settings.whitelist_button`.
         """
         await self._execute(SQL=f"""UPDATE instance_settings SET whitelist_button=? WHERE instance_id=?""", parameters=(whitelist_button, self.instance_id))
-        self.settings.whitelist_button = whitelist_button
-        return self.settings.whitelist_button
+        if self.settings is not None:
+            self.settings.whitelist_button = whitelist_button
+            return self.settings.whitelist_button
 
     @exists
-    async def set_emoji(self, emoji: str) -> str:
+    async def set_emoji(self, emoji: str) -> str | None:
         """
         Set the `emoji` attribute in the `instance_settings` table.
 
         Args:
-            emoji (str): The Discord Emoji to use.
+            emoji (str): The Discord Emoji to use for reaction based Whitelisting.
 
         Returns:
-            str: Returns `Instance_Settings.emoji`.
+            str | None: Returns `Instance_Settings.emoji`.
         """
         await self._execute(SQL=f"""UPDATE instance_settings SET emoji=? WHERE instance_id=?""", parameters=(emoji, self.instance_id))
-        self.settings.emoji = emoji
-        return self.settings.emoji
+        if self.settings is not None:
+            self.settings.emoji = emoji
+            return self.settings.emoji
 
     @exists
-    async def set_donator(self, donator: DonatorType) -> DonatorType:
+    async def set_donator(self, donator: DonatorType = DonatorType.PUBLIC) -> DonatorType | None:
         """
         Set the `donator` attribute in the `instance_settings` table.
 
         Args:
             donator (DonatorType): The Donator Type.
-            pos (tuple[int, int], optional): The position of the banner element. (X, Y)
 
         Returns:
-            DonatorType: Returns `Instance_Settings.donator`.
+            DonatorType | None: Returns `Instance_Settings.donator`.
         """
 
         await self._execute(SQL=f"""UPDATE instance_settings SET donator=? WHERE instance_id=?""", parameters=(donator.value, self.instance_id))
-        self.settings.donator = donator
-        return self.settings.donator
+        if self.settings is not None:
+            self.settings.donator = donator
+            return self.settings.donator
 
     @exists
-    async def set_discord_console_channel_id(self, channel_id: int) -> int:
+    async def set_donator_bypass(self, bypass: bool = False) -> bool | None:
+        """
+        Set the `donator_bypass` attribute in the `instance_settings` table.
+
+        Args:
+            bypass (bool): Allow Donator's to bypass whitelist wait time.
+
+        Returns:
+            bool | None: Returns `Instance_Settings.donator_bypass`.
+        """
+
+        await self._execute(SQL=f"""UPDATE instance_settings SET donator_bypass=? WHERE instance_id=?""", parameters=(bypass, self.instance_id))
+        if self.settings is not None:
+            self.settings.donator_bypass = bypass
+            return self.settings.donator_bypass
+
+    @exists
+    async def set_metrics_visible(self, visible: bool = False) -> bool | None:
+        """
+        Controls if the metrics should be visible in the Banner.\n
+        Sets the `metrics` attribute in the `instance_settings` table.
+
+        Args:
+            visible (bool, optional): True or False. Defaults to False.
+
+        Returns:
+            bool | None: Returns `Instance_Settings.metrics`.
+        """
+        await self._execute(SQL=f"""UPDATE instance_settings SET metrics=? WHERE instance_id=?""", parameters=(visible, self.instance_id))
+        if self.settings is not None:
+            self.settings.metrics = visible
+            return self.settings.metrics
+
+    @exists
+    async def set_status_visible(self, visible: bool = True) -> bool | None:
+        """
+        Controls if the status should be visible in the Banner.\n
+        Sets the `status` attribute in the `instance_settings` table.
+
+        Args:
+            visible (bool, optional): True or False. Defaults to True.
+
+        Returns:
+            bool | None: Returns `Instance_Settings.status`.
+        """
+        await self._execute(SQL=f"""UPDATE instance_settings SET status=? WHERE instance_id=?""", parameters=(visible, self.instance_id))
+        if self.settings is not None:
+            self.settings.status = visible
+            return self.settings.status
+
+    @exists
+    async def set_unique_visitor_count_visible(self, visible: bool = False) -> bool | None:
+        """
+        Controls if the unique visitor count should be visible in the Banner.\n
+        Sets the `unique_visitors` attribute in the `instance_settings` table.
+
+        Args:
+            visible (bool, optional): True or False. Defaults to False.
+
+        Returns:
+            bool | None: Returns `Instance_Settings.unique_visitors`.
+        """
+        await self._execute(SQL=f"""UPDATE instance_settings SET unique_visitors=? WHERE instance_id=?""", parameters=(visible, self.instance_id))
+        if self.settings is not None:
+            self.settings.unique_visitors = visible
+            return self.settings.unique_visitors
+
+    @exists
+    async def set_discord_console_channel_id(self, channel_id: int) -> int | None:
         """
         Sets the `discord_console_channel` attribute in the `instance_settings` table.
 
@@ -374,18 +483,19 @@ class Instance(Base):
             ValueError: If the `channel_id` is to short. (<15)
 
         Returns:
-            int: Returns `Instance_Settings.discord_console_channel`.
+            int | None: Returns `Instance_Settings.discord_console_channel`.
         """
 
         if len(str(object=channel_id)) < 15:
             raise ValueError("The `channel_id` is to short. (<15)")
 
         await self._execute(SQL=f"""UPDATE instance_settings SET discord_console_channel_id=? WHERE instance_id=?""", parameters=(channel_id, self.instance_id))
-        self.settings.discord_console_channel_id = channel_id
-        return self.settings.discord_console_channel_id
+        if self.settings is not None:
+            self.settings.discord_console_channel_id = channel_id
+            return self.settings.discord_console_channel_id
 
     @exists
-    async def set_discord_role_id(self, role_id: int) -> int:
+    async def set_discord_role_id(self, role_id: int) -> int | None:
         """
         Sets the `discord_role_id` attribute in the `instance_settings` table.
 
@@ -396,17 +506,18 @@ class Instance(Base):
             ValueError: If the `discord_role_id` is to short. (<15)
 
         Returns:
-            int: Returns `Instance_Settings.discord_role_id`.
+            int | None: Returns `Instance_Settings.discord_role_id`.
         """
         if len(str(object=role_id)) < 15:
             raise ValueError("The `discord_role_id` is to short. (<15)")
 
         await self._execute(SQL=f"""UPDATE instance_settings SET discord_role_id=? WHERE instance_id=?""", parameters=(role_id, self.instance_id))
-        self.settings.discord_role_id = role_id
-        return self.settings.discord_role_id
+        if self.settings is not None:
+            self.settings.discord_role_id = role_id
+            return self.settings.discord_role_id
 
     @exists
-    async def set_avatar_url(self, avatar_url: str) -> str:
+    async def set_avatar_url(self, avatar_url: str) -> str | None:
         """
         Sets the `avatar_url` attribute in the `instance_settings` table.
 
@@ -414,14 +525,15 @@ class Instance(Base):
             avatar_url (str): The URL of the avatar icon.
 
         Returns:
-            str: Returns `Instance_Settings.avatar_url`.
+            str | None: Returns `Instance_Settings.avatar_url`.
         """
         await self._execute(SQL=f"""UPDATE instance_settings SET avatar_url=? WHERE instance_id=?""", parameters=(avatar_url.strip(), self.instance_id))
-        self.settings.avatar_url = avatar_url.strip()
-        return self.settings.avatar_url
+        if self.settings is not None:
+            self.settings.avatar_url = avatar_url.strip()
+            return self.settings.avatar_url
 
     @exists
-    async def set_hidden(self, hidden: bool) -> bool:
+    async def set_hidden(self, hidden: bool) -> bool | None:
         """
         Sets the `hidden` attribute in the `instance_settings` table. \n
         This controls if the instance can be seen via slash commands for general users.
@@ -430,11 +542,12 @@ class Instance(Base):
             hidden (bool): The `hidden` attribute.
 
         Returns:
-            bool: Returns `Instance_Settings.hidden`.
+            bool | None: Returns `Instance_Settings.hidden`.
         """
         await self._execute(SQL=f"""UPDATE instance_settings SET hidden=? WHERE instance_id=?""", parameters=(hidden, self.instance_id))
-        self.settings.hidden = hidden
-        return self.settings.hidden
+        if self.settings is not None:
+            self.settings.hidden = hidden
+            return self.settings.hidden
 
 
 class DBInstance(Base):
@@ -467,22 +580,26 @@ class DBInstance(Base):
         _settings: Row | None = await self._execute(SQL=f"""INSERT INTO instance_settings(instance_id) VALUES(?)
                                                     ON CONFLICT(instance_id) DO NOTHING RETURNING *""",
                                                     parameters=(instance_id,))
-        if _settings is None:
-            return _instance
+        if _settings is not None:
+            await _instance.get_settings()
 
         _metrics: Row | None = await self._execute(SQL=f"""INSERT INTO instance_metrics(instance_id) VALUES(?) ON CONFLICT(instance_id) DO NOTHING RETURNING *""",
                                                    parameters=(instance_id,))
-        if _metrics is None:
-            return _instance
+        if _metrics is not None:
+            await _instance.get_metrics()
 
         _banner_settings: Row | None = await self._execute(SQL=f"""INSERT INTO instance_banner_settings(instance_id) VALUES(?)
                                                            ON CONFLICT(instance_id) DO NOTHING RETURNING *""", parameters=(instance_id,))
-        if _banner_settings is None:
-            return _instance
+        await self._execute(SQL=f"""INSERT INTO banner_element_color(instance_id) VALUES(?)
+                                                           ON CONFLICT(instance_id) DO NOTHING""", parameters=(instance_id,))
+        await self._execute(SQL=f"""INSERT INTO banner_element_position(instance_id) VALUES(?)
+                                                           ON CONFLICT(instance_id) DO NOTHING""", parameters=(instance_id,))
+        if _banner_settings is not None:
+            await _instance.get_banner()
 
-        await _instance._get_settings()
-        await _instance._get_metrics()
-        await _instance._get_banner()
+        await self._execute(SQL=f"""INSERT INTO instance_buttons(instance_id) VALUES(?)
+                                                           ON CONFLICT(instance_id) DO NOTHING""", parameters=(instance_id,))
+
         return _instance
 
     async def get_instance(self, instance_id: str) -> Instance | None:
@@ -503,7 +620,8 @@ class DBInstance(Base):
         if _exists is None:
             raise ValueError(f"The `instance_id` provided doesn't exist in the `instances` table. Instance ID:{instance_id}")
 
-        _instance: Instance = await Instance(**_exists)._get_settings()
-        await _instance._get_metrics()
-        await _instance._get_banner()
+        _instance: Instance = Instance(**_exists)
+        await _instance.get_settings()
+        await _instance.get_metrics()
+        await _instance.get_banner()
         return _instance
