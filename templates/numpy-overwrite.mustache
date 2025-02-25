@@ -1,0 +1,43 @@
+{{! Numpy Docstring Template - https://marketplace.visualstudio.com/items?itemName=njpwerner.autodocstring}}
+{{summaryPlaceholder}}
+
+{{extendedSummaryPlaceholder}}
+{{#parametersExist}}
+Parameters
+-----------
+{{#args}}
+{{var}}: :class:`{{typePlaceholder}}`
+    {{descriptionPlaceholder}}.
+{{/args}}
+{{#kwargs}}
+{{var}}: :class:`{{typePlaceholder}}`, optional
+    {{descriptionPlaceholder}}, by default {{&default}}.
+{{/kwargs}}
+{{/parametersExist}}
+{{#returnsExist}}
+
+Returns
+--------
+{{#returns}}
+:class:`{{typePlaceholder}}`
+    {{descriptionPlaceholder}}.
+{{/returns}}
+{{/returnsExist}}
+{{#yieldsExist}}
+
+Yields
+-------
+{{#yields}}
+:class:`{{typePlaceholder}}`
+    {{descriptionPlaceholder}}.
+{{/yields}}
+{{/yieldsExist}}
+{{#exceptionsExist}}
+
+Raises
+-------
+{{#exceptions}}
+:exc:`{{type}}`
+    {{descriptionPlaceholder}}.
+{{/exceptions}}
+{{/exceptionsExist}}

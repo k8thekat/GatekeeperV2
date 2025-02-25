@@ -6,3 +6,6 @@ local.py
 *.db
 wiki
 
+todo
+local.ini
+dev.py
