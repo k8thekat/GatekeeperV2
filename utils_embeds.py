@@ -76,7 +76,7 @@ class botEmbeds():
         embed.add_field(name='Hidden', value=bool(db_server.Hidden), inline=True)
         embed.add_field(name='Whitelist Hidden', value=bool(db_server.Whitelist_disabled), inline=True)
 
-        embed.add_field(name='Filtered Console:', value=str(bool(db_server.Whitelist)), inline=False)
+        embed.add_field(name='Filtered Console:', value=str(bool(db_server.Console_Filtered)), inline=False)
         embed.add_field(name='Console Filter Type:', value=bool(db_server.Console_Filtered_Type), inline=True)
         if db_server.Discord_Console_Channel != None:
             discord_channel = context.guild.get_channel(db_server.Discord_Console_Channel)
