@@ -26,6 +26,7 @@ import os
 import pathlib
 import re
 import sys
+import threading
 import time
 import traceback
 from argparse import Namespace
@@ -36,10 +37,12 @@ import DB
 # import utils
 Handler = None
 AMP_setup = False
+AMP_shutdown_event = threading.Event()
 
 
 def AMP_init(args: Namespace):
     global AMP_setup
+    AMP_shutdown_event.clear()
     handler = getAMPHandler(args=args)
     handler.setup_AMPInstances()
     AMP_setup = True
@@ -48,12 +51,40 @@ def AMP_init(args: Namespace):
 
 def amp_server_instance_check():
     """Checks for new AMP Instances every 30 seconds.."""
-    while True:
+    while not AMP_shutdown_event.is_set():
         handler = getAMPHandler()
+        if handler is None:
+            AMP_shutdown_event.wait(1)
+            continue
+
         handler.logger.dev('Checking AMP Instance(s) Status...')
-        handler._instanceValidation(AMP=handler.AMP)
-        handler.AMP._instance_ThreadManager()
-        time.sleep(30)
+        try:
+            handler._instanceValidation(AMP=handler.AMP)
+            handler.AMP._instance_ThreadManager()
+        except Exception:
+            handler.logger.error(f'AMP instance check loop exception: {traceback.format_exc()}')
+
+        AMP_shutdown_event.wait(30)
+
+
+def request_shutdown():
+    """Request the AMP handler background loops to stop."""
+    global AMP_setup
+    AMP_shutdown_event.set()
+    AMP_setup = False
+
+    handler = Handler
+    if handler is None:
+        return
+
+    try:
+        handler.logger.info('Stopping AMP handler background loops...')
+    except Exception:
+        pass
+
+    for server in handler.AMP_Instances.values():
+        if hasattr(server, "Console") and server.Console is not None:
+            server.Console.console_thread_running = False
 
 
 class AMPHandler():

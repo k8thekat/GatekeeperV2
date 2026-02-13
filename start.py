@@ -71,7 +71,8 @@ class Setup:
 
         # This connects and creates all our AMP related parts
         import AMP_Handler
-        self.AMP_Thread = threading.Thread(target=AMP_Handler.AMP_init, name='AMP Handler', args=[self.args, ])
+        # Run AMP handler in a background thread. For normal bot runs we make it daemon so shutdown cannot hang.
+        self.AMP_Thread = threading.Thread(target=AMP_Handler.AMP_init, name='AMP Handler', args=[self.args, ], daemon=self.args.discord)
         self.AMP_Thread.start()
 
         if self.args.discord:
@@ -84,7 +85,15 @@ class Setup:
             import tokens
 
             import discordBot
-            discordBot.client_run(tokens)
+            try:
+                discordBot.client_run(tokens)
+            except (KeyboardInterrupt, SystemExit):
+                self.logger.warning('Shutdown signal received, stopping Gatekeeper...')
+            finally:
+                AMP_Handler.request_shutdown()
+                self.AMP_Thread.join(timeout=10)
+                if self.AMP_Thread.is_alive():
+                    self.logger.warning('AMP handler thread did not stop cleanly before process exit.')
 
     def python_ver_check(self):
         if not sys.version_info.major >= 3 and not sys.version_info.minor >= 10:

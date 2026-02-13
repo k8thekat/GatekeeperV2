@@ -190,8 +190,8 @@ class Banner(commands.Cog):
 
         for db_server in server_list:
 
-            if db_server == None:
-                self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
+            if db_server is None:
+                continue
 
             if db_server.Hidden == 1:
                 continue
@@ -199,13 +199,17 @@ class Banner(commands.Cog):
             # We need the AMP object for the Banner Generator.
             try:
                 amp_server = self.AMPHandler.AMP_Instances[db_server.InstanceID]
-            except:
+            except Exception:
                 if self.DBConfig.GetSetting("Auto_BG_Remove") == True:
                     self.DB.Remove_Server_from_BannerGroup(banner_groupname=banner_name, instanceID=db_server.InstanceID)
-                else:
-                    continue
+                continue
 
-            banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
+            try:
+                banner_file = self.uiBot.banner_file_handler(self.BC.Banner_Generator(amp_server, db_server.getBanner())._image_())
+            except Exception:
+                self.logger.exception(f'Failed to generate banner for InstanceID {db_server.InstanceID} in BannerGroup {banner_name}.')
+                continue
+
             # Store all the images as a `discord.File` for ease of iterations.
             banner_image_list.append(banner_file)
 
@@ -244,7 +248,7 @@ class Banner(commands.Cog):
             for curpos in range(0, len(message_list)):
                 try:
                     if first_msg:
-                        await message_list[curpos].edit(content=f"*Edited at {discord.utils.utcnow().strftime('%Y-%m-%d | %H:%M')}*", attachments=[banner_image_list[curpos]], embed=None)
+                        await message_list[curpos].edit(content=f"*Zuletzt aktualisiert: {discord.utils.utcnow().strftime('%Y-%m-%d | %H:%M')}*", attachments=[banner_image_list[curpos]], embed=None)
                         first_msg = False
                     else:
                         await message_list[curpos].edit(attachments=[banner_image_list[curpos]], embed=None)
@@ -289,27 +293,39 @@ class Banner(commands.Cog):
         for key, value in Banners.items():
             self.logger.dev(f'Getting the Banner Group: {value["name"]} from the DB')
             discord_guild = self._client.get_guild(value['guild_id'])
+            if discord_guild is None:
+                self.logger.error(f'Unable to find guild {value["guild_id"]} for BannerGroup {value["name"]}, skipping.')
+                continue
+
             discord_channel = discord_guild.get_channel(key)
+            if discord_channel is None:
+                self.logger.error(f'Unable to find channel {key} in guild {discord_guild.id} for BannerGroup {value["name"]}, removing channel mapping.')
+                self.DB.Remove_Channel_from_BannerGroup(channelid=key, guildid=discord_guild.id)
+                continue
 
             # This should create a list of DBServer Objects.
+            servers = []
             if len(value['servers']):
-                servers = [self.DB.GetServer(ServerID=entry) for entry in value["servers"] if self.DB.GetServer(ServerID=entry) != [None or "None"]]
+                for entry in value["servers"]:
+                    db_server = self.DB.GetServer(ServerID=entry)
+                    if db_server not in [None, "None"]:
+                        servers.append(db_server)
 
             messages = []
-            # Removing any None values returned from the DB leaving us with an empty list.
-            for entry in value['messages']:
-                if entry in ['None', None]:
-                    value['messages'].remove(entry)
+            value['messages'] = [entry for entry in value['messages'] if entry not in ['None', None]]
 
             if len(value['messages']):
                 # This should give us a list of partial message objects.
-                messages = [discord_channel.get_partial_message(entry) for entry in value["messages"] if discord_channel.get_partial_message(entry) != [None]]
+                messages = [discord_channel.get_partial_message(entry) for entry in value["messages"]]
 
-            if self.DBConfig.GetSetting('Banner_Type') == 1:
-                await self._banner_generator(banner_name=value['name'], server_list=servers, message_list=messages, discord_channel=discord_channel, discord_guild=discord_guild)
+            try:
+                if self.DBConfig.GetSetting('Banner_Type') == 1:
+                    await self._banner_generator(banner_name=value['name'], server_list=servers, message_list=messages, discord_channel=discord_channel, discord_guild=discord_guild)
 
-            else:
-                await self._embed_generator(banner_name=value['name'], server_list=servers, message_list=messages, discord_channel=discord_channel, discord_guild=discord_guild)
+                else:
+                    await self._embed_generator(banner_name=value['name'], server_list=servers, message_list=messages, discord_channel=discord_channel, discord_guild=discord_guild)
+            except Exception:
+                self.logger.exception(f'Banner auto-update failed for BannerGroup {value["name"]}, continuing with next group.')
 
     @commands.hybrid_group(name='bannergroup')
     async def banner_group_group(self, context: commands.Context):

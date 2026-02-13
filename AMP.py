@@ -688,8 +688,12 @@ class AMPInstance:
         parameters = {}
         result = self.CallAPI("Core/GetStatus", parameters)
 
-        # This happens because CallAPI returns False when it fails permissions.
-        if result == False or None:
+        # CallAPI returns False/None on permission or transport failures.
+        if result is False or result is None:
+            return False
+
+        if not isinstance(result, dict):
+            self.logger.error(f"Core/GetStatus returned unexpected payload for {self.FriendlyName}: {type(result)}")
             return False
         return result
 
@@ -712,12 +716,15 @@ class AMPInstance:
         if result == False:
             return TPS, Users, CPU, Memory, Uptime
 
-        Uptime = str(result["Uptime"])
-        TPS = str(result["State"])
-        Users = (str(result["Metrics"]["Active Users"]["RawValue"]), str(result["Metrics"]["Active Users"]["MaxValue"]))
-        Memory = (str(result["Metrics"]["Memory Usage"]["RawValue"]), str(result["Metrics"]["Memory Usage"]["MaxValue"]))
-        CPU = str(result["Metrics"]["CPU Usage"]["RawValue"])  # This is a percentage
-        self.Metrics = result["Metrics"]
+        try:
+            Uptime = str(result["Uptime"])
+            TPS = str(result["State"])
+            Users = (str(result["Metrics"]["Active Users"]["RawValue"]), str(result["Metrics"]["Active Users"]["MaxValue"]))
+            Memory = (str(result["Metrics"]["Memory Usage"]["RawValue"]), str(result["Metrics"]["Memory Usage"]["MaxValue"]))
+            CPU = str(result["Metrics"]["CPU Usage"]["RawValue"])  # This is a percentage
+            self.Metrics = result["Metrics"]
+        except (KeyError, TypeError):
+            self.logger.error(f"Core/GetStatus returned incomplete Metrics for {self.FriendlyName}")
         return TPS, Users, CPU, Memory, Uptime
 
     def getLiveStatus(self) -> bool:
@@ -741,9 +748,15 @@ class AMPInstance:
         """Returns Number of Online Players over Player Limit. \n
         `eg 2/10`"""
         result = self.getStatus()
-        if result != False:
+        if result == False:
+            return ("0", "0")
+
+        try:
             Users = (str(result["Metrics"]["Active Users"]["RawValue"]), str(result["Metrics"]["Active Users"]["MaxValue"]))
             return Users
+        except (KeyError, TypeError):
+            self.logger.error(f"Core/GetStatus did not include Active Users for {self.FriendlyName}")
+            return ("0", "0")
 
     def getUserList(self) -> list[str]:
         """Returns a List of connected users."""
@@ -751,9 +764,17 @@ class AMPInstance:
         parameters = {}
         result = self.CallAPI("Core/GetUserList", parameters)
         user_list = []
+        if result is False or result is None:
+            return user_list
+
+        if isinstance(result, list):
+            return result
+
+        if not isinstance(result, dict):
+            self.logger.error(f"Core/GetUserList returned unexpected payload for {self.FriendlyName}: {type(result)}")
+            return user_list
+
         for user in result:
-            # for user in result['result']:
-            # user_list.append(result['result'][user])
             user_list.append(result[user])
         return user_list
 
