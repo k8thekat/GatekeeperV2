@@ -480,7 +480,7 @@ class AMPInstance:
                 if APICall == "Core/GetUpdates":
                     break
 
-                self.logger.error(f"{self.FriendlyName}: AMP API recieved no Data; sleeping for 5 seconds...")
+                self.logger.error(f"{self.FriendlyName}: AMP API received no Data; sleeping for 5 seconds...")
                 time.sleep(5)
 
             except:
