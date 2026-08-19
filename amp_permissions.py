@@ -16,7 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with Gatekeeper; see the file COPYING.  If not, write to the Free
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA. 
+   02110-1301, USA.
 '''
 def perms_super():
     core = ['Core.*',
@@ -71,7 +71,6 @@ def perms_super():
         '-LocalFileBackup.Backup.RestoreBackup',
         '-LocalFileBackup.Backup.ToggleStickiness',
         'Core.AppManagement.*',
-        '-Core.AppManagement.UpdateApplication',
         '-Core.Special.*']
     return core
 
@@ -80,4 +79,4 @@ def perms_super():
 
 
 
-        
+

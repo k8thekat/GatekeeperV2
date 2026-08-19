@@ -99,8 +99,9 @@ ___
 - `/dbserver change_instance_id (from_server, to_server)` - Use this to switch an AMP instance with another AMP Instance in the Database.
 
 ### <u>AMP Server Commands</u>: 
-- `/server update` - Updates the current list of AMP servers. *(This is also done every 30 seconds)*
+- `/server refresh` - Updates the current list of AMP servers. *(This is also done every 30 seconds)*
     - **TIP**: This is used when creating a new Instance and needing to update the bots listings.
+- `/server update (server)` - After confirmation, stops the selected game server, installs its application update without a backup, and starts it again.
 - `/server start (server)` - Starts the specified dedicated server.
     - **TIP**: `server` supports server nicknames that are set via `/server displayname` command.
 - `/server stop (server)` - Stops the specified AMP Dedicated server.

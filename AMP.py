@@ -992,6 +992,12 @@ class AMPInstance:
         result = self.CallAPI("Core/GetUpdateInfo", parameters)
         return result
 
+    def UpdateApplication(self):
+        """Update the game-server application managed by this AMP instance."""
+        self.Login()
+        parameters = {}
+        return self.CallAPI("Core/UpdateApplication", parameters)
+
     # These are GENERIC Methods below this point purely for typehiting and Linter purpose. ---------------------------------------------------------------------------
 
     def addWhitelist(self, db_user, in_gamename: str = None):
