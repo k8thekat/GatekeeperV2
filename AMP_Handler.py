@@ -128,6 +128,22 @@ class AMPHandler():
 
         return value
 
+    def _coerce_group_config(self, value: object) -> list[str]:
+        if value is None:
+            return []
+
+        if isinstance(value, str):
+            return [entry.strip() for entry in value.split(',') if len(entry.strip()) != 0]
+
+        if isinstance(value, (list, tuple, set)):
+            results: list[str] = []
+            for entry in value:
+                if isinstance(entry, str):
+                    results.extend(self._coerce_group_config(entry))
+            return results
+
+        return []
+
     def _extract_group_names(self, source: dict | None) -> set[str]:
         if not isinstance(source, dict):
             return set()
@@ -228,10 +244,7 @@ class AMPHandler():
 
         self.tokens = tokens
         configured_groups = getattr(tokens, 'AMPInstanceGroups', [])
-        if isinstance(configured_groups, str):
-            configured_groups = [configured_groups]
-        elif configured_groups is None:
-            configured_groups = []
+        configured_groups = self._coerce_group_config(configured_groups)
 
         self.allowed_instance_groups = set()
         for group_name in configured_groups:
