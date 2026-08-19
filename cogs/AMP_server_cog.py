@@ -42,6 +42,34 @@ import modules.banner_creator as BC
 Dependencies = None
 
 
+class ServerUpdateConfirmation(discord.ui.View):
+    """Confirmation prompt restricted to the user who requested the update."""
+
+    def __init__(self, author_id: int):
+        super().__init__(timeout=60)
+        self.author_id = author_id
+        self.confirmed = False
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.author_id:
+            return True
+        await interaction.response.send_message(
+            'Only the person who requested this update can confirm it.', ephemeral=True
+        )
+        return False
+
+    @discord.ui.button(label='Update server', style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.confirmed = True
+        await interaction.response.defer()
+        self.stop()
+
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.stop()
+
+
 class AMP_Server(commands.Cog):
     def __init__(self, client: discord.Client):
         self._client = client
@@ -61,6 +89,7 @@ class AMP_Server(commands.Cog):
         self.uiBot = utils_ui
         self.eBot = utils_embeds.botEmbeds(client)
         self.BC = BC
+        self._active_updates: set[str] = set()
 
         self.logger.info(f'**SUCCESS** Initializing {self.name.title().replace("Amp", "AMP")}')
 
@@ -95,16 +124,81 @@ class AMP_Server(commands.Cog):
         if context.invoked_subcommand is None:
             await context.send('Please try your command again...', ephemeral=True, delete_after=self._client.Message_Timeout)
 
-    @server.command(name='update')
+    @server.command(name='refresh')
     @utils.role_check()
-    async def amp_server_update(self, context: commands.Context):
+    async def amp_server_refresh(self, context: commands.Context):
         """Updates the bot with any freshly created AMP Instances"""
-        self.logger.command(f'{context.author.name} used AMP Server Update')
-        new_server = self.AMPHandler._instanceValidation(AMP=self.AMPHandler.AMP)
-        if new_server:
-            await context.send(f'Found a new Server: {new_server}', ephemeral=True, delete_after=self._client.Message_Timeout)
-        else:
-            await context.send('Uhh.. No new instances were found. Hmmm...', ephemeral=True, delete_after=self._client.Message_Timeout)
+        self.logger.command(f'{context.author.name} used AMP Server Refresh')
+        before = set(self.AMPInstances)
+        await asyncio.to_thread(self.AMPHandler._instanceValidation, AMP=self.AMPHandler.AMP)
+        added = set(self.AMPInstances) - before
+        if added:
+            names = ', '.join(self.AMPInstances[instance_id].FriendlyName for instance_id in added)
+            await context.send(f'Found new server(s): **{names}**', ephemeral=True, delete_after=self._client.Message_Timeout)
+            return
+        await context.send('No new instances were found.', ephemeral=True, delete_after=self._client.Message_Timeout)
+
+    @server.command(name='update')
+    @utils.role_check('server.start')
+    @app_commands.autocomplete(server=utils.autocomplete_servers)
+    async def amp_server_update(self, context: commands.Context, server):
+        """Stops, updates, and restarts a game-server application."""
+        self.logger.command(f'{context.author.name} requested an AMP Server Update')
+        amp_server = self.uBot.serverparse(server, context, context.guild.id)
+        if amp_server is None:
+            return await context.send('That AMP server could not be found.', ephemeral=True)
+
+        instance_id = str(amp_server.InstanceID)
+        if instance_id in self._active_updates:
+            return await context.send(
+                f'**{amp_server.FriendlyName}** is already being updated.', ephemeral=True
+            )
+
+        self._active_updates.add(instance_id)
+        view = ServerUpdateConfirmation(context.author.id)
+        prompt = await context.send(
+            f'⚠️ **Update {amp_server.FriendlyName}?**\n'
+            'The game server will be stopped, updated without creating a backup, and then started again. '
+            'Players will be disconnected during this process.',
+            view=view,
+            ephemeral=True,
+        )
+
+        try:
+            timed_out = await view.wait()
+            if timed_out or not view.confirmed:
+                await prompt.edit(content='Server update cancelled.', view=None)
+                return
+
+            await prompt.edit(
+                content=f'Updating **{amp_server.FriendlyName}**: stopping the game server…', view=None
+            )
+            was_running = await asyncio.to_thread(amp_server._ADScheck)
+            if was_running:
+                await asyncio.to_thread(amp_server.StopInstance)
+                await asyncio.sleep(5)
+
+            await prompt.edit(content=f'Updating **{amp_server.FriendlyName}**: installing the application update…')
+            result = await asyncio.to_thread(amp_server.UpdateApplication)
+            update_failed = result is False or (
+                isinstance(result, dict)
+                and (result.get('result') is False or result.get('Status') is False)
+            )
+            if update_failed:
+                raise RuntimeError(f'AMP rejected Core/UpdateApplication: {result}')
+
+            await prompt.edit(content=f'Updating **{amp_server.FriendlyName}**: starting the game server…')
+            await asyncio.to_thread(amp_server.StartInstance)
+            amp_server.ADS_Running = True
+            await prompt.edit(content=f'✅ **{amp_server.FriendlyName}** was updated and started.', view=None)
+        except Exception:
+            self.logger.exception(f'Failed to update AMP server {amp_server.FriendlyName}')
+            await prompt.edit(
+                content=f'❌ The update of **{amp_server.FriendlyName}** failed. Check the Gatekeeper and AMP logs.',
+                view=None,
+            )
+        finally:
+            self._active_updates.discard(instance_id)
 
     @server.command(name='broadcast')
     @utils.role_check()

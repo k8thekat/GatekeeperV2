@@ -85,8 +85,8 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
             perm_node = str(context.command).replace(" ", ".")
 
         bPerms = get_botPerms()
-        bPerms.perm_node_check(perm_node, context)
-        if bPerms.perm_node_check == False:
+        has_permission = bPerms.perm_node_check(perm_node, context)
+        if not has_permission:
             logger.command(f'*Custom* Permission Check Failed on {author} missing {perm_node}')
             return False
         else:
@@ -119,10 +119,12 @@ async def async_rolecheck(context: Union[commands.Context, discord.Interaction, 
     return False
 
 
-def role_check():
-    """Use this before any Commands that require a Staff/Mod level permission Role, this will also check for Administrator"""
-    # return commands.check(async_rolecheck(permission_node=perm))
-    return commands.check(async_rolecheck)
+def role_check(permission_node: str = None):
+    """Check the configured staff role or an explicit custom permission node."""
+    async def predicate(context: commands.Context):
+        return await async_rolecheck(context, perm_node=permission_node)
+
+    return commands.check(predicate)
 
 
 def author_check(user_id: int = None):
@@ -627,10 +629,12 @@ class botPerms():
                         if command_perm_node_false_check[1:] == command_perm_node:
                             self.logger.dev('This perm node has been denied even though you have global permissions.', command_perm_node_false_check, command_perm_node)
                             return False
+                    return True
 
                 if command_perm_node in role['permissions']:
                     self.logger.dev('Found command perm node in Roles Permissions list.', command_perm_node)
                     return True
+        return False
 
     def get_roles(self) -> list[str]:
         """Pre build my Permissions Role Name List"""
