@@ -96,6 +96,7 @@ class AMPHandler():
 
         self.AMP2FA = False
         self.tokens = ''
+        self.allowed_instance_groups: set[str] = set()
 
         self.superUser = False
 
@@ -116,6 +117,60 @@ class AMPHandler():
 
         self.val_settings()
         self.moduleHandler()
+
+    def _normalize_group_name(self, value: object) -> str | None:
+        if not isinstance(value, str):
+            return None
+
+        value = value.strip().casefold()
+        if len(value) == 0:
+            return None
+
+        return value
+
+    def _extract_group_names(self, source: dict | None) -> set[str]:
+        if not isinstance(source, dict):
+            return set()
+
+        names: set[str] = set()
+        candidate_keys = (
+            'Group',
+            'GroupName',
+            'InstanceGroup',
+            'InstanceGroupName',
+            'Target',
+            'TargetName',
+            'FriendlyName',
+            'DisplayName',
+            'Name',
+        )
+
+        for key in candidate_keys:
+            if key not in source:
+                continue
+
+            value = source[key]
+            if isinstance(value, str):
+                normalized = self._normalize_group_name(value)
+                if normalized is not None:
+                    names.add(normalized)
+                continue
+
+            if isinstance(value, list):
+                for entry in value:
+                    normalized = self._normalize_group_name(entry)
+                    if normalized is not None:
+                        names.add(normalized)
+
+        return names
+
+    def _instance_group_allowed(self, target: dict, amp_instance: dict) -> bool:
+        if len(self.allowed_instance_groups) == 0:
+            return True
+
+        instance_groups = self._extract_group_names(target)
+        instance_groups.update(self._extract_group_names(amp_instance))
+        return len(instance_groups.intersection(self.allowed_instance_groups)) > 0
 
     def setup_AMPInstances(self):
         """Intializes the connection to AMP and creates AMP_Instance objects."""
@@ -172,6 +227,23 @@ class AMPHandler():
             import tokens
 
         self.tokens = tokens
+        configured_groups = getattr(tokens, 'AMPInstanceGroups', [])
+        if isinstance(configured_groups, str):
+            configured_groups = [configured_groups]
+        elif configured_groups is None:
+            configured_groups = []
+
+        self.allowed_instance_groups = set()
+        for group_name in configured_groups:
+            normalized = self._normalize_group_name(group_name)
+            if normalized is not None:
+                self.allowed_instance_groups.add(normalized)
+
+        if len(self.allowed_instance_groups) != 0:
+            self.logger.info(
+                f'Gatekeeper will only load AMP instance groups: {sorted(self.allowed_instance_groups)}'
+            )
+
         if not tokens.AMPurl.startswith('http://') and not tokens.AMPurl.startswith('https://'):
             self.logger.critical('** Please verify your AMPurl. It either needs "http://" or "https://" depending on your AMP/Network setup. **')
             reset = True
@@ -228,6 +300,7 @@ class AMPHandler():
         result = AMP.getInstances()
         amp_instance_keys = list(self.AMP_Instances.keys())  # This could be empty on startup;
         available_instances = []
+        visible_instance_found = False
         # if len(result["result"][0]['AvailableInstances']) == 0:
         if len(result[0]['AvailableInstances']) == 0:
             self.logger.critical(f'***ATTENTION*** Please ensure the permissions are set correctly, the Bot cannot find any AMP Instances at this time...')
@@ -248,6 +321,14 @@ class AMPHandler():
                 if flag_reg != None and flag_reg.group():
                     continue
 
+                if not self._instance_group_allowed(Target, amp_instance):
+                    self.logger.dev(
+                        f'Skipping AMP Instance {amp_instance["FriendlyName"]} because it is not in an allowed AMPInstanceGroups entry.'
+                    )
+                    continue
+
+                visible_instance_found = True
+
                 # Creating a new list of Instances with just their IDs.
                 available_instances.append(amp_instance['InstanceID'])
 
@@ -267,6 +348,11 @@ class AMPHandler():
                 self.logger.dev(f'Loaded __{name}__ for {amp_instance["FriendlyName"]}')
                 server = self.AMP_Modules[image_source](instanceID=amp_instance['InstanceID'], serverdata=amp_instance, Handler=self)
                 self.AMP_Instances[server.InstanceID] = server
+
+        if len(self.allowed_instance_groups) != 0 and not visible_instance_found:
+            self.logger.warning(
+                'AMP returned instances, but none matched the configured AMPInstanceGroups allowlist.'
+            )
 
         # AMPHandler AMP Instances will be empty on first startup; we need to NOT compare for any missing instances.
         if startup:

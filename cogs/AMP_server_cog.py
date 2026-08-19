@@ -170,6 +170,39 @@ class AMP_Server(commands.Cog):
                 await prompt.edit(content='Server update cancelled.', view=None)
                 return
 
+            permission_checks = {
+                'Core.AppManagement.StopApplication': await asyncio.to_thread(
+                    amp_server.CurrentSessionHasPermission, 'Core.AppManagement.StopApplication'
+                ),
+                'Core.AppManagement.UpdateApplication': await asyncio.to_thread(
+                    amp_server.CurrentSessionHasPermission, 'Core.AppManagement.UpdateApplication'
+                ),
+                'Core.AppManagement.StartApplication': await asyncio.to_thread(
+                    amp_server.CurrentSessionHasPermission, 'Core.AppManagement.StartApplication'
+                ),
+            }
+            self.logger.info(f'AMP permission check for {amp_server.FriendlyName}: {permission_checks}')
+            missing_permissions = [
+                permission for permission, allowed in permission_checks.items() if allowed is not True
+            ]
+            if missing_permissions:
+                amp_user_info = await asyncio.to_thread(
+                    amp_server.getAMPUserInfo, self.AMPHandler.tokens.AMPUser
+                )
+                self.logger.error(
+                    f'{amp_server.FriendlyName} session for {self.AMPHandler.tokens.AMPUser} '
+                    f'is missing AMP permissions: {missing_permissions} | User info: {amp_user_info}'
+                )
+                await prompt.edit(
+                    content=(
+                        f'AMP denied the update for **{amp_server.FriendlyName}** before execution.\n'
+                        f'Missing session permissions: `{", ".join(missing_permissions)}`.\n'
+                        f'Check the effective AMP roles of `{self.AMPHandler.tokens.AMPUser}` on this instance.'
+                    ),
+                    view=None,
+                )
+                return
+
             await prompt.edit(
                 content=f'Updating **{amp_server.FriendlyName}**: stopping the game server…', view=None
             )

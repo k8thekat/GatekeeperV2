@@ -13,3 +13,8 @@ AMPUser = ''
 AMPPassword = ''
 AMPurl = ''
 
+# Optional: limit Gatekeeper to AMP instance groups.
+# Leave this empty to allow every instance AMP exposes to the bot account.
+# Example: AMPInstanceGroups = ['Public Servers', 'Palworld']
+AMPInstanceGroups = []
+

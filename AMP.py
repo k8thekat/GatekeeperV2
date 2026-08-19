@@ -421,8 +421,8 @@ class AMPInstance:
     def Login(self) -> bool:
         if self.SessionID == 0:
             if self.InstanceID in self.AMPHandler.SessionIDlist:
-                self.AMPHandler.SessionIDlist[self.InstanceID] = self.SessionID
-                return
+                self.SessionID = self.AMPHandler.SessionIDlist[self.InstanceID]
+                return True
 
             self.logger.dev(f"AMPInstance Logging in {self.InstanceID}")
 
@@ -544,7 +544,7 @@ class AMPInstance:
             if (type(res["Title"]) == str) and (res["Title"] == "Unauthorized Access"):
                 self.logger.error(f'["Title"]: The API Call {APICall} failed because of {res}')
                 # Resetting the Session ID for the Instance; forcing a new login/SessionID
-                self.AMPHandler.SessionIDlist.pop(self.InstanceID)
+                self.AMPHandler.SessionIDlist.pop(self.InstanceID, None)
                 self.SessionID = 0
                 return False
 
